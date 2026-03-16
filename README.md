@@ -217,3 +217,9 @@ MIT — แจกฟรี ใช้ได้เลย
   สร้างโดย <a href="https://github.com/killernay">เน (Chanon N.)</a><br/>
   เพราะข้อมูลของคุณ ควรเข้าถึงได้ง่ายๆ ไม่ต้องจ่ายแพง
 </p>
+
+<p align="center">
+  <a href="https://twitter.com/killernay">𝕏 @killernay</a> ·
+  <a href="https://github.com/killernay">GitHub</a> ·
+  <a href="mailto:chanon@ngernthongdee.co.th">Email</a>
+</p>
