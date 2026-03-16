@@ -57,14 +57,17 @@ nEIP (AI-Native):   Agent/User → Tool Registry → Business Logic → Database
 
 ### Zero-setup AI Integration ผ่าน CLI
 
-AI tools ทุกตัวที่ run ใน terminal (Claude Code, OpenClaw, Aider) เชื่อมต่อ nEIP ได้ทันที:
+AI tools ที่ทำงานผ่าน terminal เช่น **Claude Code** เชื่อมต่อ nEIP ได้ทันทีผ่าน CLI — ไม่ต้อง setup MCP หรือ config เพิ่ม:
 
 ```bash
-# AI agent พิมพ์คำสั่งเดียว
+# Claude Code สั่งงาน nEIP ผ่าน CLI ได้เลย
 neip ar invoice create    # สร้างใบแจ้งหนี้
 neip reports trial-balance # ดูงบทดลอง
 neip gl journal list       # ดูรายการบันทึกบัญชี
+neip dashboard             # ดูภาพรวมธุรกิจ
 ```
+
+> **ทำไมไม่ใช้ MCP?** MCP ต้อง serialize ข้อมูลทุก request ทำให้เปลือง token โดยเฉพาะกับข้อมูล ERP ที่มีขนาดใหญ่ CLI approach ประหยัด token กว่ามาก และในอนาคตสามารถเพิ่ม MCP Server ได้ไม่ยากเพราะมี REST API ครบอยู่แล้ว
 
 ### Human-in-the-Loop (HITL) ที่โปร่งใส
 
