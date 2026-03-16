@@ -1,91 +1,112 @@
-# nEIP — AI-Native EIP for Thai SMEs & Startups
+<p align="center">
+  <img src="https://img.shields.io/badge/status-alpha-orange" alt="Status: Alpha" />
+  <img src="https://img.shields.io/badge/modules-31-blue" alt="31 Modules" />
+  <img src="https://img.shields.io/badge/API-186_endpoints-green" alt="186 API Endpoints" />
+  <img src="https://img.shields.io/badge/license-MIT-yellow" alt="MIT License" />
+</p>
 
-## ทำไมต้อง EIP ไม่ใช่ ERP?
+# nEIP — เนถีบ ERP
 
-**ERP** (Enterprise Resource Planning) คือซอฟต์แวร์ "วางแผนทรัพยากร" — ออกแบบมาให้คน operate ทุกขั้นตอน: คีย์ข้อมูล → ตรวจสอบ → อนุมัติ → ออกรายงาน ทุกอย่างผ่านหน้าจอ
+**Enterprise Intelligence Platform** — ระบบ ERP ยุคใหม่ที่ข้อมูลเข้าง่าย ออกง่าย ไม่ต้องจ่ายแพงทุกครั้งที่อยากดูข้อมูลของตัวเอง
 
-**EIP** (Enterprise Intelligence Platform) คือแนวคิดใหม่ — ระบบที่ **AI เข้าถึงข้อมูลและทำงานได้ตั้งแต่วันแรก** ไม่ใช่ ERP เดิมที่แปะ AI เข้าไปทีหลัง
-
-```
-Traditional ERP:    User → UI Screen → Business Logic → Database
-nEIP (AI-Native):   Agent/User → Tool Registry → Business Logic → Database
-                                        ↕
-                               Event Bus (async)
-                                        ↕
-                              Other Modules / Agents
-```
+> **nEIP** มาจากชื่อ "เน" (คนเขียน) + **EIP** — เริ่มจาก AI-Native ERP แล้วกลายเป็น Enterprise Intelligence Platform เพราะ ERP มันเก่าไปแล้ว
 
 ---
 
-## ปัญหาของ ERP แบบเดิม (Pain Points)
+## ทำไมต้องทำใหม่?
 
-### SMEs/Startups ติดอยู่ในสถานการณ์ที่ยากลำบาก:
+**20 ปีที่ผ่านมา ERP มีปัญหาเดิมซ้ำๆ:**
 
-| ระบบที่มีในตลาด | ปัญหาหลัก |
-|-----------------|-----------|
-| **WinSpeed / FlowAccount / PeakAccount** | ทำได้แค่บัญชี ไม่ใช่ ERP ครบวงจร ไม่มี API/CLI ให้ AI เชื่อมต่อ |
-| **SAP B1 / SAP HANA** | แพงมาก ซับซ้อน ต้องมีทีม IT ใหญ่ AI integration ยากมาก |
-| **Odoo** | ต้อง hack customize ตลอด tech stack โบราณ (Python/XML) ต้องใช้ XML-RPC |
-| **Excel** | ยืดหยุ่นแต่ไม่มี structure ไม่มี audit trail ไม่ scale |
+😤 **เอาข้อมูลเข้า ERP = ลำบาก** — คีย์ด้วยมือ ทีละรายการ ทีละหน้าจอ
 
-**ปัญหาร่วมของทุกระบบ**: ไม่ได้ออกแบบมาให้ AI เข้าถึงได้ — ไม่มี CLI, ไม่มี Tool Registry, ไม่มี MCP
+😤 **เอาข้อมูลออกจาก ERP = ลำบากกว่า** — อยากได้รายงานสักอัน ต้องจ้าง consultant ทุกครั้ง
 
-### ผลกระทบ:
-- **เสียโอกาสทางธุรกิจ** — ข้อมูลอยู่ใน ERP แต่ดึงออกมาวิเคราะห์ไม่ได้
-- **ต้นทุนคนสูง** — ทุกขั้นตอนต้องพึ่งคน ตั้งแต่คีย์ข้อมูล ตรวจสอบ จนถึงออกรายงาน
-- **ปิดงบเดือนใช้เวลา 15 วัน** — ดึงข้อมูลจาก ERP ไปหยอด Excel ด้วยมือ
-- **ไม่สามารถ scale** — การเชื่อมต่อระบบภายนอกทำได้ยากหรือทำไม่ได้เลย
+😤 **จ่ายแพงทุกครั้งที่อยากดูข้อมูลของตัวเอง** — License, customization, report, integration ทุกอย่างเสียเงิน
+
+😤 **AI เข้าถึงข้อมูลไม่ได้** — ERP ทุกตัวในตลาดไม่มีทางให้ AI อ่านหรือเขียนข้อมูลได้
+
+### ระบบที่มีอยู่ในตลาด
+
+| ระบบ | ปัญหา |
+|------|-------|
+| **WinSpeed / FlowAccount / PeakAccount** | ทำได้แค่บัญชี ไม่ใช่ ERP ครบวงจร ไม่มี API ให้ต่อ |
+| **SAP B1 / HANA** | แพงมาก ซับซ้อน ต้องมีทีม IT ใหญ่ |
+| **Odoo** | ต้อง hack ตลอด tech stack เก่า ต้องใช้ XML-RPC |
+| **Excel** | ยืดหยุ่นแต่ไม่มี structure ไม่มี audit trail |
 
 ---
 
-## nEIP แก้ปัญหาเหล่านี้อย่างไร
+## แนวคิดของ nEIP
 
-### AI-Native ตั้งแต่ออกแบบ
+ให้มองอย่างนี้ — **3 ช่องทาง สำหรับ 3 กลุ่มคน**:
 
-ทุก business function เป็น **callable tool** ที่ทั้งคนและ AI เรียกใช้ได้ผ่าน interface เดียวกัน:
+### 1. 🖥️ Web UI — สำหรับคนทำงานเดิม
+บัญชี, การเงิน, admin — **ใช้หน้าจอเหมือน ERP ปกติ** กดๆ คลิกๆ ได้เลย ไม่ต้องเรียนรู้อะไรใหม่ ปล่อยเขาทำงานไป
 
-```typescript
-// AI agent สามารถเรียกใช้ได้เลย
-{
-  name: "finance.create_invoice",
-  description: "สร้างใบแจ้งหนี้ลูกค้า",
-  risk_level: "medium",
-  requires_approval: false,
-  audit_required: true
-}
-```
+### 2. 🔌 REST API — สำหรับ Dev / IT
+เชื่อมต่อระบบอื่น อ่านข้อมูลใน ERP ได้ทันที auto-migrate ข้อมูลเข้าได้ ไม่ต้องจ้าง consultant อีกต่อไป — **186 endpoints พร้อม Swagger docs**
 
-### Zero-setup AI Integration ผ่าน CLI
-
-AI tools ที่ทำงานผ่าน terminal เช่น **Claude Code** เชื่อมต่อ nEIP ได้ทันทีผ่าน CLI — ไม่ต้อง setup MCP หรือ config เพิ่ม:
+### 3. ⌨️ CLI — สำหรับ AI Agent
+ทำมาเพื่อรองรับ **agent-based AI worker** เช่น:
+- **Claude Code** — สั่งงาน ERP ผ่าน terminal ได้เลย
+- **OpenClaw (น้องกุ้ง)** — ต่อไปจะสร้าง invoice ก็สั่งผ่านน้องกุ้งได้
 
 ```bash
-# Claude Code สั่งงาน nEIP ผ่าน CLI ได้เลย
-neip ar invoice create    # สร้างใบแจ้งหนี้
-neip reports trial-balance # ดูงบทดลอง
-neip gl journal list       # ดูรายการบันทึกบัญชี
-neip dashboard             # ดูภาพรวมธุรกิจ
+# น้องกุ้งสั่งสร้างใบแจ้งหนี้
+neip ar invoice create
+
+# Claude Code ดูงบทดลอง
+neip reports trial-balance
+
+# ดูภาพรวมธุรกิจ
+neip dashboard
 ```
 
-> **ทำไมไม่ใช้ MCP?** MCP ต้อง serialize ข้อมูลทุก request ทำให้เปลือง token โดยเฉพาะกับข้อมูล ERP ที่มีขนาดใหญ่ CLI approach ประหยัด token กว่ามาก และในอนาคตสามารถเพิ่ม MCP Server ได้ไม่ยากเพราะมี REST API ครบอยู่แล้ว
+> **เรื่อง MCP** — กำลังศึกษาอยู่ว่าจะเพิ่มดีไหม เพราะ MCP serialize ข้อมูลทุก request ทำให้เปลือง token โดยเฉพาะข้อมูล ERP ที่ใหญ่ ตอนนี้ CLI approach ประหยัดกว่า แต่เพิ่ม MCP ได้ไม่ยากเพราะมี API ครบอยู่แล้ว
 
-### Human-in-the-Loop (HITL) ที่โปร่งใส
+---
 
-AI ช่วยตัดสินใจ แต่ action สำคัญต้องผ่านคน:
-- **Auto Zone** — AI ทำเองได้เลย (เช่น จับคู่ใบเสร็จ)
-- **Suggest Zone** — AI แนะนำ คนกดอนุมัติ (เช่น อนุมัติ PO)
-- **Review Zone** — AI flag ความผิดปกติ คนตรวจสอบ (เช่น discount เกินนโยบาย)
-- **Manual Zone** — คนทำเองเท่านั้น (เช่น ปิดงบปี)
+## สถานะปัจจุบัน
 
-### 3 ช่องทางเข้าถึงเท่าเทียมกัน
+> ⚠️ **Alpha — ยังไม่เสร็จ** แต่ทดสอบผ่านบางส่วนแล้ว
 
-| ช่องทาง | ใครใช้ | ทำอะไรได้ |
-|---------|--------|----------|
-| **Web UI** | พนักงาน, ผู้จัดการ | ดูข้อมูล สร้างเอกสาร อนุมัติ |
-| **REST API** | Developer, ระบบภายนอก | Integration, webhook, automation |
-| **CLI** | AI agent, DevOps, power user | ทุกอย่างที่ Web ทำได้ ผ่าน terminal |
+### 31 Modules (ลอกโครงสร้างจาก SAP มาเลย บอกตรงๆ)
 
-ทุกช่องทางผ่าน **Business Logic เดียวกัน, RBAC เดียวกัน, Audit Trail เดียวกัน**
+| กลุ่ม | Module | ภาษาไทย | API | Web | CLI |
+|-------|--------|---------|:---:|:---:|:---:|
+| **การเงิน** | FI-GL | บัญชีแยกประเภท | ✓ | ✓ | ✓ |
+| | FI-AR | ลูกหนี้การค้า | ✓ | ✓ | ✓ |
+| | FI-AP | เจ้าหนี้การค้า | ✓ | ✓ | ✓ |
+| | FI-AA | สินทรัพย์ถาวร | ✓ | ✓ | ✓ |
+| | FI-BL | กระทบยอดธนาคาร | ✓ | ✓ | ✓ |
+| | FI-TV | ใบหัก ณ ที่จ่าย (ภ.ง.ด.3/53) | ✓ | ✓ | ✓ |
+| | FI-TX | ภาษี VAT 7% / WHT | ✓ | ✓ | ✓ |
+| **ควบคุม** | CO | ศูนย์ต้นทุน / ศูนย์กำไร / งบประมาณ | ✓ | ✓ | ✓ |
+| **ขาย** | SD-QT | ใบเสนอราคา | ✓ | ✓ | ✓ |
+| | SD-SO | ใบสั่งขาย | ✓ | ✓ | ✓ |
+| | SD-DO | ใบส่งของ | ✓ | ✓ | ✓ |
+| | SD-INV | ใบแจ้งหนี้ / ใบกำกับภาษี | ✓ | ✓ | ✓ |
+| | SD-RC | ใบเสร็จรับเงิน | ✓ | ✓ | ✓ |
+| | SD-CN | ใบลดหนี้ | ✓ | ✓ | ✓ |
+| | SD-PAY | รับชำระเงิน | ✓ | ✓ | ✓ |
+| **จัดซื้อ** | MM-PO | ใบสั่งซื้อ | ✓ | ✓ | ✓ |
+| **คลัง** | MM-IM | คลังสินค้า / สต็อก | ✓ | ✓ | ✓ |
+| | MM-PR | สินค้า / SKU | ✓ | ✓ | ✓ |
+| **บุคคล** | HR | พนักงาน / แผนก / เงินเดือน / ลา | ✓ | ✓ | ✓ |
+| **CRM** | CRM | ทะเบียนลูกค้า + ผู้ขาย | ✓ | ✓ | ✓ |
+| **รายงาน** | RPT | งบทดลอง, กำไรขาดทุน, งบดุล, P&L | ✓ | ✓ | ✓ |
+| **แดชบอร์ด** | DASH | ภาพรวมธุรกิจ | ✓ | ✓ | ✓ |
+| **ตรวจสอบ** | AUDIT | บันทึกทุกการเปลี่ยนแปลง | ✓ | ✓ | ✓ |
+
+### วงจรเอกสาร
+
+```
+ขาย:    ใบเสนอราคา → ใบสั่งขาย → ใบส่งของ → ใบแจ้งหนี้ → รับเงิน → ใบเสร็จ
+ซื้อ:    ใบสั่งซื้อ → บิล → จ่ายเงิน → ใบหัก ณ ที่จ่าย
+บัญชี:   บันทึกรายวัน → ผ่านรายการ → งบทดลอง → งบการเงิน → ปิดงวด
+HR:     รับพนักงาน → เงินเดือน → ประกันสังคม → ลา → ลาออก
+คลัง:    สร้างสินค้า → รับเข้า → ขาย → ส่งของ → ตรวจนับ
+```
 
 ---
 
@@ -112,118 +133,87 @@ PGPASSWORD=neip psql -h localhost -p 5433 -U neip -d neip \
 # 4. Setup environment
 cp .env.example .env
 
-# 5. Start API (port 5400)
+# 5. Start API
 node apps/api/dist/index.js
 
-# 6. Start Web UI (port 3100)
+# 6. Start Web UI
 pnpm --filter web dev -- -p 3100
 ```
-
-## Access
 
 | Service | URL |
 |---------|-----|
 | Web UI | http://localhost:3100 |
 | API Docs (Swagger) | http://localhost:5400/api/docs |
-| CLI | `node apps/cli/dist/index.js --help` |
+| CLI Help | `neip --help` |
 
 ---
 
 ## Architecture
 
 ```
-┌─ Clients ─────────────────────────────────┐
-│ Web UI (Next.js 15) │ CLI │ Swagger UI   │
-│ พนักงาน/ผู้จัดการ      │ AI  │ Developer   │
+┌─ ใครใช้อะไร ──────────────────────────────┐
+│ 🖥️ Web UI      → บัญชี, การเงิน, admin    │
+│ 🔌 REST API    → Dev, IT, integration     │
+│ ⌨️ CLI         → AI agent, power user     │
 ├─ API Gateway ─────────────────────────────┤
-│ Fastify 5.8 · 186 endpoints              │
-│ JWT Auth · RBAC 140 perms · Rate Limit   │
-│ Audit Trail (auto-log ทุก mutation)       │
-├─ Tool Registry ───────────────────────────┤
-│ ทุก business function = callable tool    │
-│ Schema + Risk Level + Approval Required  │
-├─ Shared Packages ─────────────────────────┤
+│ Fastify 5.8 · 186 endpoints · JWT        │
+│ RBAC 140 permissions · Audit auto-log    │
+├─ Shared Logic ────────────────────────────┤
 │ @neip/shared · @neip/core · @neip/db    │
 │ @neip/ai · @neip/tax                    │
-├─ Business Modules ────────────────────────┤
-│ Finance: GL·AR·AP·Assets·Bank·WHT·Tax   │
-│ Sales: QT→SO→DO→Invoice→Receipt→CN       │
-│ Purchase: PO→Bill→Payment · Inventory    │
-│ HR: Employee·Dept·Payroll·Leave          │
-│ CO: Cost Center·Profit Center·Budget     │
-│ CRM: Contacts · Reports · Dashboard     │
+├─ Business Modules (31 modules) ──────────┤
+│ Finance · Sales · Purchase · Inventory   │
+│ HR · Controlling · CRM · Reports         │
 ├─ AI Layer ────────────────────────────────┤
-│ BaseAgent · Invoice Matching · HITL      │
-│ Month-End Close · Confidence Zones       │
+│ BaseAgent · HITL · Confidence Zones      │
 ├─ Infrastructure ──────────────────────────┤
 │ PostgreSQL 17 · 58 tables · RLS         │
-│ pg-boss · Docker · Pino logging         │
+│ pg-boss · Docker · Pino                 │
 └───────────────────────────────────────────┘
-```
-
-## Modules (31 Enterprise-Grade)
-
-| Module | ภาษาไทย | API | Web | CLI |
-|--------|---------|:---:|:---:|:---:|
-| FI-GL | บัญชีแยกประเภท | ✓ | ✓ | ✓ |
-| FI-AR | ลูกหนี้การค้า | ✓ | ✓ | ✓ |
-| FI-AP | เจ้าหนี้การค้า | ✓ | ✓ | ✓ |
-| FI-AA | สินทรัพย์ถาวร | ✓ | ✓ | ✓ |
-| FI-BL | กระทบยอดธนาคาร | ✓ | ✓ | ✓ |
-| FI-TV | ใบหัก ณ ที่จ่าย (ภ.ง.ด.3/53) | ✓ | ✓ | ✓ |
-| FI-TX | ภาษี VAT/WHT | ✓ | ✓ | ✓ |
-| CO | ศูนย์ต้นทุน / ศูนย์กำไร / งบประมาณ | ✓ | ✓ | ✓ |
-| SD-QT | ใบเสนอราคา | ✓ | ✓ | ✓ |
-| SD-SO | ใบสั่งขาย | ✓ | ✓ | ✓ |
-| SD-DO | ใบส่งของ | ✓ | ✓ | ✓ |
-| SD-INV | ใบแจ้งหนี้ / ใบกำกับภาษี | ✓ | ✓ | ✓ |
-| SD-RC | ใบเสร็จรับเงิน | ✓ | ✓ | ✓ |
-| SD-CN | ใบลดหนี้ | ✓ | ✓ | ✓ |
-| SD-PAY | รับชำระเงิน | ✓ | ✓ | ✓ |
-| MM-PO | ใบสั่งซื้อ | ✓ | ✓ | ✓ |
-| MM-IM | คลังสินค้า / สต็อก | ✓ | ✓ | ✓ |
-| MM-PR | สินค้า / SKU | ✓ | ✓ | ✓ |
-| HR | พนักงาน / แผนก / เงินเดือน / ลา | ✓ | ✓ | ✓ |
-| CRM | ทะเบียนลูกค้า+ผู้ขาย | ✓ | ✓ | ✓ |
-| RPT | รายงาน + P&L Comparison | ✓ | ✓ | ✓ |
-| DASH | แดชบอร์ด | ✓ | ✓ | ✓ |
-| AUDIT | บันทึกการเปลี่ยนแปลง (Audit Trail) | ✓ | ✓ | ✓ |
-
-## Business Cycles
-
-```
-วงจรขาย:    ใบเสนอราคา → ใบสั่งขาย → ใบส่งของ → ใบแจ้งหนี้ → รับชำระ → ใบเสร็จ
-วงจรซื้อ:    ใบสั่งซื้อ → บิลค่าใช้จ่าย → จ่ายเจ้าหนี้ → ใบหัก ณ ที่จ่าย
-วงจรบัญชี:   บันทึกรายวัน → ผ่านรายการ → งบทดลอง → งบกำไรขาดทุน → งบดุล → ปิดงวด
-วงจร HR:    รับพนักงาน → เงินเดือน → ประกันสังคม → ลางาน → ลาออก
-วงจรคลัง:    สร้างสินค้า → รับเข้าคลัง → ขาย → ส่งของ → ตรวจนับ
 ```
 
 ## Thai Compliance (กฎหมายไทย)
 
-- **VAT 7%** — คำนวณแบบ round-half-up ตามกรมสรรพากร
-- **WHT 8 ประเภท** — ภ.ง.ด.3/53 พร้อมออกใบรับรอง
-- **ประกันสังคม** — 5% สูงสุด 750 บาท (เพดานเงินเดือน 15,000)
-- **PDPA** — ปิดบัง PII ใน list, anonymize พนักงานที่ลาออก, audit trail ครบ
-- **TFAC** — ผังบัญชีมาตรฐานสภาวิชาชีพบัญชี
-- **ปีพุทธศักราช** — รองรับ พ.ศ. ในรายงานและ export
-- **Data Retention** — 7 ปีตามประมวลรัษฎากร มาตรา 87/3
+| หัวข้อ | รายละเอียด |
+|--------|-----------|
+| VAT | 7% round-half-up ตามกรมสรรพากร |
+| WHT | 8 ประเภทรายได้ พร้อมออก ภ.ง.ด.3/53 |
+| ประกันสังคม | 5% สูงสุด 750 บาท |
+| PDPA | ปิดบัง PII, anonymize, audit trail |
+| ผังบัญชี | มาตรฐาน TFAC สภาวิชาชีพบัญชี |
+| ปี พ.ศ. | รองรับพุทธศักราชในรายงาน |
+| เก็บข้อมูล | 7 ปีตามประมวลรัษฎากร ม.87/3 |
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Monorepo | Turborepo + pnpm workspaces |
-| API | Fastify 5.8, TypeScript 5.x strict mode |
-| Web | Next.js 15.5, React 19, Tailwind CSS 4, Zustand, TanStack Query |
+| Monorepo | Turborepo + pnpm |
+| API | Fastify 5.8, TypeScript strict |
+| Web | Next.js 15, React 19, Tailwind 4 |
 | CLI | Commander.js |
-| Database | PostgreSQL 17, Drizzle ORM, Row-Level Security |
-| AI | BaseAgent abstract class, Confidence Zones, pluggable LLM |
-| Tax | bigint satang arithmetic, round-half-up |
-| Auth | argon2id hash, JWT (1hr access + 30d refresh) |
-| Queue | pg-boss v12 (PostgreSQL-based, no Redis) |
-| Container | Docker Compose (db + api + worker) |
+| DB | PostgreSQL 17, Drizzle ORM, RLS |
+| AI | BaseAgent, HITL, Confidence Zones |
+| Auth | argon2id, JWT |
+| Queue | pg-boss v12 |
+
+## แผนต่อไป
+
+- [ ] แก้ Web UI ให้ใช้งานได้ครบทุกหน้า
+- [ ] เพิ่ม E2E tests (Playwright)
+- [ ] พิจารณา MCP Server
+- [ ] เพิ่ม AI agents เฉพาะทาง (cashflow forecast, demand planning)
+- [ ] Mobile app (React Native)
+- [ ] Open source core modules
 
 ## License
 
-Proprietary — Copyright (c) 2026 Chanon N.
+MIT — แจกฟรี ใช้ได้เลย
+
+---
+
+<p align="center">
+  <strong>nEIP</strong> — เนถีบ ERP<br/>
+  สร้างโดย <a href="https://github.com/killernay">เน (Chanon N.)</a><br/>
+  เพราะข้อมูลของคุณ ควรเข้าถึงได้ง่ายๆ ไม่ต้องจ่ายแพง
+</p>
