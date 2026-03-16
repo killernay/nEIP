@@ -588,7 +588,7 @@ export async function invoiceRoutes(
       const rows = await fastify.sql<[InvoiceRow?]>`
         UPDATE invoices
         SET status = 'void', updated_at = NOW()
-        WHERE id = ${id} AND tenant_id = ${tenantId} AND status IN ('draft', 'sent')
+        WHERE id = ${id} AND tenant_id = ${tenantId} AND status IN ('draft', 'sent', 'posted')
         RETURNING *
       `;
       const inv = rows[0];
