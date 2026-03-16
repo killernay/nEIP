@@ -258,8 +258,8 @@ export async function visitPage(
 
   // Phase 1: Wait for React to render (JS bundle executes after domcontentloaded).
   // We wait until we see EITHER the auth spinner OR actual page content.
-  // Timeout: 30s (for cold compilation of unwarmed routes).
-  const reactRenderDeadline = Date.now() + 30000;
+  // Timeout: 60s (allows for cold Next.js compilation).
+  const reactRenderDeadline = Date.now() + 60000;
   let reactRendered = false;
   while (Date.now() < reactRenderDeadline) {
     const spinning = await page.locator('.animate-spin').isVisible().catch(() => false);
@@ -269,17 +269,22 @@ export async function visitPage(
   }
 
   if (!reactRendered) {
-    // Page is still blank after 30s — likely still compiling, try reinjectAuth
+    // Page is still blank after 60s — likely still compiling, try reinjectAuth
     await reinjectAuth(page, path);
   } else {
     // Phase 2: React has rendered. If spinner visible, wait for it to clear.
-    // Auth spinner clears within ~100ms if auth is OK.
-    // If it persists after 10s, auth failed — reinject.
-    const spinnerDeadline = Date.now() + 10000;
+    // The auth spinner (Zustand hydration guard) clears within ~100ms once
+    // auth is confirmed. If it persists > 15s, auth hydration failed — reinject.
+    // NOTE: A visible h1/nav means content is showing — spinner may be a DATA
+    // loading indicator, not the auth guard. In that case skip reinject.
+    const spinnerDeadline = Date.now() + 15000;
     let spinnerCleared = false;
     while (Date.now() < spinnerDeadline) {
       const spinning = await page.locator('.animate-spin').isVisible().catch(() => false);
       if (!spinning) { spinnerCleared = true; break; }
+      // If we can already see page content, auth is fine — spinner is data loading
+      const hasPageContent = await page.locator('h1, h2').first().isVisible().catch(() => false);
+      if (hasPageContent) { spinnerCleared = true; break; }
       await page.waitForTimeout(300);
     }
 
@@ -289,11 +294,14 @@ export async function visitPage(
     }
   }
 
-  // Phase 3: Final spinner wait
-  const finalDeadline = Date.now() + 20000;
+  // Phase 3: Final spinner wait (60s)
+  const finalDeadline = Date.now() + 60000;
   while (Date.now() < finalDeadline) {
     const spinning = await page.locator('.animate-spin').isVisible().catch(() => false);
     if (!spinning) break;
+    // If page content is visible alongside spinner, auth is OK — stop waiting
+    const hasPageContent = await page.locator('h1, h2').first().isVisible().catch(() => false);
+    if (hasPageContent) break;
     await page.waitForTimeout(300);
   }
 
@@ -307,7 +315,12 @@ export async function visitPage(
     hasEmpty = hasEmpty || (await page.locator(`text=${msg}`).first().isVisible().catch(() => false));
   }
   const hasHeading = await page.locator('h1').first().isVisible().catch(() => false);
-  const stillSpinning = await page.locator('.animate-spin').isVisible().catch(() => false);
+  // stillSpinning is only true when the auth guard spinner is blocking the page.
+  // If h1/h2 heading is visible, auth succeeded and any remaining spinner is
+  // a data-loading indicator — report stillSpinning as false in that case.
+  const rawSpinning = await page.locator('.animate-spin').isVisible().catch(() => false);
+  const hasAnyHeading = await page.locator('h1, h2').first().isVisible().catch(() => false);
+  const stillSpinning = rawSpinning && !hasAnyHeading;
   const hasCard = await page.locator('[class*="rounded-lg"]').first().isVisible().catch(() => false);
 
   await page.screenshot({ path: `${SCREENSHOTS_DIR}/${screenshotName}`, fullPage: true });

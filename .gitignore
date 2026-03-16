@@ -16,3 +16,5 @@ pnpm-debug.log*
 test-results/
 .code-review-graph/
 .mcp.json
+_bmad/
+_bmad-output/

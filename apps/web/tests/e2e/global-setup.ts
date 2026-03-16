@@ -129,6 +129,16 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     '/reports',
     '/settings',
     '/invoices/new',
+    '/products',
+    '/bank',
+    '/cost-centers',
+    '/profit-centers',
+    '/employees',
+    '/journal-entries',
+    '/quotations',
+    '/invoices',
+    '/payments',
+    '/receipts',
   ];
 
   console.log(`[global-setup] Pre-warming ${ROUTES_TO_WARM.length} routes...`);
