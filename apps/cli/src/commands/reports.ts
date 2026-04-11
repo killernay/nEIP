@@ -487,5 +487,48 @@ Examples:
       await pnlComparison(options);
     });
 
+  // --- Compliance reports ---
+
+  reports
+    .command('vat-return')
+    .description('รายงาน ภ.พ.30 — VAT return report (ภ.พ.30)')
+    .requiredOption('--year <year>', 'ปีภาษี — Tax year')
+    .requiredOption('--month <month>', 'เดือนภาษี (1-12) — Tax month')
+    .action(async (opts: { year: string; month: string }) => {
+      const result = await api.get<{ data: unknown }>('/api/v1/reports/vat-return', {
+        year: opts.year,
+        month: opts.month,
+      });
+      if (!result.ok) { printError(result.error.detail, result.error.status); process.exit(1); }
+      printSuccess(result.data.data, `VAT Return (ภ.พ.30) — ${opts.month}/${opts.year}:`);
+    });
+
+  reports
+    .command('ssc-filing')
+    .description('รายงานประกันสังคม — Social Security contribution filing')
+    .requiredOption('--year <year>', 'ปี — Year')
+    .requiredOption('--month <month>', 'เดือน (1-12) — Month')
+    .action(async (opts: { year: string; month: string }) => {
+      const result = await api.get<{ data: unknown }>('/api/v1/reports/ssc-filing', {
+        year: opts.year,
+        month: opts.month,
+      });
+      if (!result.ok) { printError(result.error.detail, result.error.status); process.exit(1); }
+      printSuccess(result.data.data, `SSC Filing — ${opts.month}/${opts.year}:`);
+    });
+
+  reports
+    .command('cash-flow')
+    .description('งบกระแสเงินสด — Cash flow statement')
+    .requiredOption('--year <year>', 'ปีบัญชี — Fiscal year')
+    .option('--period <period>', 'งวดบัญชี (1-12) — Fiscal period')
+    .action(async (opts: { year: string; period?: string }) => {
+      const params: Record<string, string> = { year: opts.year };
+      if (opts.period) params['period'] = opts.period;
+      const result = await api.get<{ data: unknown }>('/api/v1/reports/cash-flow', params);
+      if (!result.ok) { printError(result.error.detail, result.error.status); process.exit(1); }
+      printSuccess(result.data.data, `Cash Flow Statement — FY ${opts.year}:`);
+    });
+
   return reports;
 }

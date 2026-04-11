@@ -50,6 +50,10 @@ export default function FiscalSettingsPage(): React.JSX.Element {
   const [toggleTarget, setToggleTarget] = useState<{ type: 'year' | 'period'; id: string; name: string; currentStatus: string } | null>(null);
   const [toggling, setToggling] = useState(false);
 
+  // Year-end close dialog
+  const [yearEndTarget, setYearEndTarget] = useState<FiscalYear | null>(null);
+  const [yearEndClosing, setYearEndClosing] = useState(false);
+
   const handleToggle = useCallback(async () => {
     if (!toggleTarget) return;
     setToggling(true);
@@ -68,6 +72,21 @@ export default function FiscalSettingsPage(): React.JSX.Element {
       setToggling(false);
     }
   }, [toggleTarget, refetch]);
+
+  const handleYearEndClose = useCallback(async () => {
+    if (!yearEndTarget) return;
+    setYearEndClosing(true);
+    try {
+      await api.post(`/settings/fiscal-years/${yearEndTarget.id}/year-end-close`);
+      showToast.success(`Year-end close completed for Fiscal Year ${yearEndTarget.year}. Closing entries posted.`);
+      setYearEndTarget(null);
+      refetch();
+    } catch {
+      showToast.error('Failed to perform year-end close');
+    } finally {
+      setYearEndClosing(false);
+    }
+  }, [yearEndTarget, refetch]);
 
   const statusBadge = (status: 'open' | 'closed'): React.JSX.Element => (
     <span
@@ -126,6 +145,15 @@ export default function FiscalSettingsPage(): React.JSX.Element {
                 </div>
                 <div className="flex items-center gap-2">
                   {statusBadge(fy.status)}
+                  {fy.status === 'open' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setYearEndTarget(fy)}
+                    >
+                      Year-End Close
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -213,6 +241,17 @@ export default function FiscalSettingsPage(): React.JSX.Element {
         confirmVariant={toggleTarget?.currentStatus === 'open' ? 'destructive' : 'primary'}
         onConfirm={handleToggle}
         loading={toggling}
+      />
+      {/* Year-End Close Confirm */}
+      <ConfirmDialog
+        open={yearEndTarget !== null}
+        onOpenChange={(open) => { if (!open) setYearEndTarget(null); }}
+        title={`Year-End Close — Fiscal Year ${yearEndTarget?.year ?? ''}`}
+        description="This will close all periods, post closing journal entries (revenue & expense to retained earnings), and lock the fiscal year. This action is difficult to reverse. Are you sure?"
+        confirmLabel="Run Year-End Close"
+        confirmVariant="destructive"
+        onConfirm={handleYearEndClose}
+        loading={yearEndClosing}
       />
     </div>
   );

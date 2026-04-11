@@ -23,6 +23,7 @@ import {
   AP_PO_RECEIVE,
   AP_PO_CONVERT,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -214,12 +215,6 @@ interface CountRow {
   count: string;
 }
 
-function generateDocNumber(prefix: string): string {
-  const yyyymmdd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const seq = String(Date.now()).slice(-3);
-  return `${prefix}-${yyyymmdd}-${seq}`;
-}
-
 function mapPo(r: PoRow, lines: PoLineRow[] = []) {
   return {
     id: r.id,
@@ -293,7 +288,7 @@ export async function purchaseOrderRoutes(
       });
 
       const poId = crypto.randomUUID();
-      const documentNumber = generateDocNumber('PO');
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'purchase_order', new Date().getFullYear());
 
       await fastify.sql`
         INSERT INTO purchase_orders (id, document_number, vendor_id, status, order_date, expected_date, total_satang, notes, tenant_id, created_by)
@@ -696,7 +691,7 @@ export async function purchaseOrderRoutes(
 
       // Create the bill
       const billId = crypto.randomUUID();
-      const billDocumentNumber = `BILL-${Date.now()}`;
+      const billDocumentNumber = await nextDocNumber(fastify.sql, tenantId, 'bill', new Date().getFullYear());
       const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
       await fastify.sql`

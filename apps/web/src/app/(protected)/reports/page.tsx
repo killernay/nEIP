@@ -5,7 +5,9 @@ import {
   ClipboardList,
   FileSpreadsheet,
   GitCompare,
+  Receipt,
   Scale,
+  Shield,
   TrendingUp,
   Users,
 } from 'lucide-react';
@@ -65,6 +67,24 @@ const REPORTS: ReportLink[] = [
     description: 'Monthly, YTD, year-over-year, and month-over-month profit & loss comparison views',
     href: '/reports/pnl',
     icon: GitCompare,
+  },
+  {
+    title: 'AR Aging',
+    description: 'Outstanding customer invoices by aging bucket (Current, 1-30, 31-60, 61-90, >90 days)',
+    href: '/reports/ar-aging',
+    icon: ClipboardList,
+  },
+  {
+    title: 'VAT Return (ภ.พ.30)',
+    description: 'Monthly VAT return summary for Revenue Department filing',
+    href: '/reports/vat-return',
+    icon: Receipt,
+  },
+  {
+    title: 'SSC Filing (สปส. 1-10)',
+    description: 'Monthly Social Security contribution filing report',
+    href: '/reports/ssc-filing',
+    icon: Shield,
   },
 ];
 

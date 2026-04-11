@@ -16,6 +16,7 @@ import {
   AP_PAYMENT_CREATE,
   AP_PAYMENT_READ,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -170,7 +171,7 @@ export async function billPaymentRoutes(
       }
 
       const paymentId = crypto.randomUUID();
-      const documentNumber = `PMT-${Date.now()}`;
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'bill_payment', new Date().getFullYear());
 
       await fastify.sql`
         INSERT INTO bill_payments (id, document_number, bill_id, amount_satang, payment_date, payment_method, reference, notes, tenant_id, created_by)

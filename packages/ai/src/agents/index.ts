@@ -27,3 +27,59 @@ export type {
   FixedAsset,
   AccrualItem,
 } from './month-end-close-agent.js';
+
+// Phase 6 agents
+export { AnomalyDetectionAgent } from './anomaly-detection-agent.js';
+export type {
+  AnomalyScanInput,
+  AnomalyScanOutput,
+  AnomalyFinding,
+  AnomalySeverity,
+  AnomalyType,
+  JournalEntryRecord,
+} from './anomaly-detection-agent.js';
+
+export { CashFlowForecastAgent } from './cash-flow-forecast-agent.js';
+export type {
+  CashFlowForecastInput,
+  CashFlowForecastOutput,
+  DailyProjection,
+  ArAgingItem,
+  ApAgingItem,
+  RecurringJeItem,
+} from './cash-flow-forecast-agent.js';
+
+export { CategorizationAgent } from './categorization-agent.js';
+export type {
+  CategorizationInput,
+  CategorizationOutput,
+  CategorySuggestion,
+  CategoryRule,
+} from './categorization-agent.js';
+
+export { BankReconAgent } from './bank-recon-agent.js';
+export type {
+  BankReconInput,
+  BankReconOutput,
+  BankTransaction,
+  LedgerEntry,
+  ReconMatch,
+} from './bank-recon-agent.js';
+
+export { DocumentParserAgent } from './document-parser-agent.js';
+export type {
+  DocumentParseInput,
+  DocumentParseOutput,
+  ExtractedField,
+  ExtractedItem,
+} from './document-parser-agent.js';
+
+export { PredictiveAgent } from './predictive-agent.js';
+export type {
+  PredictiveInput,
+  PredictiveOutput,
+  PredictionType,
+  HistoricalDataPoint,
+  ForecastPoint,
+  TrendLine,
+} from './predictive-agent.js';

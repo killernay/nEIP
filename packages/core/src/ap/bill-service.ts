@@ -17,7 +17,7 @@
  */
 
 import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, like } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import {
   ValidationError,
@@ -28,10 +28,21 @@ import {
 } from '@neip/shared';
 import type { ToolResult } from '@neip/shared';
 import type { DbClient } from '@neip/db';
-import { bills, bill_line_items, vendors } from '@neip/db';
+import { bills, bill_line_items, vendors, journal_entries, journal_entry_lines, chart_of_accounts } from '@neip/db';
 import type { ToolDefinition, ExecutionContext } from '../tool-registry/types.js';
 import { EventStore } from '../events/event-store.js';
 import { DocumentNumberingService } from '../gl/document-numbering.js';
+
+// Thai VAT rate: 7% expressed in basis points (700 = 7%)
+const VAT_RATE_BASIS_POINTS = 700n;
+
+/** Compute VAT amount (round half up) using bigint arithmetic. */
+function calcVat(subTotalSatang: bigint): bigint {
+  const scaled = subTotalSatang * VAT_RATE_BASIS_POINTS;
+  const quotient = scaled / 10000n;
+  const remainder = scaled % 10000n;
+  return remainder * 2n >= 10000n ? quotient + 1n : quotient;
+}
 
 // ---------------------------------------------------------------------------
 // Input schemas
@@ -272,17 +283,6 @@ export function createBillTools(
         );
       }
 
-      const postedAt = new Date();
-
-      await db
-        .update(bills)
-        .set({
-          status: 'posted',
-          posted_at: postedAt,
-          updated_at: new Date(),
-        })
-        .where(eq(bills.id, params.billId));
-
       // Get lines
       const lineRows = await db
         .select()
@@ -297,6 +297,119 @@ export function createBillTools(
         accountId: l.account_id,
       }));
 
+      // Look up AP account (code 2100) and Input VAT account (code 1170)
+      const apAccounts = await db
+        .select({ id: chart_of_accounts.id })
+        .from(chart_of_accounts)
+        .where(
+          and(
+            eq(chart_of_accounts.tenant_id, ctx.tenantId),
+            like(chart_of_accounts.code, '2100%'),
+            eq(chart_of_accounts.account_type, 'liability'),
+          ),
+        )
+        .limit(1);
+
+      const inputVatAccounts = await db
+        .select({ id: chart_of_accounts.id })
+        .from(chart_of_accounts)
+        .where(
+          and(
+            eq(chart_of_accounts.tenant_id, ctx.tenantId),
+            like(chart_of_accounts.code, '1170%'),
+            eq(chart_of_accounts.account_type, 'asset'),
+          ),
+        )
+        .limit(1);
+
+      const apAccountId = apAccounts[0]?.id ?? null;
+      const inputVatAccountId = inputVatAccounts[0]?.id ?? null;
+
+      // Calculate VAT
+      const subTotalSatang = BigInt(bill.total_satang);
+      const vatAmountSatang = calcVat(subTotalSatang);
+      const grandTotalSatang = subTotalSatang + vatAmountSatang;
+
+      // Create Journal Entry: Dr Expense per line (subTotal), Dr Input VAT, Cr AP (grandTotal)
+      const postedAt = new Date();
+      const fiscalYear = postedAt.getFullYear();
+      const fiscalPeriod = postedAt.getMonth() + 1;
+      const jeId = uuidv7();
+      const jeDocNumber = await docNumbering.next(
+        ctx.tenantId,
+        'journal_entry',
+        fiscalYear,
+      );
+
+      await db.insert(journal_entries).values({
+        id: jeId,
+        document_number: jeDocNumber,
+        description: `Bill posted: ${bill.document_number}`,
+        status: 'posted',
+        fiscal_year: fiscalYear,
+        fiscal_period: fiscalPeriod,
+        tenant_id: ctx.tenantId,
+        created_by: ctx.userId,
+        posted_at: postedAt,
+        created_at: postedAt,
+        updated_at: postedAt,
+      });
+
+      // Dr Expense — one line per bill line item
+      let jeLineNum = 1;
+      for (const line of lineRows) {
+        await db.insert(journal_entry_lines).values({
+          id: uuidv7(),
+          entry_id: jeId,
+          line_number: jeLineNum,
+          account_id: line.account_id,
+          description: line.description,
+          debit_satang: BigInt(line.amount_satang),
+          credit_satang: 0n,
+          created_at: postedAt,
+        });
+        jeLineNum++;
+      }
+
+      // Dr Input VAT (7% VAT on subTotal)
+      if (inputVatAccountId && vatAmountSatang > 0n) {
+        await db.insert(journal_entry_lines).values({
+          id: uuidv7(),
+          entry_id: jeId,
+          line_number: jeLineNum,
+          account_id: inputVatAccountId,
+          description: `Input VAT 7% — ${bill.document_number}`,
+          debit_satang: vatAmountSatang,
+          credit_satang: 0n,
+          created_at: postedAt,
+        });
+        jeLineNum++;
+      }
+
+      // Cr Accounts Payable (grandTotal = subTotal + VAT)
+      if (apAccountId) {
+        await db.insert(journal_entry_lines).values({
+          id: uuidv7(),
+          entry_id: jeId,
+          line_number: jeLineNum,
+          account_id: apAccountId,
+          description: `Accounts Payable — ${bill.document_number}`,
+          debit_satang: 0n,
+          credit_satang: grandTotalSatang,
+          created_at: postedAt,
+        });
+      }
+
+      // Update bill: draft → posted
+      await db
+        .update(bills)
+        .set({
+          status: 'posted',
+          posted_at: postedAt,
+          updated_at: new Date(),
+        })
+        .where(eq(bills.id, params.billId));
+
       // Emit domain event
       await eventStore.append({
         type: 'BillPosted',
@@ -305,10 +418,11 @@ export function createBillTools(
         tenantId: ctx.tenantId,
         payload: {
           documentNumber: bill.document_number,
+          journalEntryId: jeId,
           postedAt: postedAt.toISOString(),
         },
         version: 2,
-        fiscalYear: new Date().getFullYear(),
+        fiscalYear,
       });
 
       return ok({

@@ -21,6 +21,7 @@ import {
   FI_ASSET_DEPRECIATE,
   FI_ASSET_DISPOSE,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -566,7 +567,7 @@ export async function fixedAssetRoutes(
 
       // Create Journal Entry (debit depreciation expense, credit accumulated depreciation)
       const jeId = crypto.randomUUID();
-      const jeNumber = `DEP-${Date.now()}`;
+      const jeNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', new Date().getFullYear());
       const now = new Date();
       const fiscalYear = now.getFullYear();
       const fiscalPeriod = now.getMonth() + 1;
@@ -691,7 +692,7 @@ export async function fixedAssetRoutes(
 
       // Create disposal Journal Entry
       const jeId = crypto.randomUUID();
-      const jeNumber = `DIS-${Date.now()}`;
+      const jeNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', new Date().getFullYear());
       const now = new Date();
       const fiscalYear = now.getFullYear();
       const fiscalPeriod = now.getMonth() + 1;

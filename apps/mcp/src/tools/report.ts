@@ -195,4 +195,164 @@ export function registerReportTools(server: McpServer): void {
       }
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_vat_return
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_vat_return',
+    'สร้างแบบ ภ.พ.30 — Generate VAT return report (ภ.พ.30)',
+    {
+      taxYear: z.number().describe('Tax year'),
+      taxMonth: z.number().describe('Tax month (1-12)'),
+    },
+    async ({ taxYear, taxMonth }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/reports/vat-return?taxYear=${taxYear}&taxMonth=${taxMonth}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_ssc_filing
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_ssc_filing',
+    'สร้างแบบ สปส. — Generate social security contribution filing (สปส.1-10)',
+    {
+      year: z.number().describe('Year'),
+      month: z.number().describe('Month (1-12)'),
+    },
+    async ({ year, month }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/reports/ssc-filing?year=${year}&month=${month}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_cash_flow
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_cash_flow',
+    'งบกระแสเงินสด — Generate cash flow statement',
+    {
+      startDate: z.string().optional().describe('Start date (YYYY-MM-DD)'),
+      endDate: z.string().optional().describe('End date (YYYY-MM-DD)'),
+    },
+    async ({ startDate, endDate }) => {
+      try {
+        const params: string[] = [];
+        if (startDate) params.push(`startDate=${startDate}`);
+        if (endDate) params.push(`endDate=${endDate}`);
+        const qs = params.length > 0 ? `?${params.join('&')}` : '';
+        const data = await apiCall<Record<string, unknown>>('GET', `/reports/cash-flow${qs}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: run_anomaly_scan
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'run_anomaly_scan',
+    'สแกนความผิดปกติ — Run AI anomaly detection scan on transactions',
+    {
+      scope: z.enum(['all', 'gl', 'ar', 'ap', 'payroll']).optional().default('all').describe('Scan scope'),
+      startDate: z.string().optional().describe('Start date (YYYY-MM-DD)'),
+      endDate: z.string().optional().describe('End date (YYYY-MM-DD)'),
+    },
+    async ({ scope, startDate, endDate }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/ai/anomaly-scan', {
+          scope, startDate, endDate,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: run_cash_forecast
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'run_cash_forecast',
+    'พยากรณ์กระแสเงินสด — Run AI cash flow forecast',
+    {
+      horizonDays: z.number().optional().default(30).describe('Forecast horizon in days'),
+    },
+    async ({ horizonDays }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/ai/cash-forecast', {
+          horizonDays,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: categorize_transaction
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'categorize_transaction',
+    'จัดหมวดหมู่รายการ — AI-categorize a bank transaction',
+    {
+      description: z.string().describe('Transaction description'),
+      amountSatang: z.string().describe('Amount in satang'),
+      bankAccountId: z.string().optional().describe('Bank account ID'),
+    },
+    async ({ description, amountSatang, bankAccountId }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/ai/categorize', {
+          description, amountSatang, bankAccountId,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_predictions
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_predictions',
+    'สร้างการพยากรณ์ — Generate AI predictions (revenue, expenses, etc.)',
+    {
+      metric: z.enum(['revenue', 'expenses', 'profit', 'cash_balance', 'ar_collections']).describe('Metric to predict'),
+      horizonMonths: z.number().optional().default(3).describe('Prediction horizon in months'),
+    },
+    async ({ metric, horizonMonths }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/ai/predictions', {
+          metric, horizonMonths,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
 }

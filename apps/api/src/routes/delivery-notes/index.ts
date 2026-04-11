@@ -3,11 +3,12 @@
  *   POST /api/v1/delivery-notes              — create from sales order
  *   GET  /api/v1/delivery-notes              — list
  *   GET  /api/v1/delivery-notes/:id          — detail
- *   POST /api/v1/delivery-notes/:id/deliver  — mark as delivered (updates SO line delivered_quantity)
+ *   POST /api/v1/delivery-notes/:id/deliver             — mark as delivered (updates SO line delivered_quantity)
+ *   POST /api/v1/delivery-notes/:id/convert-to-invoice  — create invoice from delivered DO
  */
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { NotFoundError, ConflictError, API_V1_PREFIX } from '@neip/shared';
+import { NotFoundError, ConflictError, ValidationError, API_V1_PREFIX } from '@neip/shared';
 import { requireAuth } from '../../hooks/require-auth.js';
 import { requirePermission } from '../../hooks/require-permission.js';
 import { toISO } from '../../lib/to-iso.js';
@@ -15,7 +16,9 @@ import {
   AR_DO_CREATE,
   AR_DO_READ,
   AR_DO_DELIVER,
+  AR_INVOICE_CREATE,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -147,11 +150,7 @@ interface CountRow {
   count: string;
 }
 
-function generateDocNumber(prefix: string): string {
-  const yyyymmdd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const seq = String(Date.now()).slice(-3);
-  return `${prefix}-${yyyymmdd}-${seq}`;
-}
+// Document numbering now uses DocumentNumberingService via nextDocNumber()
 
 // ---------------------------------------------------------------------------
 // Route plugin
@@ -191,7 +190,8 @@ export async function deliveryNoteRoutes(
       }
 
       const doId = crypto.randomUUID();
-      const documentNumber = generateDocNumber('DO');
+      const fiscalYear = new Date().getFullYear();
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'delivery_note', fiscalYear);
 
       await fastify.sql`
         INSERT INTO delivery_notes (id, document_number, sales_order_id, customer_id, customer_name, status, delivery_date, notes, tenant_id, created_by)
@@ -481,6 +481,166 @@ export async function deliveryNoteRoutes(
         })),
         createdAt: toISO(doc.created_at),
         updatedAt: new Date().toISOString(),
+      });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/delivery-notes/:id/convert-to-invoice — delivered → create invoice
+  // -------------------------------------------------------------------------
+  fastify.post<{ Params: IdParams }>(
+    `${API_V1_PREFIX}/delivery-notes/:id/convert-to-invoice`,
+    {
+      schema: {
+        description: 'Convert a delivered delivery note to an invoice (DO → INV)',
+        tags: ['ar'],
+        security: [{ bearerAuth: [] }],
+        params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+        response: {
+          201: {
+            description: 'Invoice created from delivery note',
+            type: 'object',
+            properties: {
+              deliveryNoteId: { type: 'string' },
+              invoiceId: { type: 'string' },
+              invoiceNumber: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(AR_DO_READ), requirePermission(AR_INVOICE_CREATE)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { tenantId, sub: userId } = request.user;
+
+      // Fetch delivery note
+      const doRows = await fastify.sql<[DoRow?]>`
+        SELECT * FROM delivery_notes WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      const doc = doRows[0];
+      if (!doc) throw new NotFoundError({ detail: `Delivery note ${id} not found.` });
+
+      if (doc.status !== 'delivered') {
+        throw new ConflictError({
+          detail: `Delivery note ${id} cannot be converted — current status is "${doc.status}". Only delivered delivery notes can be converted to invoice.`,
+        });
+      }
+
+      // Check if already converted (prevent double-conversion)
+      const existingInvRows = await fastify.sql<[{ id: string }?]>`
+        SELECT id FROM invoices WHERE delivery_note_id = ${id} LIMIT 1
+      `;
+      if (existingInvRows[0]) {
+        throw new ConflictError({
+          detail: `Delivery note ${id} has already been converted to invoice ${existingInvRows[0].id}.`,
+        });
+      }
+
+      // Fetch DO lines
+      const doLines = await fastify.sql<DoLineRow[]>`
+        SELECT * FROM delivery_note_lines WHERE delivery_note_id = ${id}
+      `;
+
+      // Fetch SO line prices to build invoice lines
+      interface SoLinePriceRow {
+        id: string;
+        description: string;
+        unit_price_satang: bigint;
+      }
+      const soLineIds = doLines.map((l) => l.sales_order_line_id);
+      let soLinePrices: SoLinePriceRow[] = [];
+      if (soLineIds.length > 0) {
+        // Fetch each SO line individually (tagged template doesn't support IN arrays easily)
+        soLinePrices = [];
+        for (const soLineId of soLineIds) {
+          const rows = await fastify.sql<SoLinePriceRow[]>`
+            SELECT id, description, unit_price_satang FROM sales_order_lines WHERE id = ${soLineId}
+          `;
+          if (rows[0]) soLinePrices.push(rows[0]);
+        }
+      }
+      const priceMap = new Map(soLinePrices.map((r) => [r.id, r]));
+
+      // Build invoice lines with prices from SO lines
+      let totalSatang = 0n;
+      const invoiceLines: Array<{
+        id: string;
+        lineNumber: number;
+        description: string;
+        quantity: number;
+        unitPriceSatang: string;
+        totalSatang: string;
+        accountId: string | null;
+      }> = [];
+
+      for (let i = 0; i < doLines.length; i++) {
+        const doLine = doLines[i]!;
+        const soLine = priceMap.get(doLine.sales_order_line_id);
+        if (!soLine) {
+          throw new ValidationError({
+            detail: `Sales order line ${doLine.sales_order_line_id} not found for DO line.`,
+          });
+        }
+        const unitPrice = BigInt(soLine.unit_price_satang);
+        const qty = BigInt(Math.round(doLine.quantity_delivered * 100));
+        const lineTotal = unitPrice * qty / 100n;
+        totalSatang += lineTotal;
+
+        invoiceLines.push({
+          id: crypto.randomUUID(),
+          lineNumber: i + 1,
+          description: doLine.description,
+          quantity: doLine.quantity_delivered,
+          unitPriceSatang: unitPrice.toString(),
+          totalSatang: lineTotal.toString(),
+          accountId: null,
+        });
+      }
+
+      // Create the invoice
+      const invoiceId = crypto.randomUUID();
+      const invFiscalYear = new Date().getFullYear();
+      const invoiceNumber = await nextDocNumber(fastify.sql, tenantId, 'invoice', invFiscalYear);
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
+      const dueDateStr = dueDate.toISOString().slice(0, 10);
+
+      await fastify.sql`
+        INSERT INTO invoices (
+          id, invoice_number, customer_id, status, total_satang, paid_satang,
+          due_date, notes, delivery_note_id, sales_order_id, tenant_id, created_by
+        ) VALUES (
+          ${invoiceId}, ${invoiceNumber}, ${doc.customer_id}, 'draft',
+          ${totalSatang.toString()}::bigint, 0,
+          ${dueDateStr}, ${doc.notes ?? null}, ${id}, ${doc.sales_order_id},
+          ${tenantId}, ${userId}
+        )
+      `;
+
+      // Insert invoice line items
+      for (const line of invoiceLines) {
+        await fastify.sql`
+          INSERT INTO invoice_line_items (
+            id, invoice_id, line_number, description, quantity,
+            unit_price_satang, total_satang, account_id
+          ) VALUES (
+            ${line.id}, ${invoiceId}, ${line.lineNumber}, ${line.description},
+            ${line.quantity}, ${line.unitPriceSatang}::bigint,
+            ${line.totalSatang}::bigint, ${line.accountId}
+          )
+        `;
+      }
+
+      request.log.info(
+        { deliveryNoteId: id, invoiceId, invoiceNumber, salesOrderId: doc.sales_order_id, tenantId },
+        'Delivery note converted to invoice',
+      );
+
+      return reply.status(201).send({
+        deliveryNoteId: id,
+        invoiceId,
+        invoiceNumber,
       });
     },
   );

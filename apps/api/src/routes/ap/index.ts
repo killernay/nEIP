@@ -32,6 +32,7 @@ import { billRoutes } from './bills.js';
 import { billPaymentRoutes } from './bill-payments.js';
 import { vendorRoutes } from './vendors.js';
 import { purchaseOrderRoutes } from '../purchase-orders/index.js';
+import { threeWayMatchRoutes } from './three-way-match.js';
 
 export async function apRoutes(
   fastify: FastifyInstance,
@@ -41,4 +42,5 @@ export async function apRoutes(
   await fastify.register(billPaymentRoutes);
   await fastify.register(vendorRoutes);
   await fastify.register(purchaseOrderRoutes);
+  await fastify.register(threeWayMatchRoutes);
 }

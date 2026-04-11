@@ -68,6 +68,9 @@ importers:
       '@fastify/swagger-ui':
         specifier: ^5.2.5
         version: 5.2.5
+      '@neip/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@neip/core':
         specifier: workspace:*
         version: link:../../packages/core

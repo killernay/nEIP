@@ -20,6 +20,7 @@ export {
   createJournalEntryTools,
   DocumentNumberingService,
   formatDocumentNumber,
+  nextDocNumber,
   createFiscalPeriodTools,
 } from './gl/index.js';
 export type {

@@ -167,5 +167,18 @@ Examples:
     .option('--month <month>', 'เดือนภาษี — Tax month')
     .action(async (opts: { year?: string; month?: string }) => { await whtSummary(opts); });
 
+  cmd.command('annual-cert')
+    .description('ออก 50 ทวิ — Generate annual WHT certificate (50 ทวิ) for an employee')
+    .requiredOption('--employee <employeeId>', 'รหัสพนักงาน — Employee ID')
+    .requiredOption('--year <year>', 'ปีภาษี — Tax year')
+    .action(async (opts: { employee: string; year: string }) => {
+      const result = await api.get<{ data: unknown }>(`/api/v1/wht-certificates/annual-cert`, {
+        employeeId: opts.employee,
+        taxYear: opts.year,
+      });
+      if (!result.ok) { printError(result.error.detail, result.error.status); process.exit(1); }
+      printSuccess(result.data.data, `Annual WHT certificate (50 ทวิ) — Employee ${opts.employee}, Year ${opts.year}:`);
+    });
+
   return cmd;
 }

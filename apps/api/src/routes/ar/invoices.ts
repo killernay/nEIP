@@ -17,7 +17,9 @@ import {
   AR_INVOICE_CREATE,
   AR_INVOICE_READ,
   AR_INVOICE_VOID,
+  FI_ETAX_READ,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // Thai VAT rate: 7% expressed in basis points (700 = 7%)
 const VAT_RATE_BASIS_POINTS = 700n;
@@ -243,7 +245,8 @@ export async function invoiceRoutes(
       }
 
       const invoiceId = crypto.randomUUID();
-      const invoiceNumber = `INV-${Date.now()}`;
+      const fiscalYear = new Date().getFullYear();
+      const invoiceNumber = await nextDocNumber(fastify.sql, tenantId, 'invoice', fiscalYear);
 
       await fastify.sql`
         INSERT INTO invoices (id, invoice_number, customer_id, status, total_satang, paid_satang, due_date, notes, tenant_id, created_by)
@@ -456,7 +459,8 @@ export async function invoiceRoutes(
         SELECT * FROM invoice_line_items WHERE invoice_id = ${id} ORDER BY line_number
       `;
 
-      // Look up AR account (code 1100) and Revenue account (code 4000) for this tenant
+      // Look up AR account (code 1100), Revenue account (code 4000),
+      // and VAT Payable account (code 2110) for this tenant
       const arAccounts = await fastify.sql<[{ id: string }?]>`
         SELECT id FROM chart_of_accounts
         WHERE tenant_id = ${tenantId} AND code LIKE '1100%' AND account_type = 'asset'
@@ -467,17 +471,25 @@ export async function invoiceRoutes(
         WHERE tenant_id = ${tenantId} AND account_type = 'revenue'
         ORDER BY code ASC LIMIT 1
       `;
+      const vatPayableAccounts = await fastify.sql<[{ id: string }?]>`
+        SELECT id FROM chart_of_accounts
+        WHERE tenant_id = ${tenantId} AND code LIKE '2110%' AND account_type = 'liability'
+        ORDER BY code ASC LIMIT 1
+      `;
 
       const arAccountId = arAccounts[0]?.id ?? null;
       const revAccountId = revAccounts[0]?.id ?? null;
+      const vatPayableAccountId = vatPayableAccounts[0]?.id ?? null;
 
-      // Create Journal Entry: Dr AR (total), Cr Revenue per line
+      // Create Journal Entry: Dr AR (grandTotal), Cr Revenue per line (subTotal), Cr VAT Payable (vatAmount)
       const jeId = crypto.randomUUID();
-      const jeNumber = `INV-JE-${Date.now()}`;
       const now = new Date();
       const fiscalYear = now.getFullYear();
+      const jeNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', fiscalYear);
       const fiscalPeriod = now.getMonth() + 1;
-      const totalSatang = BigInt(inv.total_satang);
+      const subTotalSatang = BigInt(inv.total_satang);
+      const vatAmountSatang = calcVat(subTotalSatang);
+      const grandTotalSatang = subTotalSatang + vatAmountSatang;
 
       await fastify.sql`
         INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, tenant_id, created_by, posted_at)
@@ -489,7 +501,7 @@ export async function invoiceRoutes(
         )
       `;
 
-      // Dr AR (entire invoice total)
+      // Dr AR (grandTotal = subTotal + VAT)
       if (arAccountId) {
         await fastify.sql`
           INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
@@ -497,12 +509,12 @@ export async function invoiceRoutes(
             ${crypto.randomUUID()}, ${jeId}, 1,
             ${arAccountId},
             ${'Accounts Receivable — ' + inv.invoice_number},
-            ${totalSatang.toString()}::bigint, 0
+            ${grandTotalSatang.toString()}::bigint, 0
           )
         `;
       }
 
-      // Cr Revenue — one line per invoice line item
+      // Cr Revenue — one line per invoice line item (subTotal breakdown)
       let lineNum = 2;
       for (const line of lines) {
         const accountId = line.account_id ?? revAccountId;
@@ -518,6 +530,19 @@ export async function invoiceRoutes(
           `;
           lineNum++;
         }
+      }
+
+      // Cr VAT Payable (7% VAT on subTotal)
+      if (vatPayableAccountId && vatAmountSatang > 0n) {
+        await fastify.sql`
+          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+          VALUES (
+            ${crypto.randomUUID()}, ${jeId}, ${lineNum},
+            ${vatPayableAccountId},
+            ${'VAT Payable 7% — ' + inv.invoice_number},
+            0, ${vatAmountSatang.toString()}::bigint
+          )
+        `;
       }
 
       // Update invoice: draft → posted
@@ -607,6 +632,131 @@ export async function invoiceRoutes(
       request.log.info({ invoiceId: id, tenantId }, 'Invoice voided');
 
       return reply.status(200).send(buildInvoiceResponse(inv, []));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/invoices/:id/e-tax — e-Tax Invoice (ใบกำกับภาษีอิเล็กทรอนิกส์)
+  // -------------------------------------------------------------------------
+  fastify.get<{ Params: IdParams }>(
+    `${API_V1_PREFIX}/invoices/:id/e-tax`,
+    {
+      schema: {
+        description: 'Generate e-Tax Invoice structured data (ใบกำกับภาษี) following Thai e-Tax Invoice requirements',
+        tags: ['ar', 'thai-compliance'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              documentType: { type: 'string' },
+              documentTypeCode: { type: 'string' },
+              seller: { type: 'object' },
+              buyer: { type: 'object' },
+              invoice: { type: 'object' },
+              generatedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(FI_ETAX_READ)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { tenantId } = request.user;
+
+      // Fetch invoice
+      const invRows = await fastify.sql<[InvoiceRow?]>`
+        SELECT * FROM invoices WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      const inv = invRows[0];
+      if (!inv) throw new NotFoundError({ detail: `Invoice ${id} not found.` });
+
+      if (inv.status === 'draft') {
+        throw new ValidationError({ detail: 'e-Tax Invoice can only be generated for posted invoices.' });
+      }
+
+      // Fetch line items
+      const lines = await fastify.sql<InvoiceLineRow[]>`
+        SELECT * FROM invoice_line_items WHERE invoice_id = ${id} ORDER BY line_number
+      `;
+
+      // Fetch seller (tenant/firm) info
+      interface FirmInfo {
+        company_name: string | null; tax_id: string | null;
+        branch_number: string | null; address: string | null;
+      }
+      const firmRows = await fastify.sql<[FirmInfo?]>`
+        SELECT company_name, tax_id, branch_number, address
+        FROM tenants WHERE id = ${tenantId} LIMIT 1
+      `;
+      const firm = firmRows[0];
+
+      // Fetch buyer (customer/contact) info
+      interface ContactInfo {
+        company_name: string; tax_id: string | null;
+        branch_number: string | null; contact_person: string | null;
+        address_line1: string | null; address_line2: string | null;
+        city: string | null; province: string | null;
+        postal_code: string | null; country: string;
+      }
+      const contactRows = await fastify.sql<[ContactInfo?]>`
+        SELECT company_name, tax_id, branch_number, contact_person,
+               address_line1, address_line2, city, province, postal_code, country
+        FROM contacts WHERE id = ${inv.customer_id} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      const buyer = contactRows[0];
+
+      const subTotal = BigInt(inv.total_satang);
+      const vatAmount = calcVat(subTotal);
+      const grandTotal = subTotal + vatAmount;
+
+      const eTaxItems = lines.map((l) => ({
+        lineNumber: l.line_number,
+        description: l.description,
+        quantity: l.quantity,
+        unitPriceSatang: l.unit_price_satang.toString(),
+        totalSatang: l.total_satang.toString(),
+      }));
+
+      return reply.status(200).send({
+        documentType: 'ใบกำกับภาษี',
+        documentTypeCode: 'T02',
+        seller: {
+          companyName: firm?.company_name ?? tenantId,
+          taxId: firm?.tax_id ?? null,
+          branchNumber: firm?.branch_number ?? '00000',
+          address: firm?.address ?? null,
+        },
+        buyer: {
+          companyName: buyer?.company_name ?? null,
+          taxId: buyer?.tax_id ?? null,
+          branchNumber: buyer?.branch_number ?? '00000',
+          contactPerson: buyer?.contact_person ?? null,
+          address: buyer
+            ? [buyer.address_line1, buyer.address_line2, buyer.city, buyer.province, buyer.postal_code, buyer.country]
+                .filter(Boolean)
+                .join(', ')
+            : null,
+        },
+        invoice: {
+          invoiceNumber: inv.invoice_number,
+          invoiceDate: inv.posted_at ? toISO(inv.posted_at) : toISO(inv.created_at),
+          dueDate: inv.due_date,
+          items: eTaxItems,
+          subTotalSatang: subTotal.toString(),
+          vatRateBasisPoints: Number(VAT_RATE_BASIS_POINTS),
+          vatAmountSatang: vatAmount.toString(),
+          grandTotalSatang: grandTotal.toString(),
+          currency: 'THB',
+        },
+        generatedAt: new Date().toISOString(),
+      });
     },
   );
 }

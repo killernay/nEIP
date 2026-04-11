@@ -21,6 +21,7 @@ import {
   AP_BILL_UPDATE,
   AP_BILL_APPROVE,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -202,7 +203,7 @@ export async function billRoutes(
       });
 
       const billId = crypto.randomUUID();
-      const documentNumber = `BILL-${Date.now()}`;
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'bill', new Date().getFullYear());
 
       await fastify.sql`
         INSERT INTO bills (id, document_number, vendor_id, total_satang, paid_satang, due_date, notes, status, tenant_id, created_by)

@@ -23,6 +23,7 @@
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
+    "@neip/ai": "workspace:*",
     "@neip/core": "workspace:*",
     "@neip/db": "workspace:*",
     "@neip/shared": "workspace:*",

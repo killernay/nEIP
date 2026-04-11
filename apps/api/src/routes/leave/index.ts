@@ -392,4 +392,198 @@ export async function leaveRoutes(
       return reply.status(200).send(mapLeaveRequest(rows[0]));
     },
   );
+
+  // =========================================================================
+  // 4.8 Leave Management Enhancement — Accrual Rules + Public Holidays
+  // =========================================================================
+
+  // POST /leave-accrual-rules
+  fastify.post<{ Body: Record<string, unknown> }>(
+    `${API_V1_PREFIX}/leave-accrual-rules`,
+    {
+      schema: { description: 'สร้างกฎการสะสมวันลา — Create leave accrual rule', tags: ['leave'], security: [{ bearerAuth: [] }] },
+      preHandler: [requireAuth, requirePermission(HR_LT_CREATE)],
+    },
+    async (request, reply) => {
+      const b = request.body;
+      const { tenantId } = request.user;
+      const id = crypto.randomUUID();
+      await fastify.sql`
+        INSERT INTO leave_accrual_rules (id, leave_type_id, accrual_per_month, max_carry_forward, probation_months, tenant_id)
+        VALUES (${id}, ${b['leaveTypeId'] as string}, ${Number(b['accrualPerMonth'] ?? 0)},
+                ${Number(b['maxCarryForward'] ?? 0)}, ${Number(b['probationMonths'] ?? 0)}, ${tenantId})
+      `;
+      const rows = await fastify.sql<{ id: string; leave_type_id: string; accrual_per_month: number; max_carry_forward: number; probation_months: number }[]>`
+        SELECT * FROM leave_accrual_rules WHERE id = ${id} LIMIT 1
+      `;
+      return reply.status(201).send({
+        id: rows[0]!.id, leaveTypeId: rows[0]!.leave_type_id,
+        accrualPerMonth: Number(rows[0]!.accrual_per_month),
+        maxCarryForward: rows[0]!.max_carry_forward, probationMonths: rows[0]!.probation_months,
+      });
+    },
+  );
+
+  // GET /leave-accrual-rules
+  fastify.get(
+    `${API_V1_PREFIX}/leave-accrual-rules`,
+    {
+      schema: { description: 'รายการกฎการสะสมวันลา — List leave accrual rules', tags: ['leave'], security: [{ bearerAuth: [] }] },
+      preHandler: [requireAuth, requirePermission(HR_LT_READ)],
+    },
+    async (request, reply) => {
+      const { tenantId } = request.user;
+      const rows = await fastify.sql<{ id: string; leave_type_id: string; accrual_per_month: number; max_carry_forward: number; probation_months: number }[]>`
+        SELECT * FROM leave_accrual_rules WHERE tenant_id = ${tenantId}
+      `;
+      return reply.status(200).send({
+        items: rows.map((r) => ({
+          id: r.id, leaveTypeId: r.leave_type_id,
+          accrualPerMonth: Number(r.accrual_per_month),
+          maxCarryForward: r.max_carry_forward, probationMonths: r.probation_months,
+        })),
+        total: rows.length,
+      });
+    },
+  );
+
+  // POST /public-holidays
+  fastify.post<{ Body: Record<string, unknown> }>(
+    `${API_V1_PREFIX}/public-holidays`,
+    {
+      schema: { description: 'เพิ่มวันหยุดราชการ — Add a public holiday', tags: ['leave'], security: [{ bearerAuth: [] }] },
+      preHandler: [requireAuth, requirePermission(HR_LT_CREATE)],
+    },
+    async (request, reply) => {
+      const b = request.body;
+      const { tenantId } = request.user;
+      const id = crypto.randomUUID();
+      await fastify.sql`
+        INSERT INTO public_holidays (id, date, name_th, name_en, tenant_id)
+        VALUES (${id}, ${b['date'] as string}, ${b['nameTh'] as string}, ${b['nameEn'] as string}, ${tenantId})
+      `;
+      return reply.status(201).send({ id, date: b['date'], nameTh: b['nameTh'], nameEn: b['nameEn'] });
+    },
+  );
+
+  // GET /public-holidays
+  fastify.get<{ Querystring: { year?: string } }>(
+    `${API_V1_PREFIX}/public-holidays`,
+    {
+      schema: { description: 'รายการวันหยุดราชการ — List public holidays', tags: ['leave'], security: [{ bearerAuth: [] }] },
+      preHandler: [requireAuth, requirePermission(HR_LT_READ)],
+    },
+    async (request, reply) => {
+      const { tenantId } = request.user;
+      const year = request.query.year ?? String(new Date().getFullYear());
+      const rows = await fastify.sql<{ id: string; date: string; name_th: string; name_en: string }[]>`
+        SELECT * FROM public_holidays WHERE tenant_id = ${tenantId} AND EXTRACT(YEAR FROM date) = ${parseInt(year, 10)} ORDER BY date
+      `;
+      return reply.status(200).send({
+        items: rows.map((r) => ({ id: r.id, date: r.date, nameTh: r.name_th, nameEn: r.name_en })),
+        total: rows.length,
+      });
+    },
+  );
+
+  // GET /leave-requests/accrual-balance/:employeeId — accrual-based balance
+  fastify.get<{ Params: { employeeId: string }; Querystring: { year?: string } }>(
+    `${API_V1_PREFIX}/leave-requests/accrual-balance/:employeeId`,
+    {
+      schema: { description: 'ดูวันลาคงเหลือแบบสะสม — Accrual-based leave balance', tags: ['leave'], security: [{ bearerAuth: [] }] },
+      preHandler: [requireAuth, requirePermission(HR_LR_READ)],
+    },
+    async (request, reply) => {
+      const { employeeId } = request.params;
+      const { tenantId } = request.user;
+      const currentYear = parseInt(request.query.year ?? String(new Date().getFullYear()), 10);
+      const currentMonth = new Date().getMonth() + 1;
+
+      // Get employee hire date for probation check
+      const empRows = await fastify.sql<[{ hire_date: string }?]>`
+        SELECT hire_date FROM employees WHERE id = ${employeeId} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      if (!empRows[0]) throw new NotFoundError({ detail: `Employee ${employeeId} not found.` });
+
+      const hireDate = new Date(empRows[0].hire_date);
+      const monthsSinceHire = Math.max(0, (new Date().getFullYear() - hireDate.getFullYear()) * 12 + new Date().getMonth() - hireDate.getMonth());
+
+      const leaveTypes = await fastify.sql<LeaveTypeRow[]>`SELECT * FROM leave_types WHERE tenant_id = ${tenantId}`;
+
+      const balances = await Promise.all(
+        leaveTypes.map(async (lt) => {
+          // Get accrual rule
+          const accrualRows = await fastify.sql<[{ accrual_per_month: number; max_carry_forward: number; probation_months: number }?]>`
+            SELECT accrual_per_month, max_carry_forward, probation_months FROM leave_accrual_rules
+            WHERE leave_type_id = ${lt.id} AND tenant_id = ${tenantId} LIMIT 1
+          `;
+
+          let accrued: number;
+          if (accrualRows[0]) {
+            const rule = accrualRows[0];
+            // Check probation
+            if (monthsSinceHire < rule.probation_months) {
+              accrued = 0;
+            } else {
+              // Accrue based on months in current year
+              accrued = Math.min(Number(rule.accrual_per_month) * currentMonth, lt.annual_quota_days);
+            }
+          } else {
+            // No accrual rule — use flat annual quota
+            accrued = lt.annual_quota_days;
+          }
+
+          // Get used days (exclude weekends and public holidays in count)
+          const usedRows = await fastify.sql<{ total_days: number }[]>`
+            SELECT COALESCE(SUM(days), 0)::integer as total_days FROM leave_requests
+            WHERE tenant_id = ${tenantId} AND employee_id = ${employeeId} AND leave_type_id = ${lt.id}
+              AND status = 'approved' AND start_date >= ${String(currentYear) + '-01-01'} AND start_date <= ${String(currentYear) + '-12-31'}
+          `;
+          const usedDays = usedRows[0]?.total_days ?? 0;
+
+          return {
+            leaveTypeId: lt.id, leaveTypeCode: lt.code,
+            leaveTypeNameTh: lt.name_th, leaveTypeNameEn: lt.name_en,
+            accruedDays: accrued, usedDays,
+            remainingDays: accrued - usedDays,
+          };
+        }),
+      );
+
+      return reply.status(200).send({ employeeId, year: currentYear, balances });
+    },
+  );
+
+  // GET /leave-requests/working-days — calculate working days between dates
+  fastify.get<{ Querystring: { startDate: string; endDate: string } }>(
+    `${API_V1_PREFIX}/leave-requests/working-days`,
+    {
+      schema: { description: 'คำนวณจำนวนวันทำงาน — Calculate working days (excludes weekends + public holidays)', tags: ['leave'], security: [{ bearerAuth: [] }] },
+      preHandler: [requireAuth, requirePermission(HR_LR_READ)],
+    },
+    async (request, reply) => {
+      const { tenantId } = request.user;
+      const { startDate, endDate } = request.query;
+
+      // Get public holidays
+      const holidays = await fastify.sql<{ date: string }[]>`
+        SELECT date::text FROM public_holidays WHERE tenant_id = ${tenantId} AND date >= ${startDate} AND date <= ${endDate}
+      `;
+      const holidaySet = new Set(holidays.map((h) => h.date));
+
+      // Count working days
+      let workingDays = 0;
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dayOfWeek = d.getDay();
+        const dateStr = d.toISOString().slice(0, 10);
+        if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidaySet.has(dateStr)) {
+          workingDays++;
+        }
+      }
+
+      return reply.status(200).send({ startDate, endDate, workingDays, publicHolidaysExcluded: holidays.length });
+    },
+  );
 }

@@ -29,6 +29,22 @@
  *   neip budgets list/create/update
  *   neip vendors list/create/update
  *   neip audit list / search
+ *   neip recurring-je list/create/run
+ *   neip pricing list/create/resolve
+ *   neip payment-terms list/create
+ *   neip dunning run/list
+ *   neip credit check <contactId>
+ *   neip pr list/create/approve/reject/convert
+ *   neip rfq list/create/send/compare/select
+ *   neip stock-count list/create/post
+ *   neip attendance clock-in/clock-out/summary
+ *   neip positions list/create/org-tree
+ *   neip currency list/create/rate/convert
+ *   neip company list/create/switch
+ *   neip approval list/approve/reject/delegate
+ *   neip batch list/create/trace
+ *   neip pdpa access-request/erasure-request
+ *   neip ai anomaly-scan/forecast/categorize/predict
  *
  * Global flags:
  *   --format <table|json>   Output format (default: table)
@@ -73,6 +89,22 @@ import { buildContactsCommand } from './commands/contacts.js';
 import { buildEmployeesCommand, buildDepartmentsCommand } from './commands/employees.js';
 import { buildPayrollCommand } from './commands/payroll.js';
 import { buildLeaveCommand } from './commands/leave.js';
+import { buildRecurringJeCommand } from './commands/recurring-je.js';
+import { buildPricingCommand } from './commands/pricing.js';
+import { buildPaymentTermsCommand } from './commands/payment-terms.js';
+import { buildDunningCommand } from './commands/dunning.js';
+import { buildCreditCommand } from './commands/credit.js';
+import { buildPurchaseRequisitionsCommand } from './commands/purchase-requisitions.js';
+import { buildRfqCommand } from './commands/rfq.js';
+import { buildStockCountCommand } from './commands/stock-count.js';
+import { buildAttendanceCommand } from './commands/attendance.js';
+import { buildPositionsCommand } from './commands/positions.js';
+import { buildCurrencyCommand } from './commands/currencies.js';
+import { buildCompanyCommand } from './commands/companies.js';
+import { buildApprovalCommand } from './commands/approvals.js';
+import { buildBatchCommand } from './commands/batches.js';
+import { buildPdpaCommand } from './commands/pdpa.js';
+import { buildAiCommand } from './commands/ai.js';
 import { ApiError } from './lib/api-client.js';
 import { type OutputFormat, printError, setFormat } from './output/formatter.js';
 
@@ -228,6 +260,24 @@ program.addCommand(buildEmployeesCommand());
 program.addCommand(buildDepartmentsCommand());
 program.addCommand(buildPayrollCommand());
 program.addCommand(buildLeaveCommand());
+
+// Phase 1-6: New feature commands
+program.addCommand(buildRecurringJeCommand());
+program.addCommand(buildPricingCommand());
+program.addCommand(buildPaymentTermsCommand());
+program.addCommand(buildDunningCommand());
+program.addCommand(buildCreditCommand());
+program.addCommand(buildPurchaseRequisitionsCommand());
+program.addCommand(buildRfqCommand());
+program.addCommand(buildStockCountCommand());
+program.addCommand(buildAttendanceCommand());
+program.addCommand(buildPositionsCommand());
+program.addCommand(buildCurrencyCommand());
+program.addCommand(buildCompanyCommand());
+program.addCommand(buildApprovalCommand());
+program.addCommand(buildBatchCommand());
+program.addCommand(buildPdpaCommand());
+program.addCommand(buildAiCommand());
 
 // ---------------------------------------------------------------------------
 // Parse and run

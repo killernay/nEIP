@@ -16,6 +16,7 @@ import {
   AR_RECEIPT_READ,
   AR_RECEIPT_VOID,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -120,12 +121,6 @@ interface CountRow {
   count: string;
 }
 
-function generateDocNumber(prefix: string): string {
-  const yyyymmdd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const seq = String(Date.now()).slice(-3);
-  return `${prefix}-${yyyymmdd}-${seq}`;
-}
-
 function mapReceipt(r: ReceiptRow) {
   return {
     id: r.id,
@@ -174,7 +169,7 @@ export async function receiptRoutes(
       const { tenantId, sub: userId } = request.user;
 
       const receiptId = crypto.randomUUID();
-      const documentNumber = generateDocNumber('RC');
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'receipt', new Date().getFullYear());
 
       await fastify.sql`
         INSERT INTO receipts (id, document_number, payment_id, invoice_id, customer_id, customer_name,

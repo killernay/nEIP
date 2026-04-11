@@ -23,6 +23,7 @@ import {
   GL_JOURNAL_POST,
   GL_JOURNAL_REVERSE,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -234,7 +235,7 @@ export async function journalEntryRoutes(
       }
 
       const entryId = crypto.randomUUID();
-      const documentNumber = `JE-${Date.now()}`;
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', fiscalYear);
 
       const entryRows = await fastify.sql<[JournalEntryRow?]>`
         INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, tenant_id, created_by, idempotency_key)
@@ -520,7 +521,7 @@ export async function journalEntryRoutes(
 
       // Create reversal entry with swapped debits/credits.
       const reversalId = crypto.randomUUID();
-      const reversalDocNum = `JE-REV-${Date.now()}`;
+      const reversalDocNum = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', original.fiscal_year);
 
       const reversalRows = await fastify.sql<[JournalEntryRow?]>`
         INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, reversed_entry_id, tenant_id, created_by, posted_at)

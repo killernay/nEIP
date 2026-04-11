@@ -52,6 +52,12 @@ export {
   UnconfiguredLlmClient,
   InvoiceMatchingAgent,
   MonthEndCloseAgent,
+  AnomalyDetectionAgent,
+  CashFlowForecastAgent,
+  CategorizationAgent,
+  BankReconAgent,
+  DocumentParserAgent,
+  PredictiveAgent,
 } from './agents/index.js';
 
 export type {
@@ -71,6 +77,25 @@ export type {
   AccountBalance,
   FixedAsset,
   AccrualItem,
+  // Phase 6 types
+  AnomalyScanInput,
+  AnomalyScanOutput,
+  AnomalyFinding,
+  CashFlowForecastInput,
+  CashFlowForecastOutput,
+  DailyProjection,
+  CategorizationInput,
+  CategorizationOutput,
+  CategorySuggestion,
+  BankReconInput,
+  BankReconOutput,
+  ReconMatch,
+  DocumentParseInput,
+  DocumentParseOutput,
+  PredictiveInput,
+  PredictiveOutput,
+  ForecastPoint,
+  TrendLine,
 } from './agents/index.js';
 
 // ---------------------------------------------------------------------------

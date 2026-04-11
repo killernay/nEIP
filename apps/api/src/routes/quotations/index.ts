@@ -8,10 +8,13 @@
  *   POST /api/v1/quotations/:id/send     — draft → sent
  *   POST /api/v1/quotations/:id/approve  — sent  → approved
  *   POST /api/v1/quotations/:id/reject   — sent  → rejected
- *   POST /api/v1/quotations/:id/convert  — approved → converted (creates invoice)
- *   POST /api/v1/quotations/:id/duplicate — clone as new draft
+ *   POST /api/v1/quotations/:id/convert           — approved → converted (creates invoice, shortcut)
+ *   POST /api/v1/quotations/:id/convert-to-order  — approved → converted (creates sales order)
+ *   POST /api/v1/quotations/:id/duplicate          — clone as new draft
  *
- * Business flow: Quotation → Approved → Convert to Invoice (ใบแจ้งหนี้)
+ * Business flows:
+ *   Standard: QT → SO → DO → INV → PAY (SAP-style)
+ *   Shortcut: QT → INV (direct conversion, kept for convenience)
  */
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
@@ -26,7 +29,9 @@ import {
   AR_QUOTATION_SEND,
   AR_QUOTATION_APPROVE,
   AR_QUOTATION_CONVERT,
+  AR_SO_CREATE,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -115,6 +120,7 @@ const quotationResponseSchema = {
     validUntil: { type: 'string', format: 'date' },
     totalSatang: { type: 'string' },
     convertedInvoiceId: { type: 'string', nullable: true },
+    convertedSalesOrderId: { type: 'string', nullable: true },
     lines: { type: 'array', items: { type: 'object' } },
     sentAt: { type: 'string', nullable: true },
     approvedAt: { type: 'string', nullable: true },
@@ -178,6 +184,7 @@ interface QuotationRow {
   valid_until: string;
   total_satang: bigint;
   converted_invoice_id: string | null;
+  converted_sales_order_id: string | null;
   tenant_id: string;
   created_by: string;
   sent_at: Date | string | null;
@@ -206,25 +213,6 @@ interface CountRow {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Generate document number: QT-YYYYMMDD-NNN (sequential within day) */
-async function generateDocNumber(
-  fastify: FastifyInstance,
-  tenantId: string,
-): Promise<string> {
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const prefix = `QT-${today}-`;
-
-  // Count existing docs with same prefix for this tenant to get the next sequence
-  const rows = await fastify.sql<[{ count: string }]>`
-    SELECT COUNT(*)::text AS count
-    FROM quotations
-    WHERE tenant_id = ${tenantId}
-      AND document_number LIKE ${prefix + '%'}
-  `;
-  const next = parseInt(rows[0]?.count ?? '0', 10) + 1;
-  return `${prefix}${String(next).padStart(3, '0')}`;
-}
-
 /** Build a formatted quotation response object */
 function formatQuotation(
   q: QuotationRow,
@@ -241,6 +229,7 @@ function formatQuotation(
     validUntil: q.valid_until,
     totalSatang: q.total_satang.toString(),
     convertedInvoiceId: q.converted_invoice_id,
+    convertedSalesOrderId: q.converted_sales_order_id,
     lines: lines.map((l) => ({
       id: l.id,
       lineNumber: l.line_number,
@@ -319,7 +308,7 @@ export async function quotationRoutes(
 
       const { processedLines, totalSatang } = processLines(lines);
       const quotationId = crypto.randomUUID();
-      const documentNumber = await generateDocNumber(fastify, tenantId);
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'quotation', new Date().getFullYear());
 
       await fastify.sql`
         INSERT INTO quotations (
@@ -372,6 +361,7 @@ export async function quotationRoutes(
         valid_until: validUntil,
         total_satang: totalSatang,
         converted_invoice_id: null,
+        converted_sales_order_id: null,
         tenant_id: tenantId,
         created_by: userId,
         sent_at: null,
@@ -822,7 +812,7 @@ export async function quotationRoutes(
 
       // Create invoice
       const invoiceId = crypto.randomUUID();
-      const invoiceNumber = `INV-${Date.now()}`;
+      const invoiceNumber = await nextDocNumber(fastify.sql, tenantId, 'invoice', new Date().getFullYear());
 
       await fastify.sql`
         INSERT INTO invoices (
@@ -912,7 +902,7 @@ export async function quotationRoutes(
       `;
 
       const newId = crypto.randomUUID();
-      const documentNumber = await generateDocNumber(fastify, tenantId);
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'quotation', new Date().getFullYear());
 
       // Default valid_until to 30 days from today
       const validUntil = new Date();
@@ -962,6 +952,7 @@ export async function quotationRoutes(
         valid_until: newValidUntil,
         total_satang: source.total_satang,
         converted_invoice_id: null,
+        converted_sales_order_id: null,
         tenant_id: tenantId,
         created_by: userId,
         sent_at: null,
@@ -972,6 +963,115 @@ export async function quotationRoutes(
       };
 
       return reply.status(201).send(formatQuotation(newRow, newLines));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/quotations/:id/convert-to-order — approved → converted (creates SO)
+  // -------------------------------------------------------------------------
+  fastify.post<{ Params: IdParams }>(
+    `${API_V1_PREFIX}/quotations/:id/convert-to-order`,
+    {
+      schema: {
+        description: 'Convert approved quotation to sales order (approved → converted)',
+        tags: ['ar'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+        response: {
+          201: {
+            description: 'Sales order created from quotation',
+            type: 'object',
+            properties: {
+              quotation: quotationResponseSchema,
+              salesOrderId: { type: 'string' },
+              salesOrderNumber: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(AR_QUOTATION_CONVERT), requirePermission(AR_SO_CREATE)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { tenantId, sub: userId } = request.user;
+
+      // Fetch quotation
+      const qRows = await fastify.sql<[QuotationRow?]>`
+        SELECT * FROM quotations WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      const q = qRows[0];
+      if (!q) {
+        throw new NotFoundError({ detail: `Quotation ${id} not found.` });
+      }
+      if (q.status !== 'approved') {
+        throw new ConflictError({
+          detail: `Quotation ${id} cannot be converted — current status is "${q.status}". Only approved quotations can be converted to sales order.`,
+        });
+      }
+
+      // Fetch lines
+      const lines = await fastify.sql<QuotationLineRow[]>`
+        SELECT * FROM quotation_lines WHERE quotation_id = ${id} ORDER BY line_number
+      `;
+
+      // Create sales order
+      const soId = crypto.randomUUID();
+      const soNumber = await nextDocNumber(fastify.sql, tenantId, 'sales_order', new Date().getFullYear());
+      const orderDate = new Date().toISOString().slice(0, 10);
+
+      await fastify.sql`
+        INSERT INTO sales_orders (
+          id, document_number, customer_id, customer_name, status, order_date,
+          expected_delivery_date, total_satang, quotation_id, notes, tenant_id, created_by
+        ) VALUES (
+          ${soId}, ${soNumber}, ${q.customer_id}, ${q.customer_name}, 'draft',
+          ${orderDate}, ${q.valid_until}, ${q.total_satang.toString()}::bigint,
+          ${id}, ${q.notes ?? null}, ${tenantId}, ${userId}
+        )
+      `;
+
+      // Copy lines to sales_order_lines
+      for (const line of lines) {
+        await fastify.sql`
+          INSERT INTO sales_order_lines (
+            id, sales_order_id, line_number, description, quantity, delivered_quantity,
+            unit_price_satang, amount_satang, account_id
+          ) VALUES (
+            ${crypto.randomUUID()}, ${soId}, ${line.line_number},
+            ${line.description}, ${line.quantity}, 0,
+            ${line.unit_price_satang.toString()}::bigint,
+            ${line.amount_satang.toString()}::bigint,
+            ${line.account_id}
+          )
+        `;
+      }
+
+      // Update quotation status
+      const updatedRows = await fastify.sql<[QuotationRow?]>`
+        UPDATE quotations
+        SET status = 'converted', converted_sales_order_id = ${soId}, updated_at = NOW()
+        WHERE id = ${id} AND tenant_id = ${tenantId}
+        RETURNING *
+      `;
+      const updated = updatedRows[0];
+      if (!updated) {
+        throw new NotFoundError({ detail: `Quotation ${id} not found after conversion.` });
+      }
+
+      request.log.info(
+        { quotationId: id, salesOrderId: soId, salesOrderNumber: soNumber, tenantId, userId },
+        'Quotation converted to sales order',
+      );
+
+      return reply.status(201).send({
+        quotation: formatQuotation(updated, lines),
+        salesOrderId: soId,
+        salesOrderNumber: soNumber,
+      });
     },
   );
 }

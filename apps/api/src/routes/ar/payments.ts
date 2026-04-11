@@ -18,6 +18,7 @@ import {
   AR_PAYMENT_READ,
   AR_PAYMENT_UPDATE,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -245,12 +246,91 @@ export async function paymentRoutes(
       }
 
       const paymentId = crypto.randomUUID();
-      const paymentNumber = `PMT-${Date.now()}`;
+      const fiscalYear = new Date().getFullYear();
+      const paymentNumber = await nextDocNumber(fastify.sql, tenantId, 'payment', fiscalYear);
       const status = invoiceId ? 'matched' : 'unmatched';
 
+      // --- Auto-create Journal Entry: Dr Cash/Bank, Cr Accounts Receivable ---
+      let journalEntryId: string | null = null;
+      try {
+        // Look up Cash/Bank account (code starting with "1010" or "1100")
+        const cashRows = await fastify.sql<[{ id: string }?]>`
+          SELECT id FROM chart_of_accounts
+          WHERE tenant_id = ${tenantId} AND is_active = true
+            AND (code LIKE '1010%' OR code LIKE '1100%')
+            AND account_type = 'asset'
+          ORDER BY code ASC LIMIT 1
+        `;
+        // Look up Accounts Receivable account (code starting with "1120" or "1100")
+        const arRows = await fastify.sql<[{ id: string }?]>`
+          SELECT id FROM chart_of_accounts
+          WHERE tenant_id = ${tenantId} AND is_active = true
+            AND (code LIKE '1120%' OR code LIKE '1100%')
+            AND account_type = 'asset'
+          ORDER BY code DESC LIMIT 1
+        `;
+
+        const cashAccountId = cashRows[0]?.id;
+        const arAccountId = arRows[0]?.id;
+
+        if (cashAccountId && arAccountId && cashAccountId !== arAccountId) {
+          const jeId = crypto.randomUUID();
+          const now = new Date();
+          const fiscalYear = now.getFullYear();
+          const fiscalPeriod = now.getMonth() + 1;
+
+          // Generate JE document number via sequence
+          const seqRows = await fastify.sql<[{ next_val: string }?]>`
+            UPDATE document_sequences
+            SET current_value = current_value + 1, updated_at = NOW()
+            WHERE tenant_id = ${tenantId} AND document_type = 'journal_entry' AND fiscal_year = ${fiscalYear}
+            RETURNING current_value::text as next_val
+          `;
+          let jeDocNumber: string;
+          if (seqRows[0]) {
+            jeDocNumber = `JE-${fiscalYear}-${seqRows[0].next_val.padStart(6, '0')}`;
+          } else {
+            // Create sequence if it doesn't exist
+            await fastify.sql`
+              INSERT INTO document_sequences (id, tenant_id, document_type, fiscal_year, current_value, prefix, created_at, updated_at)
+              VALUES (${crypto.randomUUID()}, ${tenantId}, 'journal_entry', ${fiscalYear}, 1, 'JE', NOW(), NOW())
+              ON CONFLICT (tenant_id, document_type, fiscal_year) DO UPDATE SET current_value = document_sequences.current_value + 1, updated_at = NOW()
+            `;
+            jeDocNumber = `JE-${fiscalYear}-000001`;
+          }
+
+          // Insert journal entry header (posted immediately, like AP)
+          await fastify.sql`
+            INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, tenant_id, created_by, posted_at, created_at, updated_at)
+            VALUES (${jeId}, ${jeDocNumber}, ${'AR payment received - ' + paymentNumber}, 'posted', ${fiscalYear}, ${fiscalPeriod}, ${tenantId}, ${userId}, ${now.toISOString()}::timestamptz, ${now.toISOString()}::timestamptz, ${now.toISOString()}::timestamptz)
+          `;
+
+          // Line 1: Debit Cash/Bank
+          await fastify.sql`
+            INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang, created_at)
+            VALUES (${crypto.randomUUID()}, ${jeId}, 1, ${cashAccountId}, ${'AR payment - ' + paymentNumber}, ${amountBigInt.toString()}::bigint, 0::bigint, ${now.toISOString()}::timestamptz)
+          `;
+
+          // Line 2: Credit Accounts Receivable
+          await fastify.sql`
+            INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang, created_at)
+            VALUES (${crypto.randomUUID()}, ${jeId}, 2, ${arAccountId}, ${'AR payment - ' + paymentNumber}, 0::bigint, ${amountBigInt.toString()}::bigint, ${now.toISOString()}::timestamptz)
+          `;
+
+          journalEntryId = jeId;
+        } else {
+          request.log.warn(
+            { tenantId, cashAccountId, arAccountId },
+            'Could not find distinct Cash and AR accounts for JE creation — payment recorded without JE',
+          );
+        }
+      } catch (jeError) {
+        request.log.error({ err: jeError, tenantId }, 'Failed to create journal entry for AR payment — payment will proceed without JE');
+      }
+
       await fastify.sql`
-        INSERT INTO ar_payments (id, document_number, customer_id, amount_satang, payment_date, payment_method, reference, notes, tenant_id, created_by)
-        VALUES (${paymentId}, ${paymentNumber}, ${resolvedCustomerId}, ${amountBigInt.toString()}::bigint, ${paymentDate}, ${paymentMethod}, ${reference ?? null}, ${notes ?? null}, ${tenantId}, ${userId})
+        INSERT INTO ar_payments (id, document_number, customer_id, amount_satang, payment_date, payment_method, reference, notes, journal_entry_id, tenant_id, created_by)
+        VALUES (${paymentId}, ${paymentNumber}, ${resolvedCustomerId}, ${amountBigInt.toString()}::bigint, ${paymentDate}, ${paymentMethod}, ${reference ?? null}, ${notes ?? null}, ${journalEntryId}, ${tenantId}, ${userId})
       `;
 
       // Link to invoice if provided
@@ -266,7 +346,7 @@ export async function paymentRoutes(
       }
 
       request.log.info(
-        { paymentId, paymentNumber, tenantId, userId, invoiceId },
+        { paymentId, paymentNumber, journalEntryId, tenantId, userId, invoiceId },
         'Payment recorded',
       );
 
@@ -429,6 +509,62 @@ export async function paymentRoutes(
       const links = await fastify.sql<Array<{ invoice_id: string }>>`
         SELECT invoice_id FROM invoice_payments WHERE payment_id = ${id}
       `;
+
+      // Reverse the associated journal entry if one exists
+      const jeRows = await fastify.sql<[{ journal_entry_id: string | null }?]>`
+        SELECT journal_entry_id FROM ar_payments WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      const originalJeId = jeRows[0]?.journal_entry_id;
+
+      if (originalJeId) {
+        try {
+          const { sub: userId } = request.user;
+
+          // Get original JE lines to create reversal
+          const jeLineRows = await fastify.sql<Array<{ line_number: number; account_id: string; description: string | null; debit_satang: string; credit_satang: string }>>`
+            SELECT line_number, account_id, description, debit_satang::text, credit_satang::text
+            FROM journal_entry_lines WHERE entry_id = ${originalJeId}
+          `;
+
+          // Get original JE for fiscal info
+          const origJeRows = await fastify.sql<[{ document_number: string; fiscal_year: number; fiscal_period: number }?]>`
+            SELECT document_number, fiscal_year, fiscal_period FROM journal_entries WHERE id = ${originalJeId} LIMIT 1
+          `;
+          const origJe = origJeRows[0];
+
+          if (origJe && jeLineRows.length > 0) {
+            // Mark original JE as reversed
+            await fastify.sql`
+              UPDATE journal_entries SET status = 'reversed', updated_at = NOW()
+              WHERE id = ${originalJeId}
+            `;
+
+            // Create reversal JE
+            const reversalJeId = crypto.randomUUID();
+            const now = new Date();
+
+            // Generate reversal JE document number
+            const reversalDocNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', origJe.fiscal_year);
+
+            await fastify.sql`
+              INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, reversed_entry_id, tenant_id, created_by, posted_at, created_at, updated_at)
+              VALUES (${reversalJeId}, ${reversalDocNumber}, ${'Reversal of ' + origJe.document_number + ' (AR payment void)'}, 'posted', ${origJe.fiscal_year}, ${origJe.fiscal_period}, ${originalJeId}, ${tenantId}, ${userId}, ${now.toISOString()}::timestamptz, ${now.toISOString()}::timestamptz, ${now.toISOString()}::timestamptz)
+            `;
+
+            // Create reversed lines (swap debit/credit)
+            for (const line of jeLineRows) {
+              await fastify.sql`
+                INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang, created_at)
+                VALUES (${crypto.randomUUID()}, ${reversalJeId}, ${line.line_number}, ${line.account_id}, ${line.description}, ${line.credit_satang}::bigint, ${line.debit_satang}::bigint, ${now.toISOString()}::timestamptz)
+              `;
+            }
+
+            request.log.info({ originalJeId, reversalJeId, tenantId }, 'Journal entry reversed for voided AR payment');
+          }
+        } catch (jeError) {
+          request.log.error({ err: jeError, originalJeId, tenantId }, 'Failed to reverse journal entry for voided AR payment');
+        }
+      }
 
       // Void the payment
       await fastify.sql`

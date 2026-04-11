@@ -21,6 +21,7 @@ import {
   FI_WHT_VOID,
   FI_WHT_FILE,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -223,7 +224,7 @@ export async function whtRoutes(
       const whtAmount = (income * BigInt(whtRateBasisPoints)) / 10000n;
 
       const id = crypto.randomUUID();
-      const docNumber = `WHT-${String(taxYear)}-${String(taxMonth).padStart(2, '0')}-${Date.now().toString().slice(-6)}`;
+      const docNumber = await nextDocNumber(fastify.sql, tenantId, 'wht', taxYear);
 
       await fastify.sql`
         INSERT INTO wht_certificates (
@@ -520,6 +521,124 @@ export async function whtRoutes(
         WHERE id = ${id} RETURNING *
       `;
       return reply.status(200).send(mapWht(rows[0]));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/wht/annual-certificate — 50 ทวิ Annual Tax Certificate
+  // -------------------------------------------------------------------------
+  fastify.post<{ Body: { employeeId: string; taxYear: number } }>(
+    `${API_V1_PREFIX}/wht/annual-certificate`,
+    {
+      schema: {
+        description: '50 ทวิ Annual Tax Certificate — aggregate all WHT deductions for an employee in a tax year',
+        tags: ['wht', 'thai-compliance'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['employeeId', 'taxYear'],
+          additionalProperties: false,
+          properties: {
+            employeeId: { type: 'string', minLength: 1 },
+            taxYear: { type: 'integer', minimum: 2000 },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              certificateType: { type: 'string' },
+              taxYear: { type: 'integer' },
+              payer: { type: 'object' },
+              payee: { type: 'object' },
+              incomeDetails: { type: 'array', items: { type: 'object' } },
+              totalIncomeSatang: { type: 'string' },
+              totalWhtSatang: { type: 'string' },
+              generatedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(FI_WHT_READ)],
+    },
+    async (request, reply) => {
+      const { tenantId } = request.user;
+      const { employeeId, taxYear } = request.body;
+
+      // Fetch employee info
+      interface EmployeeInfo {
+        id: string; first_name_th: string; last_name_th: string;
+        national_id: string | null; tax_id: string | null;
+        email: string | null; position: string | null;
+      }
+      const empRows = await fastify.sql<[EmployeeInfo?]>`
+        SELECT id, first_name_th, last_name_th, national_id, tax_id, email, position
+        FROM employees
+        WHERE id = ${employeeId} AND tenant_id = ${tenantId}
+        LIMIT 1
+      `;
+      if (!empRows[0]) throw new NotFoundError({ detail: `Employee ${employeeId} not found.` });
+      const emp = empRows[0];
+
+      // Fetch firm/tenant info as payer
+      interface FirmInfo {
+        company_name: string | null; tax_id: string | null;
+        branch_number: string | null; address: string | null;
+      }
+      const firmRows = await fastify.sql<[FirmInfo?]>`
+        SELECT company_name, tax_id, branch_number, address
+        FROM tenants WHERE id = ${tenantId} LIMIT 1
+      `;
+      const firm = firmRows[0];
+
+      // Aggregate payroll WHT for the year (personal income tax)
+      interface PayrollWhtRow {
+        pay_period_start: string;
+        gross_satang: number;
+        personal_income_tax_satang: number;
+      }
+      const payrollRows = await fastify.sql<PayrollWhtRow[]>`
+        SELECT pr.pay_period_start, pi.gross_satang, pi.personal_income_tax_satang
+        FROM payroll_items pi
+        JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
+        WHERE pi.employee_id = ${employeeId}
+          AND pr.tenant_id = ${tenantId}
+          AND pr.status IN ('calculated', 'approved', 'paid')
+          AND EXTRACT(YEAR FROM pr.pay_period_start::date) = ${taxYear}
+        ORDER BY pr.pay_period_start
+      `;
+
+      let totalIncome = 0;
+      let totalWht = 0;
+      const incomeDetails = payrollRows.map((r) => {
+        totalIncome += r.gross_satang;
+        totalWht += r.personal_income_tax_satang;
+        return {
+          period: r.pay_period_start,
+          incomeSatang: r.gross_satang.toString(),
+          whtSatang: r.personal_income_tax_satang.toString(),
+        };
+      });
+
+      return reply.status(200).send({
+        certificateType: '50ทวิ',
+        taxYear,
+        payer: {
+          companyName: firm?.company_name ?? tenantId,
+          taxId: firm?.tax_id ?? null,
+          branchNumber: firm?.branch_number ?? '00000',
+          address: firm?.address ?? null,
+        },
+        payee: {
+          name: `${emp.first_name_th} ${emp.last_name_th}`,
+          taxId: emp.tax_id ?? emp.national_id ?? null,
+          position: emp.position,
+        },
+        incomeDetails,
+        totalIncomeSatang: totalIncome.toString(),
+        totalWhtSatang: totalWht.toString(),
+        generatedAt: new Date().toISOString(),
+      });
     },
   );
 

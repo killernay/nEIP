@@ -295,4 +295,281 @@ export async function costCenterRoutes(
       });
     },
   );
+
+  // =========================================================================
+  // 4.9 CO Budget Control — Budget Status
+  // =========================================================================
+
+  fastify.get<{ Params: IdParams; Querystring: { year?: string } }>(
+    `${API_V1_PREFIX}/cost-centers/:id/budget-status`,
+    {
+      schema: {
+        description: 'Budget utilization status for a cost center',
+        tags: ['cost-centers'],
+        security: [{ bearerAuth: [] }],
+        params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+      },
+      preHandler: [requireAuth, requirePermission(CO_COST_CENTER_READ)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { tenantId } = request.user;
+      const year = parseInt((request.query as { year?: string }).year ?? String(new Date().getFullYear()), 10);
+
+      const ccRows = await fastify.sql<[CcRow?]>`SELECT * FROM cost_centers WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1`;
+      if (!ccRows[0]) throw new NotFoundError({ detail: `Cost center ${id} not found.` });
+
+      // Get total budget for this cost center
+      const budgetRows = await fastify.sql<{ total_budget: string }[]>`
+        SELECT COALESCE(SUM(amount_satang), 0)::text as total_budget
+        FROM budgets WHERE tenant_id = ${tenantId} AND fiscal_year = ${year}
+          AND (cost_center_id = ${id} OR cost_center_id IS NULL)
+      `;
+      const totalBudget = BigInt(budgetRows[0]?.total_budget ?? '0');
+
+      // Get YTD actual spend (debit - credit on posted JEs with this cost center)
+      const actualRows = await fastify.sql<{ total_debit: string; total_credit: string }[]>`
+        SELECT COALESCE(SUM(jel.debit_satang), 0)::text as total_debit,
+               COALESCE(SUM(jel.credit_satang), 0)::text as total_credit
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON je.id = jel.entry_id
+        WHERE jel.cost_center_id = ${id}
+          AND je.tenant_id = ${tenantId}
+          AND je.status = 'posted'
+          AND je.fiscal_year = ${year}
+      `;
+      const totalDebit = BigInt(actualRows[0]?.total_debit ?? '0');
+      const totalCredit = BigInt(actualRows[0]?.total_credit ?? '0');
+      const utilized = totalDebit - totalCredit;
+      const remaining = totalBudget - utilized;
+      const percentage = totalBudget > 0n ? Number((utilized * 10000n) / totalBudget) / 100 : 0;
+
+      let status: string;
+      if (percentage >= 100) status = 'over_budget';
+      else if (percentage >= 90) status = 'warning';
+      else status = 'within_budget';
+
+      return reply.status(200).send({
+        costCenter: mapCc(ccRows[0]),
+        fiscalYear: year,
+        budgetSatang: totalBudget.toString(),
+        utilizedSatang: utilized.toString(),
+        remainingSatang: remaining.toString(),
+        utilizationPercent: Math.round(percentage * 100) / 100,
+        status,
+      });
+    },
+  );
+
+  // =========================================================================
+  // 4.9 CO Budget Control — Check endpoint (for JE posting)
+  // =========================================================================
+
+  fastify.post<{ Body: Record<string, unknown> }>(
+    `${API_V1_PREFIX}/cost-centers/budget-check`,
+    {
+      schema: {
+        description: 'Check budget availability before posting a JE',
+        tags: ['cost-centers'],
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [requireAuth, requirePermission(CO_COST_CENTER_READ)],
+    },
+    async (request, reply) => {
+      const b = request.body;
+      const { tenantId } = request.user;
+      const costCenterId = b['costCenterId'] as string;
+      const amountSatang = BigInt(String(b['amountSatang'] ?? '0'));
+      const year = Number(b['fiscalYear'] ?? new Date().getFullYear());
+      const override = b['override'] === true;
+
+      // Get total budget
+      const budgetRows = await fastify.sql<{ total_budget: string }[]>`
+        SELECT COALESCE(SUM(amount_satang), 0)::text as total_budget
+        FROM budgets WHERE tenant_id = ${tenantId} AND fiscal_year = ${year}
+          AND (cost_center_id = ${costCenterId} OR cost_center_id IS NULL)
+      `;
+      const totalBudget = BigInt(budgetRows[0]?.total_budget ?? '0');
+
+      // Get YTD actuals
+      const actualRows = await fastify.sql<{ total_debit: string; total_credit: string }[]>`
+        SELECT COALESCE(SUM(jel.debit_satang), 0)::text as total_debit,
+               COALESCE(SUM(jel.credit_satang), 0)::text as total_credit
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON je.id = jel.entry_id
+        WHERE jel.cost_center_id = ${costCenterId}
+          AND je.tenant_id = ${tenantId}
+          AND je.status = 'posted'
+          AND je.fiscal_year = ${year}
+      `;
+      const utilized = BigInt(actualRows[0]?.total_debit ?? '0') - BigInt(actualRows[0]?.total_credit ?? '0');
+      const afterPosting = utilized + amountSatang;
+
+      let allowed = true;
+      let warning: string | null = null;
+
+      if (totalBudget > 0n) {
+        const percentAfter = Number((afterPosting * 10000n) / totalBudget) / 100;
+
+        if (percentAfter > 100) {
+          if (override) {
+            warning = `Budget override: posting would exceed budget (${Math.round(percentAfter)}% utilized).`;
+          } else {
+            allowed = false;
+            warning = `Budget exceeded: posting would bring utilization to ${Math.round(percentAfter)}%. Use CO_BUDGET_OVERRIDE permission to proceed.`;
+          }
+        } else if (percentAfter > 90) {
+          warning = `Budget warning: posting would bring utilization to ${Math.round(percentAfter)}%.`;
+        }
+      }
+
+      return reply.status(200).send({
+        costCenterId, fiscalYear: year,
+        budgetSatang: totalBudget.toString(),
+        currentUtilizedSatang: utilized.toString(),
+        proposedAmountSatang: amountSatang.toString(),
+        afterPostingSatang: afterPosting.toString(),
+        allowed, warning,
+      });
+    },
+  );
+
+  // =========================================================================
+  // 4.10 CO Variance Analysis
+  // =========================================================================
+
+  fastify.get<{ Querystring: Record<string, string> }>(
+    `${API_V1_PREFIX}/reports/budget-variance-detail`,
+    {
+      schema: {
+        description: 'Budget variance analysis by cost center — per-account planned vs actual',
+        tags: ['cost-centers'],
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [requireAuth, requirePermission(CO_COST_CENTER_READ)],
+    },
+    async (request, reply) => {
+      const { tenantId } = request.user;
+      const costCenterId = request.query['costCenterId'];
+      const year = parseInt(request.query['year'] ?? String(new Date().getFullYear()), 10);
+
+      if (!costCenterId) {
+        // Provide summary across all cost centers
+        const ccRows = await fastify.sql<CcRow[]>`SELECT * FROM cost_centers WHERE tenant_id = ${tenantId} AND is_active = true ORDER BY code`;
+
+        const summaries = await Promise.all(ccRows.map(async (cc) => {
+          const budgetRows = await fastify.sql<{ total_budget: string }[]>`
+            SELECT COALESCE(SUM(amount_satang), 0)::text as total_budget
+            FROM budgets WHERE tenant_id = ${tenantId} AND fiscal_year = ${year}
+              AND (cost_center_id = ${cc.id} OR cost_center_id IS NULL)
+          `;
+          const actualRows = await fastify.sql<{ total_debit: string; total_credit: string }[]>`
+            SELECT COALESCE(SUM(jel.debit_satang), 0)::text as total_debit,
+                   COALESCE(SUM(jel.credit_satang), 0)::text as total_credit
+            FROM journal_entry_lines jel
+            JOIN journal_entries je ON je.id = jel.entry_id
+            WHERE jel.cost_center_id = ${cc.id} AND je.tenant_id = ${tenantId}
+              AND je.status = 'posted' AND je.fiscal_year = ${year}
+          `;
+          const planned = BigInt(budgetRows[0]?.total_budget ?? '0');
+          const actual = BigInt(actualRows[0]?.total_debit ?? '0') - BigInt(actualRows[0]?.total_credit ?? '0');
+          const variance = planned - actual;
+
+          return {
+            costCenter: mapCc(cc),
+            plannedSatang: planned.toString(),
+            actualSatang: actual.toString(),
+            varianceSatang: variance.toString(),
+            variancePercent: planned > 0n ? Math.round(Number((variance * 10000n) / planned)) / 100 : 0,
+            favorable: variance >= 0n,
+          };
+        }));
+
+        return reply.status(200).send({ fiscalYear: year, costCenters: summaries });
+      }
+
+      // Per-account detail for a specific cost center
+      const ccRows = await fastify.sql<[CcRow?]>`SELECT * FROM cost_centers WHERE id = ${costCenterId} AND tenant_id = ${tenantId} LIMIT 1`;
+      if (!ccRows[0]) throw new NotFoundError({ detail: `Cost center ${costCenterId} not found.` });
+
+      // Get budgets per account
+      interface BudgetRow { account_id: string; amount_satang: string; }
+      const budgets = await fastify.sql<BudgetRow[]>`
+        SELECT account_id, amount_satang::text FROM budgets
+        WHERE tenant_id = ${tenantId} AND fiscal_year = ${year}
+          AND (cost_center_id = ${costCenterId} OR cost_center_id IS NULL)
+      `;
+
+      // Get actuals per account
+      interface ActualRow { account_id: string; total_debit: string; total_credit: string; }
+      const actuals = await fastify.sql<ActualRow[]>`
+        SELECT jel.account_id,
+               COALESCE(SUM(jel.debit_satang), 0)::text as total_debit,
+               COALESCE(SUM(jel.credit_satang), 0)::text as total_credit
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON je.id = jel.entry_id
+        WHERE jel.cost_center_id = ${costCenterId}
+          AND je.tenant_id = ${tenantId}
+          AND je.status = 'posted'
+          AND je.fiscal_year = ${year}
+        GROUP BY jel.account_id
+      `;
+
+      // Get account details
+      const allAccountIds = new Set([...budgets.map((b) => b.account_id), ...actuals.map((a) => a.account_id)]);
+      const accountMap: Record<string, { code: string; name: string }> = {};
+      if (allAccountIds.size > 0) {
+        const accountIds = [...allAccountIds];
+        for (const aid of accountIds) {
+          const acctRows = await fastify.sql<[{ code: string; name: string }?]>`
+            SELECT code, name FROM chart_of_accounts WHERE id = ${aid} LIMIT 1
+          `;
+          if (acctRows[0]) accountMap[aid] = acctRows[0];
+        }
+      }
+
+      const budgetMap: Record<string, bigint> = {};
+      for (const b of budgets) budgetMap[b.account_id] = BigInt(b.amount_satang);
+
+      const actualMap: Record<string, bigint> = {};
+      for (const a of actuals) actualMap[a.account_id] = BigInt(a.total_debit) - BigInt(a.total_credit);
+
+      let totalPlanned = 0n;
+      let totalActual = 0n;
+
+      const lines = [...allAccountIds].map((accountId) => {
+        const planned = budgetMap[accountId] ?? 0n;
+        const actual = actualMap[accountId] ?? 0n;
+        const variance = planned - actual;
+        totalPlanned += planned;
+        totalActual += actual;
+
+        return {
+          accountId,
+          accountCode: accountMap[accountId]?.code ?? '',
+          accountName: accountMap[accountId]?.name ?? '',
+          plannedSatang: planned.toString(),
+          actualSatang: actual.toString(),
+          varianceSatang: variance.toString(),
+          variancePercent: planned > 0n ? Math.round(Number((variance * 10000n) / planned)) / 100 : 0,
+          favorable: variance >= 0n,
+        };
+      });
+
+      const totalVariance = totalPlanned - totalActual;
+
+      return reply.status(200).send({
+        costCenter: mapCc(ccRows[0]),
+        fiscalYear: year,
+        lines,
+        summary: {
+          totalPlannedSatang: totalPlanned.toString(),
+          totalActualSatang: totalActual.toString(),
+          totalVarianceSatang: totalVariance.toString(),
+          totalVariancePercent: totalPlanned > 0n ? Math.round(Number((totalVariance * 10000n) / totalPlanned)) / 100 : 0,
+          favorable: totalVariance >= 0n,
+        },
+      });
+    },
+  );
 }

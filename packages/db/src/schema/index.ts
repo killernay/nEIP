@@ -180,3 +180,65 @@ export type { CostCenter, NewCostCenter } from './cost-centers.js';
 
 export { profit_centers } from './profit-centers.js';
 export type { ProfitCenter, NewProfitCenter } from './profit-centers.js';
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Core Business
+// ---------------------------------------------------------------------------
+
+export { price_lists } from './price-lists.js';
+export type { PriceList, NewPriceList } from './price-lists.js';
+
+export { price_list_items } from './price-list-items.js';
+export type { PriceListItem, NewPriceListItem } from './price-list-items.js';
+
+export { payment_terms } from './payment-terms.js';
+export type { PaymentTerm, NewPaymentTerm } from './payment-terms.js';
+
+export { dunning_levels } from './dunning-levels.js';
+export type { DunningLevel, NewDunningLevel } from './dunning-levels.js';
+
+export { dunning_history } from './dunning-history.js';
+export type { DunningHistoryRow, NewDunningHistoryRow } from './dunning-history.js';
+
+export { recurring_je_templates } from './recurring-je-templates.js';
+export type { RecurringJeTemplate, NewRecurringJeTemplate } from './recurring-je-templates.js';
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Enterprise Features
+// ---------------------------------------------------------------------------
+
+export { currencies } from './currencies.js';
+export type { Currency, NewCurrency } from './currencies.js';
+
+export { exchange_rates } from './exchange-rates.js';
+export type { ExchangeRate, NewExchangeRate } from './exchange-rates.js';
+
+export { companies } from './companies.js';
+export type { Company, NewCompany } from './companies.js';
+
+export { approval_workflows } from './approval-workflows.js';
+export type { ApprovalWorkflow, NewApprovalWorkflow } from './approval-workflows.js';
+
+export { approval_steps } from './approval-steps.js';
+export type { ApprovalStep, NewApprovalStep } from './approval-steps.js';
+
+export { approval_requests } from './approval-requests.js';
+export type { ApprovalRequest, NewApprovalRequest } from './approval-requests.js';
+
+export { approval_actions } from './approval-actions.js';
+export type { ApprovalAction, NewApprovalAction } from './approval-actions.js';
+
+export { vendor_returns } from './vendor-returns.js';
+export type { VendorReturn, NewVendorReturn } from './vendor-returns.js';
+
+export { vendor_return_lines } from './vendor-return-lines.js';
+export type { VendorReturnLine, NewVendorReturnLine } from './vendor-return-lines.js';
+
+export { batches } from './batches.js';
+export type { Batch, NewBatch } from './batches.js';
+
+export { serial_numbers } from './serial-numbers.js';
+export type { SerialNumber, NewSerialNumber } from './serial-numbers.js';
+
+export { bank_matching_rules } from './bank-matching-rules.js';
+export type { BankMatchingRule, NewBankMatchingRule } from './bank-matching-rules.js';

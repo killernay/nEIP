@@ -8,7 +8,7 @@ export type { AccountOutput } from './chart-of-accounts.js';
 export { createJournalEntryTools } from './journal-entry.js';
 export type { JournalEntryOutput, JournalEntryLineOutput } from './journal-entry.js';
 
-export { DocumentNumberingService, formatDocumentNumber } from './document-numbering.js';
+export { DocumentNumberingService, formatDocumentNumber, nextDocNumber } from './document-numbering.js';
 export type { DocType } from './document-numbering.js';
 
 export { createFiscalPeriodTools } from './fiscal-period.js';

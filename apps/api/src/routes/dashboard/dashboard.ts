@@ -303,15 +303,39 @@ export async function dashboardRoutes(
         ORDER BY coa.code
       `;
 
-      // 5. AR Aging (stub — uses invoice data when available)
-      // For now, return empty aging buckets similar to the AR aging report
+      // 5. AR Aging — real invoice data
+      interface AgingInvoiceRow {
+        total_satang: string; paid_satang: string; due_date: string;
+      }
+      const agingInvoices = await fastify.sql<AgingInvoiceRow[]>`
+        SELECT total_satang::text, paid_satang::text, due_date
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status IN ('posted', 'sent', 'partial', 'overdue')
+      `;
+
+      let arCurrent = 0n, ar1to30 = 0n, ar31to60 = 0n, ar61to90 = 0n, arOver90 = 0n;
+      const todayDate = new Date();
+      for (const inv of agingInvoices) {
+        const outstanding = BigInt(inv.total_satang) - BigInt(inv.paid_satang);
+        if (outstanding <= 0n) continue;
+        const dueDate = new Date(inv.due_date);
+        const daysOverdue = Math.max(0, Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+        if (daysOverdue === 0) { arCurrent += outstanding; }
+        else if (daysOverdue <= 30) { ar1to30 += outstanding; }
+        else if (daysOverdue <= 60) { ar31to60 += outstanding; }
+        else if (daysOverdue <= 90) { ar61to90 += outstanding; }
+        else { arOver90 += outstanding; }
+      }
+      const arTotal = arCurrent + ar1to30 + ar31to60 + ar61to90 + arOver90;
+
       const arAging = {
-        current: money(0n),
-        days1to30: money(0n),
-        days31to60: money(0n),
-        days61to90: money(0n),
-        over90: money(0n),
-        total: money(0n),
+        current: money(arCurrent),
+        days1to30: money(ar1to30),
+        days31to60: money(ar31to60),
+        days61to90: money(ar61to90),
+        over90: money(arOver90),
+        total: money(arTotal),
       };
 
       return reply.status(200).send({

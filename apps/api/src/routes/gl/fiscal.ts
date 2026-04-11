@@ -14,6 +14,7 @@ import { requireAuth } from '../../hooks/require-auth.js';
 import { toISO } from '../../lib/to-iso.js';
 import { requirePermission } from '../../hooks/require-permission.js';
 import { GL_PERIOD_READ, GL_PERIOD_CLOSE } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -367,12 +368,14 @@ export async function fiscalRoutes(
     },
   );
 
-  // POST /api/v1/fiscal-years/:id/close
+  // -------------------------------------------------------------------------
+  // POST /api/v1/fiscal-years/:id/close — Year-End Closing
+  // -------------------------------------------------------------------------
   fastify.post<{ Params: IdParams }>(
     `${API_V1_PREFIX}/fiscal-years/:id/close`,
     {
       schema: {
-        description: 'Close a fiscal year (requires all periods to be closed)',
+        description: 'Year-end closing: validates all periods closed, creates closing JE (zeroes Revenue/Expense) and carry-forward JE (Retained Earnings), marks year closed',
         tags: ['gl'],
         security: [{ bearerAuth: [] }],
         params: {
@@ -380,15 +383,41 @@ export async function fiscalRoutes(
           required: ['id'],
           properties: { id: { type: 'string' } },
         },
-        response: { 200: { description: 'Fiscal year closed', ...fiscalYearResponseSchema } },
+        response: {
+          200: {
+            description: 'Fiscal year closed with closing journal entries',
+            type: 'object',
+            properties: {
+              fiscalYear: fiscalYearResponseSchema,
+              closingJournalEntry: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  documentNumber: { type: 'string' },
+                  description: { type: 'string' },
+                  lines: { type: 'array', items: { type: 'object' } },
+                },
+              },
+              carryForwardJournalEntry: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  documentNumber: { type: 'string' },
+                  description: { type: 'string' },
+                  netIncomeSatang: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
       },
       preHandler: [requireAuth, requirePermission(GL_PERIOD_CLOSE)],
     },
     async (request, reply) => {
       const { id } = request.params;
-      const { tenantId } = request.user;
+      const { tenantId, sub: userId } = request.user;
 
-      // Check fiscal year exists and belongs to tenant
+      // 1. Validate fiscal year exists and belongs to tenant
       const fyRows = await fastify.sql<[FiscalYearRow?]>`
         SELECT * FROM fiscal_years WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
       `;
@@ -397,7 +426,11 @@ export async function fiscalRoutes(
         throw new NotFoundError({ detail: `Fiscal year ${id} not found.` });
       }
 
-      // Check for open periods
+      if (fy.status === 'closed') {
+        throw new ConflictError({ detail: `Fiscal year ${fy.year} is already closed.` });
+      }
+
+      // 2. Validate all 12 periods are closed
       const openPeriods = await fastify.sql<[{ count: string }?]>`
         SELECT count(*)::text as count FROM fiscal_periods
         WHERE fiscal_year_id = ${id} AND status = 'open'
@@ -405,13 +438,181 @@ export async function fiscalRoutes(
       const openCount = parseInt(openPeriods[0]?.count ?? '0', 10);
       if (openCount > 0) {
         throw new ConflictError({
-          detail: `Cannot close fiscal year — there are still ${String(openCount)} open periods.`,
+          detail: `Cannot close fiscal year — there are still ${String(openCount)} open period(s). Close all periods first.`,
         });
       }
 
-      // Close the year
+      // 3. Calculate net income: sum all posted JE lines for Revenue and Expense accounts
+      //    Revenue accounts: credit_satang - debit_satang (net credit = income)
+      //    Expense accounts: debit_satang - credit_satang (net debit = expense)
+      interface AccountBalanceRow {
+        account_id: string;
+        account_type: string;
+        code: string;
+        name_en: string;
+        total_debit: string;
+        total_credit: string;
+      }
+
+      const accountBalances = await fastify.sql<AccountBalanceRow[]>`
+        SELECT
+          coa.id AS account_id,
+          coa.account_type,
+          coa.code,
+          coa.name_en,
+          COALESCE(SUM(jel.debit_satang), 0)::text AS total_debit,
+          COALESCE(SUM(jel.credit_satang), 0)::text AS total_credit
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON je.id = jel.entry_id
+        JOIN chart_of_accounts coa ON coa.id = jel.account_id
+        WHERE je.tenant_id = ${tenantId}
+          AND je.fiscal_year = ${fy.year}
+          AND je.status = 'posted'
+          AND coa.account_type IN ('revenue', 'expense')
+        GROUP BY coa.id, coa.account_type, coa.code, coa.name_en
+        ORDER BY coa.code
+      `;
+
+      // Separate revenue and expense accounts
+      const revenueAccounts = accountBalances.filter((a) => a.account_type === 'revenue');
+      const expenseAccounts = accountBalances.filter((a) => a.account_type === 'expense');
+
+      // Calculate net income in satang
+      // Revenue: net credit balance = total_credit - total_debit
+      let totalRevenue = 0n;
+      for (const acc of revenueAccounts) {
+        totalRevenue += BigInt(acc.total_credit) - BigInt(acc.total_debit);
+      }
+
+      // Expense: net debit balance = total_debit - total_credit
+      let totalExpense = 0n;
+      for (const acc of expenseAccounts) {
+        totalExpense += BigInt(acc.total_debit) - BigInt(acc.total_credit);
+      }
+
+      const netIncome = totalRevenue - totalExpense; // positive = profit, negative = loss
+
+      // 4. Find Retained Earnings account (code 3200 or first equity account)
+      const retainedEarningsRows = await fastify.sql<[{ id: string; code: string }?]>`
+        SELECT id, code FROM chart_of_accounts
+        WHERE tenant_id = ${tenantId} AND account_type = 'equity' AND is_active = true
+          AND code LIKE '3200%'
+        ORDER BY code ASC LIMIT 1
+      `;
+      let retainedEarningsId = retainedEarningsRows[0]?.id ?? null;
+
+      // Fallback: any equity account
+      if (!retainedEarningsId) {
+        const fallbackRows = await fastify.sql<[{ id: string }?]>`
+          SELECT id FROM chart_of_accounts
+          WHERE tenant_id = ${tenantId} AND account_type = 'equity' AND is_active = true
+          ORDER BY code ASC LIMIT 1
+        `;
+        retainedEarningsId = fallbackRows[0]?.id ?? null;
+      }
+
+      if (!retainedEarningsId) {
+        throw new ValidationError({
+          detail: 'No equity account found for Retained Earnings. Please create an equity account (code 3200) first.',
+        });
+      }
+
+      // 5. Create Closing JE: Dr all Revenue accounts / Cr all Expense accounts → zero them out
+      const closingJeId = crypto.randomUUID();
+      const closingDocNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', fy.year);
+
+      await fastify.sql`
+        INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, tenant_id, created_by, posted_at)
+        VALUES (
+          ${closingJeId}, ${closingDocNumber},
+          ${'Year-end closing entry for fiscal year ' + String(fy.year)},
+          'posted', ${fy.year}, 12,
+          ${tenantId}, ${userId}, NOW()
+        )
+      `;
+
+      const closingLines: Array<{
+        lineNumber: number;
+        accountId: string;
+        accountCode: string;
+        description: string;
+        debitSatang: string;
+        creditSatang: string;
+      }> = [];
+      let lineNum = 1;
+
+      // Dr Revenue accounts (to zero out their credit balances)
+      for (const acc of revenueAccounts) {
+        const netBalance = BigInt(acc.total_credit) - BigInt(acc.total_debit);
+        if (netBalance === 0n) continue;
+
+        const debit = netBalance > 0n ? netBalance.toString() : '0';
+        const credit = netBalance < 0n ? (-netBalance).toString() : '0';
+
+        await fastify.sql`
+          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+          VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${acc.account_id},
+                  ${'Close revenue: ' + acc.name_en}, ${debit}::bigint, ${credit}::bigint)
+        `;
+        closingLines.push({
+          lineNumber: lineNum,
+          accountId: acc.account_id,
+          accountCode: acc.code,
+          description: 'Close revenue: ' + acc.name_en,
+          debitSatang: debit,
+          creditSatang: credit,
+        });
+        lineNum++;
+      }
+
+      // Cr Expense accounts (to zero out their debit balances)
+      for (const acc of expenseAccounts) {
+        const netBalance = BigInt(acc.total_debit) - BigInt(acc.total_credit);
+        if (netBalance === 0n) continue;
+
+        const debit = netBalance < 0n ? (-netBalance).toString() : '0';
+        const credit = netBalance > 0n ? netBalance.toString() : '0';
+
+        await fastify.sql`
+          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+          VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${acc.account_id},
+                  ${'Close expense: ' + acc.name_en}, ${debit}::bigint, ${credit}::bigint)
+        `;
+        closingLines.push({
+          lineNumber: lineNum,
+          accountId: acc.account_id,
+          accountCode: acc.code,
+          description: 'Close expense: ' + acc.name_en,
+          debitSatang: debit,
+          creditSatang: credit,
+        });
+        lineNum++;
+      }
+
+      // Balance to Income Summary / Retained Earnings in the closing JE
+      // Net income goes to RE: if profit → Cr RE; if loss → Dr RE
+      if (netIncome !== 0n) {
+        const reDebit = netIncome < 0n ? (-netIncome).toString() : '0';
+        const reCredit = netIncome > 0n ? netIncome.toString() : '0';
+
+        await fastify.sql`
+          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+          VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${retainedEarningsId},
+                  ${'Net income to Retained Earnings — FY' + String(fy.year)}, ${reDebit}::bigint, ${reCredit}::bigint)
+        `;
+        closingLines.push({
+          lineNumber: lineNum,
+          accountId: retainedEarningsId,
+          accountCode: 'RE',
+          description: 'Net income to Retained Earnings — FY' + String(fy.year),
+          debitSatang: reDebit,
+          creditSatang: reCredit,
+        });
+      }
+
+      // 6. Mark fiscal year as closed
       const updatedRows = await fastify.sql<[FiscalYearRow?]>`
-        UPDATE fiscal_years SET status = 'closed', updated_at = NOW()
+        UPDATE fiscal_years SET status = 'closed', closing_je_id = ${closingJeId}, updated_at = NOW()
         WHERE id = ${id} AND tenant_id = ${tenantId}
         RETURNING *
       `;
@@ -422,21 +623,195 @@ export async function fiscalRoutes(
         SELECT * FROM fiscal_periods WHERE fiscal_year_id = ${id} ORDER BY period_number ASC
       `;
 
-      request.log.info({ fiscalYearId: id, tenantId }, 'Fiscal year closed');
+      request.log.info(
+        { fiscalYearId: id, closingJeId, netIncomeSatang: netIncome.toString(), tenantId },
+        'Fiscal year closed with closing JE',
+      );
 
       return reply.status(200).send({
-        id: updated.id,
-        year: updated.year,
-        startDate: updated.start_date,
-        endDate: updated.end_date,
-        periods: periods.map((p) => ({
-          id: p.id,
-          periodNumber: p.period_number,
-          startDate: p.start_date,
-          endDate: p.end_date,
-          status: p.status,
-        })),
-        createdAt: toISO(updated.created_at),
+        fiscalYear: {
+          id: updated.id,
+          year: updated.year,
+          startDate: updated.start_date,
+          endDate: updated.end_date,
+          periods: periods.map((p) => ({
+            id: p.id,
+            periodNumber: p.period_number,
+            startDate: p.start_date,
+            endDate: p.end_date,
+            status: p.status,
+          })),
+          createdAt: toISO(updated.created_at),
+        },
+        closingJournalEntry: {
+          id: closingJeId,
+          documentNumber: closingDocNumber,
+          description: 'Year-end closing entry for fiscal year ' + String(fy.year),
+          lines: closingLines,
+        },
+        carryForwardJournalEntry: {
+          id: closingJeId,
+          documentNumber: closingDocNumber,
+          description: 'Net income carried forward to Retained Earnings',
+          netIncomeSatang: netIncome.toString(),
+        },
+      });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // POST /api/v1/fiscal-years/:id/reopen — Reopen a closed fiscal year
+  // -------------------------------------------------------------------------
+  fastify.post<{ Params: IdParams }>(
+    `${API_V1_PREFIX}/fiscal-years/:id/reopen`,
+    {
+      schema: {
+        description: 'Reopen a closed fiscal year for corrections. Reverses the closing JE and sets year status back to open.',
+        tags: ['gl'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string' } },
+        },
+        response: {
+          200: {
+            description: 'Fiscal year reopened',
+            type: 'object',
+            properties: {
+              fiscalYear: fiscalYearResponseSchema,
+              reversalJournalEntry: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  id: { type: 'string' },
+                  documentNumber: { type: 'string' },
+                  description: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(GL_PERIOD_CLOSE)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { tenantId, sub: userId } = request.user;
+
+      // 1. Validate fiscal year exists and is closed
+      const fyRows = await fastify.sql<[(FiscalYearRow & { closing_je_id: string | null })?]>`
+        SELECT * FROM fiscal_years WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      const fy = fyRows[0];
+      if (!fy) {
+        throw new NotFoundError({ detail: `Fiscal year ${id} not found.` });
+      }
+
+      if (fy.status !== 'closed') {
+        throw new ConflictError({
+          detail: `Fiscal year ${fy.year} is not closed — current status is "${fy.status}".`,
+        });
+      }
+
+      // 2. Reverse the closing JE if one exists
+      let reversalJe: { id: string; documentNumber: string; description: string } | null = null;
+
+      const closingJeId = fy.closing_je_id;
+      if (closingJeId) {
+        // Fetch original closing JE lines
+        interface JeLineRow {
+          line_number: number;
+          account_id: string;
+          description: string | null;
+          debit_satang: string;
+          credit_satang: string;
+        }
+        const closingLines = await fastify.sql<JeLineRow[]>`
+          SELECT line_number, account_id, description, debit_satang::text, credit_satang::text
+          FROM journal_entry_lines WHERE entry_id = ${closingJeId}
+          ORDER BY line_number
+        `;
+
+        if (closingLines.length > 0) {
+          // Mark original closing JE as reversed
+          await fastify.sql`
+            UPDATE journal_entries SET status = 'reversed', updated_at = NOW()
+            WHERE id = ${closingJeId}
+          `;
+
+          // Create reversal JE with swapped debits/credits
+          const reversalJeId = crypto.randomUUID();
+          const reversalDocNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', fy.year);
+          const reversalDescription = 'Reversal of year-end closing — FY' + String(fy.year) + ' reopened';
+
+          await fastify.sql`
+            INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, reversed_entry_id, tenant_id, created_by, posted_at)
+            VALUES (
+              ${reversalJeId}, ${reversalDocNumber},
+              ${reversalDescription},
+              'posted', ${fy.year}, 12,
+              ${closingJeId}, ${tenantId}, ${userId}, NOW()
+            )
+          `;
+
+          // Create reversed lines (swap debit/credit)
+          for (const line of closingLines) {
+            await fastify.sql`
+              INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+              VALUES (${crypto.randomUUID()}, ${reversalJeId}, ${line.line_number}, ${line.account_id},
+                      ${line.description}, ${line.credit_satang}::bigint, ${line.debit_satang}::bigint)
+            `;
+          }
+
+          reversalJe = {
+            id: reversalJeId,
+            documentNumber: reversalDocNumber,
+            description: reversalDescription,
+          };
+        }
+      }
+
+      // 3. Reopen the fiscal year
+      const updatedRows = await fastify.sql<[FiscalYearRow?]>`
+        UPDATE fiscal_years SET status = 'open', closing_je_id = NULL, updated_at = NOW()
+        WHERE id = ${id} AND tenant_id = ${tenantId}
+        RETURNING *
+      `;
+      const updated = updatedRows[0];
+      if (!updated) throw new NotFoundError({ detail: `Fiscal year ${id} not found.` });
+
+      // 4. Reopen all periods in this fiscal year
+      await fastify.sql`
+        UPDATE fiscal_periods SET status = 'open', updated_at = NOW()
+        WHERE fiscal_year_id = ${id}
+      `;
+
+      const periods = await fastify.sql<FiscalPeriodRow[]>`
+        SELECT * FROM fiscal_periods WHERE fiscal_year_id = ${id} ORDER BY period_number ASC
+      `;
+
+      request.log.info(
+        { fiscalYearId: id, reversalJeId: reversalJe?.id ?? null, tenantId },
+        'Fiscal year reopened',
+      );
+
+      return reply.status(200).send({
+        fiscalYear: {
+          id: updated.id,
+          year: updated.year,
+          startDate: updated.start_date,
+          endDate: updated.end_date,
+          periods: periods.map((p) => ({
+            id: p.id,
+            periodNumber: p.period_number,
+            startDate: p.start_date,
+            endDate: p.end_date,
+            status: p.status,
+          })),
+          createdAt: toISO(updated.created_at),
+        },
+        reversalJournalEntry: reversalJe,
       });
     },
   );

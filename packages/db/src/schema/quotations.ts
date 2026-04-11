@@ -25,7 +25,8 @@ export const quotations = pgTable('quotations', {
     .default('draft'),
   valid_until: text('valid_until').notNull(), // YYYY-MM-DD
   total_satang: bigint('total_satang', { mode: 'bigint' }).notNull().default(0n),
-  converted_invoice_id: text('converted_invoice_id'), // FK to invoices — set on convert
+  converted_invoice_id: text('converted_invoice_id'), // FK to invoices — set on convert (QT→INV)
+  converted_sales_order_id: text('converted_sales_order_id'), // FK to sales_orders — set on convert-to-order (QT→SO)
   tenant_id: text('tenant_id')
     .notNull()
     .references(() => tenants.id, { onDelete: 'cascade' }),

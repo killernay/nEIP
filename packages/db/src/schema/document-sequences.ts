@@ -15,7 +15,11 @@ export const document_sequences = pgTable(
   {
     id: text('id').primaryKey(),
     doc_type: text('doc_type', {
-      enum: ['journal_entry', 'invoice', 'payment', 'bill', 'receipt'],
+      enum: [
+        'journal_entry', 'invoice', 'payment', 'bill', 'receipt',
+        'quotation', 'credit_note', 'delivery_note', 'sales_order',
+        'purchase_order', 'wht', 'bill_payment',
+      ],
     }).notNull(),
     fiscal_year: integer('fiscal_year').notNull(),
     prefix: text('prefix').notNull(),

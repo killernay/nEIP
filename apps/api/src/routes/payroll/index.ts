@@ -21,6 +21,7 @@ import { NotFoundError, ValidationError, ConflictError, API_V1_PREFIX } from '@n
 import { requireAuth } from '../../hooks/require-auth.js';
 import { requirePermission } from '../../hooks/require-permission.js';
 import { toISO } from '../../lib/to-iso.js';
+import { nextDocNumber } from '@neip/core';
 
 const HR_PAY_CREATE    = 'hr:payroll:create'    as const;
 const HR_PAY_READ      = 'hr:payroll:read'      as const;
@@ -471,7 +472,7 @@ export async function payrollRoutes(
         const totalSsc = totalEmployerSsc + employeeSsc;
 
         const jeId = crypto.randomUUID();
-        const jeNumber = `PAY-${Date.now()}`;
+        const jeNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', new Date().getFullYear());
         const now2 = new Date();
         const fiscalYear = now2.getFullYear();
         const fiscalPeriod = now2.getMonth() + 1;
@@ -643,6 +644,145 @@ export async function payrollRoutes(
       `;
 
       return reply.status(200).send(mapItem(updatedItems[0]!));
+    },
+  );
+
+  // =========================================================================
+  // 4.6 Bank File Generation
+  // =========================================================================
+
+  fastify.get<{ Params: { id: string }; Querystring: { bank: string } }>(
+    `${API_V1_PREFIX}/payroll/:id/bank-file`,
+    {
+      schema: {
+        description: 'สร้างไฟล์โอนเงินธนาคาร — Generate bank transfer file (SCB pipe-delimited / KBank fixed-width)',
+        tags: ['payroll'],
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [requireAuth, requirePermission(HR_PAY_READ)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { tenantId } = request.user;
+      const bank = (request.query.bank ?? 'scb').toLowerCase();
+
+      const runRows = await fastify.sql<PayrollRunRow[]>`
+        SELECT * FROM payroll_runs WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      if (!runRows[0]) throw new NotFoundError({ detail: `Payroll run ${id} not found.` });
+
+      const items = await fastify.sql<(PayrollItemRow & {
+        employee_code: string; first_name_th: string; last_name_th: string;
+        first_name_en: string | null; last_name_en: string | null;
+        bank_account_number: string | null; bank_name: string | null;
+      })[]>`
+        SELECT pi.*, e.employee_code, e.first_name_th, e.last_name_th,
+               e.first_name_en, e.last_name_en, e.bank_account_number, e.bank_name
+        FROM payroll_items pi
+        JOIN employees e ON e.id = pi.employee_id
+        WHERE pi.payroll_run_id = ${id}
+        ORDER BY e.employee_code
+      `;
+
+      let fileContent: string;
+      let contentType: string;
+      let filename: string;
+
+      if (bank === 'kbank') {
+        // KBank fixed-width format
+        // Columns: employee name (40), bank account (20), amount in satang (15)
+        const lines = items.map((item) => {
+          const name = ((item.first_name_en ?? item.first_name_th) + ' ' + (item.last_name_en ?? item.last_name_th)).padEnd(40).slice(0, 40);
+          const account = (item.bank_account_number ?? '').padEnd(20).slice(0, 20);
+          const amount = String(item.net_satang).padStart(15, '0');
+          return `${name}${account}${amount}`;
+        });
+        fileContent = lines.join('\n');
+        contentType = 'text/plain';
+        filename = `payroll-${id}-kbank.txt`;
+      } else {
+        // SCB pipe-delimited format
+        const lines = items.map((item) => {
+          const name = (item.first_name_en ?? item.first_name_th) + ' ' + (item.last_name_en ?? item.last_name_th);
+          return [
+            item.employee_code,
+            name,
+            item.bank_account_number ?? '',
+            item.bank_name ?? '',
+            String(item.net_satang),
+          ].join('|');
+        });
+        fileContent = 'employee_code|name|bank_account|bank_name|amount_satang\n' + lines.join('\n');
+        contentType = 'text/csv';
+        filename = `payroll-${id}-scb.csv`;
+      }
+
+      return reply
+        .status(200)
+        .header('Content-Type', contentType)
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .send(fileContent);
+    },
+  );
+
+  // =========================================================================
+  // 4.7 YTD Tax Calculation
+  // =========================================================================
+
+  fastify.get<{ Params: { employeeId: string }; Querystring: { year?: string } }>(
+    `${API_V1_PREFIX}/payroll/ytd-summary/:employeeId`,
+    {
+      schema: {
+        description: 'ดูสรุปภาษีสะสมประจำปี — YTD tax summary for an employee',
+        tags: ['payroll'],
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: [requireAuth, requirePermission(HR_PAY_READ)],
+    },
+    async (request, reply) => {
+      const { employeeId } = request.params;
+      const { tenantId } = request.user;
+      const year = parseInt(request.query.year ?? String(new Date().getFullYear()), 10);
+
+      // Get all payroll items for this employee in the given year
+      const items = await fastify.sql<{
+        gross_satang: number; social_security_satang: number;
+        provident_fund_satang: number; personal_income_tax_satang: number;
+        net_satang: number; employer_ssc_satang: number;
+      }[]>`
+        SELECT pi.gross_satang, pi.social_security_satang, pi.provident_fund_satang,
+               pi.personal_income_tax_satang, pi.net_satang, pi.employer_ssc_satang
+        FROM payroll_items pi
+        JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
+        WHERE pi.employee_id = ${employeeId}
+          AND pr.tenant_id = ${tenantId}
+          AND pr.status IN ('calculated', 'approved', 'paid')
+          AND EXTRACT(YEAR FROM pr.pay_period_start::date) = ${year}
+      `;
+
+      const ytdGross = items.reduce((s, i) => s + i.gross_satang, 0);
+      const ytdTax = items.reduce((s, i) => s + i.personal_income_tax_satang, 0);
+      const ytdSSC = items.reduce((s, i) => s + i.social_security_satang, 0);
+      const ytdPF = items.reduce((s, i) => s + i.provident_fund_satang, 0);
+      const ytdNet = items.reduce((s, i) => s + i.net_satang, 0);
+      const monthsProcessed = items.length;
+
+      // Project annual tax: ytdGross / monthsProcessed * 12, then calculate PIT
+      let projectedAnnualTax = 0;
+      if (monthsProcessed > 0) {
+        const monthlyAvg = Math.round(ytdGross / monthsProcessed);
+        projectedAnnualTax = calcPIT(monthlyAvg) * 12;
+      }
+
+      return reply.status(200).send({
+        employeeId, year, monthsProcessed,
+        ytdGrossSatang: ytdGross,
+        ytdTaxSatang: ytdTax,
+        ytdSscSatang: ytdSSC,
+        ytdProvidentFundSatang: ytdPF,
+        ytdNetSatang: ytdNet,
+        projectedAnnualTaxSatang: projectedAnnualTax,
+      });
     },
   );
 }

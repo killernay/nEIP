@@ -21,7 +21,19 @@ import { document_sequences } from '@neip/db';
 // ---------------------------------------------------------------------------
 
 /** Supported document types. */
-export type DocType = 'journal_entry' | 'invoice' | 'payment' | 'bill' | 'receipt';
+export type DocType =
+  | 'journal_entry'
+  | 'invoice'
+  | 'payment'
+  | 'bill'
+  | 'receipt'
+  | 'quotation'
+  | 'credit_note'
+  | 'delivery_note'
+  | 'sales_order'
+  | 'purchase_order'
+  | 'wht'
+  | 'bill_payment';
 
 /** Default prefix mapping per document type. */
 const DOC_TYPE_PREFIXES: Record<DocType, string> = {
@@ -30,6 +42,13 @@ const DOC_TYPE_PREFIXES: Record<DocType, string> = {
   payment: 'PMT',
   bill: 'BILL',
   receipt: 'RCT',
+  quotation: 'QT',
+  credit_note: 'CN',
+  delivery_note: 'DO',
+  sales_order: 'SO',
+  purchase_order: 'PO',
+  wht: 'WHT',
+  bill_payment: 'BP',
 };
 
 // ---------------------------------------------------------------------------
@@ -112,6 +131,53 @@ export class DocumentNumberingService {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Generate the next document number using a raw postgres.js SQL client.
+ * This is suitable for route handlers that use `fastify.sql` instead of Drizzle.
+ *
+ * Uses advisory locks to ensure gap-free numbering within a connection.
+ */
+export async function nextDocNumber(
+  sql: { unsafe: (q: string, params?: any[]) => Promise<any[]> },
+  tenantId: string,
+  docType: DocType,
+  fiscalYear: number,
+): Promise<string> {
+  const prefix = DOC_TYPE_PREFIXES[docType];
+  const lockKey = computeAdvisoryLockKey(tenantId, docType, fiscalYear);
+
+  // Advisory lock (session-level — released at end of transaction or manually)
+  await sql.unsafe(`SELECT pg_advisory_xact_lock($1)`, [lockKey]);
+
+  // Find or create sequence row
+  const existing = await sql.unsafe(
+    `SELECT id, last_number FROM document_sequences
+     WHERE tenant_id = $1 AND doc_type = $2 AND fiscal_year = $3`,
+    [tenantId, docType, fiscalYear],
+  ) as Array<{ id: string; last_number: number }>;
+
+  let nextNumber: number;
+
+  if (existing.length === 0) {
+    nextNumber = 1;
+    const id = crypto.randomUUID();
+    await sql.unsafe(
+      `INSERT INTO document_sequences (id, doc_type, fiscal_year, prefix, last_number, tenant_id)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, docType, fiscalYear, prefix, 1, tenantId],
+    );
+  } else {
+    const row = existing[0]!;
+    nextNumber = row.last_number + 1;
+    await sql.unsafe(
+      `UPDATE document_sequences SET last_number = $1, updated_at = NOW() WHERE id = $2`,
+      [nextNumber, row.id],
+    );
+  }
+
+  return formatDocumentNumber(prefix, fiscalYear, nextNumber);
+}
 
 /**
  * Format a document number: {PREFIX}-{YEAR}-{PADDED_NUMBER}

@@ -25,6 +25,8 @@ import {
   REPORT_AR_READ,
   REPORT_AP_READ,
   REPORT_PNL_COMPARISON_READ,
+  REPORT_VAT_RETURN_READ,
+  REPORT_SSC_FILING_READ,
 } from '../../lib/permissions.js';
 
 // ---------------------------------------------------------------------------
@@ -680,28 +682,92 @@ export async function reportRoutes(
       preHandler: [requireAuth, requirePermission(REPORT_AR_READ)],
     },
     async (request, reply) => {
+      const { tenantId } = request.user;
       const asOfDate = request.query.asOfDate ?? new Date().toISOString().slice(0, 10);
+      const asOfDateObj = new Date(asOfDate);
 
-      // TODO: Query invoices table when AR schema is available.
-      // For now, return an empty aging report stub.
-      // The actual implementation would:
-      // 1. Query all unpaid/partial invoices with due_date <= asOfDate
-      // 2. Calculate aging buckets based on days past due
-      // 3. Group by customer
+      interface InvoiceAgingRow {
+        id: string; invoice_number: string; customer_id: string;
+        customer_name: string; total_satang: string;
+        paid_satang: string; due_date: string;
+      }
+
+      const invoiceRows = await fastify.sql<InvoiceAgingRow[]>`
+        SELECT
+          i.id, i.invoice_number, i.customer_id,
+          COALESCE(c.company_name, 'Unknown') as customer_name,
+          i.total_satang::text, i.paid_satang::text, i.due_date
+        FROM invoices i
+        LEFT JOIN contacts c ON c.id = i.customer_id
+        WHERE i.tenant_id = ${tenantId}
+          AND i.status IN ('posted', 'sent', 'partial', 'overdue')
+        ORDER BY i.due_date ASC
+      `;
+
+      let current = 0n, days1to30 = 0n, days31to60 = 0n, days61to90 = 0n, over90 = 0n;
+
+      const customerMap = new Map<string, {
+        customerId: string; customerName: string;
+        current: bigint; days1to30: bigint; days31to60: bigint;
+        days61to90: bigint; over90: bigint; total: bigint;
+        invoices: Array<{ invoiceNumber: string; outstandingSatang: string; dueDate: string; daysOverdue: number }>;
+      }>();
+
+      for (const row of invoiceRows) {
+        const outstanding = BigInt(row.total_satang) - BigInt(row.paid_satang);
+        if (outstanding <= 0n) continue;
+
+        const dueDate = new Date(row.due_date);
+        const diffMs = asOfDateObj.getTime() - dueDate.getTime();
+        const daysOverdue = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+
+        if (daysOverdue === 0) { current += outstanding; }
+        else if (daysOverdue <= 30) { days1to30 += outstanding; }
+        else if (daysOverdue <= 60) { days31to60 += outstanding; }
+        else if (daysOverdue <= 90) { days61to90 += outstanding; }
+        else { over90 += outstanding; }
+
+        let entry = customerMap.get(row.customer_id);
+        if (!entry) {
+          entry = {
+            customerId: row.customer_id, customerName: row.customer_name,
+            current: 0n, days1to30: 0n, days31to60: 0n, days61to90: 0n, over90: 0n, total: 0n, invoices: [],
+          };
+          customerMap.set(row.customer_id, entry);
+        }
+        entry.total += outstanding;
+        if (daysOverdue === 0) { entry.current += outstanding; }
+        else if (daysOverdue <= 30) { entry.days1to30 += outstanding; }
+        else if (daysOverdue <= 60) { entry.days31to60 += outstanding; }
+        else if (daysOverdue <= 90) { entry.days61to90 += outstanding; }
+        else { entry.over90 += outstanding; }
+
+        entry.invoices.push({
+          invoiceNumber: row.invoice_number, outstandingSatang: outstanding.toString(),
+          dueDate: row.due_date, daysOverdue,
+        });
+      }
+
+      const totalOutstanding = current + days1to30 + days31to60 + days61to90 + over90;
+
+      const customers = [...customerMap.values()].map((c) => ({
+        customerId: c.customerId, customerName: c.customerName,
+        current: money(c.current), days1to30: money(c.days1to30),
+        days31to60: money(c.days31to60), days61to90: money(c.days61to90),
+        over90: money(c.over90), total: money(c.total), invoices: c.invoices,
+      }));
 
       return reply.status(200).send({
         reportName: 'AR Aging',
         generatedAt: new Date().toISOString(),
         asOfDate,
         buckets: {
-          current: money(0n),
-          days1to30: money(0n),
-          days31to60: money(0n),
-          days61to90: money(0n),
-          over90: money(0n),
+          current: money(current), days1to30: money(days1to30),
+          days31to60: money(days31to60), days61to90: money(days61to90),
+          over90: money(over90),
         },
-        total: money(0n),
-        customers: [],
+        total: money(totalOutstanding),
+        customers,
       });
     },
   );
@@ -1564,6 +1630,213 @@ export async function reportRoutes(
         items,
         totalGrossIncomeSatang: totalGrossSatang.toString(),
         totalWhtAmountSatang: totalWhtSatang.toString(),
+        currency: 'THB',
+      });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/reports/vat-return — ภ.พ.30 VAT Return Report
+  // -------------------------------------------------------------------------
+  fastify.get<{ Querystring: { year?: number; month?: number } }>(
+    `${API_V1_PREFIX}/reports/vat-return`,
+    {
+      schema: {
+        description: 'ภ.พ.30 VAT Return Report — output VAT (posted invoices) minus input VAT (posted bills) for a period',
+        tags: ['reports', 'thai-compliance'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            year: { type: 'integer', description: 'Tax year (defaults to current year)' },
+            month: { type: 'integer', minimum: 1, maximum: 12, description: 'Tax month (defaults to current month)' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              reportName: { type: 'string' },
+              generatedAt: { type: 'string', format: 'date-time' },
+              taxYear: { type: 'integer' },
+              taxMonth: { type: 'integer' },
+              outputVat: moneySchema,
+              outputVatTransactionCount: { type: 'integer' },
+              inputVat: moneySchema,
+              inputVatTransactionCount: { type: 'integer' },
+              netVat: moneySchema,
+              status: { type: 'string', enum: ['payable', 'refundable', 'zero'] },
+              currency: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(REPORT_VAT_RETURN_READ)],
+    },
+    async (request, reply) => {
+      const { tenantId } = request.user;
+      const now = new Date();
+      const year = request.query.year ?? now.getFullYear();
+      const month = request.query.month ?? (now.getMonth() + 1);
+
+      // Output VAT: 7% on posted invoice subtotals for the period
+      const outputRows = await fastify.sql<[{ invoice_count: string; total_subtotal_satang: string | null }]>`
+        SELECT
+          COUNT(*)::text as invoice_count,
+          COALESCE(SUM(total_satang), 0)::text as total_subtotal_satang
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status IN ('posted', 'sent', 'paid', 'partial')
+          AND EXTRACT(YEAR FROM posted_at) = ${year}
+          AND EXTRACT(MONTH FROM posted_at) = ${month}
+      `;
+
+      // Input VAT: 7% on posted bill totals for the period
+      const inputRows = await fastify.sql<[{ bill_count: string; total_subtotal_satang: string | null }]>`
+        SELECT
+          COUNT(*)::text as bill_count,
+          COALESCE(SUM(total_satang), 0)::text as total_subtotal_satang
+        FROM bills
+        WHERE tenant_id = ${tenantId}
+          AND status IN ('posted', 'paid', 'partial')
+          AND EXTRACT(YEAR FROM posted_at) = ${year}
+          AND EXTRACT(MONTH FROM posted_at) = ${month}
+      `;
+
+      const VAT_BP = 700n; // 7% in basis points
+
+      const outputSubtotal = BigInt(outputRows[0].total_subtotal_satang ?? '0');
+      const outputVatAmount = (outputSubtotal * VAT_BP + 5000n) / 10000n; // round half-up
+      const outputCount = parseInt(outputRows[0].invoice_count, 10);
+
+      const inputSubtotal = BigInt(inputRows[0].total_subtotal_satang ?? '0');
+      const inputVatAmount = (inputSubtotal * VAT_BP + 5000n) / 10000n;
+      const inputCount = parseInt(inputRows[0].bill_count, 10);
+
+      const netVatAmount = outputVatAmount - inputVatAmount;
+      const status = netVatAmount > 0n ? 'payable' : netVatAmount < 0n ? 'refundable' : 'zero';
+
+      return reply.status(200).send({
+        reportName: 'ภ.พ.30 VAT Return',
+        generatedAt: new Date().toISOString(),
+        taxYear: year,
+        taxMonth: month,
+        outputVat: money(outputVatAmount),
+        outputVatTransactionCount: outputCount,
+        inputVat: money(inputVatAmount),
+        inputVatTransactionCount: inputCount,
+        netVat: money(netVatAmount < 0n ? (-netVatAmount).toString() : netVatAmount.toString()),
+        status,
+        currency: 'THB',
+      });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/reports/ssc-filing — SSC Monthly Filing Report (สปส.)
+  // -------------------------------------------------------------------------
+  fastify.get<{ Querystring: { year?: number; month?: number } }>(
+    `${API_V1_PREFIX}/reports/ssc-filing`,
+    {
+      schema: {
+        description: 'SSC Monthly Filing Report (สปส.) — per-employee SSC breakdown for monthly filing',
+        tags: ['reports', 'thai-compliance'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            year: { type: 'integer', description: 'Filing year (defaults to current year)' },
+            month: { type: 'integer', minimum: 1, maximum: 12, description: 'Filing month (defaults to current month)' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              reportName: { type: 'string' },
+              generatedAt: { type: 'string', format: 'date-time' },
+              filingYear: { type: 'integer' },
+              filingMonth: { type: 'integer' },
+              employees: { type: 'array', items: { type: 'object' } },
+              totalEmployeeSSCSatang: { type: 'string' },
+              totalEmployerSSCSatang: { type: 'string' },
+              grandTotalSSCSatang: { type: 'string' },
+              employeeCount: { type: 'integer' },
+              currency: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(REPORT_SSC_FILING_READ)],
+    },
+    async (request, reply) => {
+      const { tenantId } = request.user;
+      const now = new Date();
+      const year = request.query.year ?? now.getFullYear();
+      const month = request.query.month ?? (now.getMonth() + 1);
+
+      interface SSCRow {
+        employee_id: string;
+        employee_code: string;
+        first_name_th: string;
+        last_name_th: string;
+        national_id: string | null;
+        social_security_number: string | null;
+        gross_satang: number;
+        social_security_satang: number;
+        employer_ssc_satang: number;
+      }
+
+      // Find payroll runs for the given month/year, join items with employee info
+      const rows = await fastify.sql<SSCRow[]>`
+        SELECT
+          pi.employee_id,
+          e.employee_code,
+          e.first_name_th,
+          e.last_name_th,
+          e.national_id,
+          e.social_security_number,
+          pi.gross_satang,
+          pi.social_security_satang,
+          pi.employer_ssc_satang
+        FROM payroll_items pi
+        JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
+        JOIN employees e ON e.id = pi.employee_id
+        WHERE pr.tenant_id = ${tenantId}
+          AND pr.status IN ('calculated', 'approved', 'paid')
+          AND EXTRACT(YEAR FROM pr.pay_period_start::date) = ${year}
+          AND EXTRACT(MONTH FROM pr.pay_period_start::date) = ${month}
+        ORDER BY e.employee_code
+      `;
+
+      let totalEmployeeSSC = 0;
+      let totalEmployerSSC = 0;
+
+      const employees = rows.map((r) => {
+        totalEmployeeSSC += r.social_security_satang;
+        totalEmployerSSC += r.employer_ssc_satang;
+        return {
+          employeeId: r.employee_id,
+          employeeCode: r.employee_code,
+          nameTh: `${r.first_name_th} ${r.last_name_th}`,
+          nationalId: r.national_id,
+          socialSecurityNumber: r.social_security_number,
+          grossSatang: r.gross_satang.toString(),
+          employeeSSCSatang: r.social_security_satang.toString(),
+          employerSSCSatang: r.employer_ssc_satang.toString(),
+        };
+      });
+
+      return reply.status(200).send({
+        reportName: 'SSC Monthly Filing (สปส.)',
+        generatedAt: new Date().toISOString(),
+        filingYear: year,
+        filingMonth: month,
+        employees,
+        totalEmployeeSSCSatang: totalEmployeeSSC.toString(),
+        totalEmployerSSCSatang: totalEmployerSSC.toString(),
+        grandTotalSSCSatang: (totalEmployeeSSC + totalEmployerSSC).toString(),
+        employeeCount: employees.length,
         currency: 'THB',
       });
     },

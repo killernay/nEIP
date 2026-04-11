@@ -212,5 +212,24 @@ Examples:
 
   fiscal.addCommand(period);
 
+  // neip fiscal close-year / reopen-year
+  fiscal
+    .command('close-year <yearId>')
+    .description('ปิดปีบัญชี — Close a fiscal year to prevent further postings')
+    .action(async (yearId: string) => {
+      const result = await api.post<{ data: FiscalYear }>(`/api/v1/fiscal-years/${yearId}/close`);
+      if (!result.ok) { printError(result.error.detail, result.error.status); process.exit(1); }
+      printSuccess(result.data.data, `Fiscal year ${yearId} closed.`);
+    });
+
+  fiscal
+    .command('reopen-year <yearId>')
+    .description('เปิดปีบัญชีที่ปิดแล้ว — Reopen a previously closed fiscal year')
+    .action(async (yearId: string) => {
+      const result = await api.post<{ data: FiscalYear }>(`/api/v1/fiscal-years/${yearId}/reopen`);
+      if (!result.ok) { printError(result.error.detail, result.error.status); process.exit(1); }
+      printSuccess(result.data.data, `Fiscal year ${yearId} reopened.`);
+    });
+
   return fiscal;
 }

@@ -18,6 +18,7 @@ import {
   AR_CN_ISSUE,
   AR_CN_VOID,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -142,12 +143,6 @@ interface CountRow {
   count: string;
 }
 
-function generateDocNumber(prefix: string): string {
-  const yyyymmdd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const seq = String(Date.now()).slice(-3);
-  return `${prefix}-${yyyymmdd}-${seq}`;
-}
-
 function mapCn(r: CnRow, lines: CnLineRow[] = []) {
   return {
     id: r.id,
@@ -229,7 +224,7 @@ export async function creditNoteRoutes(
       }
 
       const cnId = crypto.randomUUID();
-      const documentNumber = generateDocNumber('CN');
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'credit_note', new Date().getFullYear());
 
       await fastify.sql`
         INSERT INTO credit_notes (id, document_number, invoice_id, customer_id, customer_name, reason, total_satang, status, notes, tenant_id, created_by)

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { ChevronRight, ChevronDown } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
 import { api } from '@/lib/api-client';
@@ -10,6 +11,15 @@ import { ReportShell } from '../_components/report-shell';
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+interface CostCenterDetail {
+  costCenterId: string;
+  costCenterName: string;
+  budget: number;
+  actual: number;
+  variance: number;
+  variancePercent: number;
+}
 
 interface VarianceLine {
   code: string;
@@ -23,6 +33,7 @@ interface VarianceLine {
   /** Variance percentage */
   variancePercent: number;
   category: string;
+  costCenters?: CostCenterDetail[];
 }
 
 interface BudgetVarianceData {
@@ -43,6 +54,16 @@ function varianceColor(pct: number): string {
 export default function BudgetVariancePage(): React.JSX.Element {
   const [data, setData] = useState<BudgetVarianceData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleRow = (code: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
 
   const handleGenerate = useCallback(async (fiscalYear: string, period: string) => {
     setLoading(true);
@@ -77,30 +98,67 @@ export default function BudgetVariancePage(): React.JSX.Element {
             </tr>
           </thead>
           <tbody>
-            {data.lines.map((line, i) => (
-              <tr
-                key={`${line.code}-${i}`}
-                className="border-b border-[var(--color-border)] hover:bg-[var(--color-accent)]/30"
-              >
-                <td className="px-4 py-2 font-mono-figures text-[var(--color-muted-foreground)]">
-                  {line.code}
-                </td>
-                <td className="px-4 py-2">{line.name}</td>
-                <td className="px-4 py-2 text-[var(--color-muted-foreground)]">{line.category}</td>
-                <td className="px-4 py-2 text-right">
-                  <MoneyDisplay amount={BigInt(line.budget)} size="sm" />
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <MoneyDisplay amount={BigInt(line.actual)} size="sm" />
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <MoneyDisplay amount={BigInt(line.variance)} size="sm" showSign format="accounting" />
-                </td>
-                <td className={cn('px-4 py-2 text-right font-mono-figures', varianceColor(line.variancePercent))}>
-                  {line.variancePercent > 0 ? '+' : ''}{line.variancePercent.toFixed(1)}%
-                </td>
-              </tr>
-            ))}
+            {data.lines.map((line, i) => {
+              const hasCostCenters = (line.costCenters?.length ?? 0) > 0;
+              const isExpanded = expandedRows.has(line.code);
+              return (
+                <>
+                  <tr
+                    key={`${line.code}-${i}`}
+                    className={cn(
+                      'border-b border-[var(--color-border)] hover:bg-[var(--color-accent)]/30',
+                      hasCostCenters && 'cursor-pointer',
+                    )}
+                    onClick={hasCostCenters ? () => toggleRow(line.code) : undefined}
+                  >
+                    <td className="px-4 py-2 font-mono-figures text-[var(--color-muted-foreground)]">
+                      <span className="flex items-center gap-1">
+                        {hasCostCenters && (isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />)}
+                        {line.code}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2">{line.name}</td>
+                    <td className="px-4 py-2 text-[var(--color-muted-foreground)]">{line.category}</td>
+                    <td className="px-4 py-2 text-right">
+                      <MoneyDisplay amount={BigInt(line.budget)} size="sm" />
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <MoneyDisplay amount={BigInt(line.actual)} size="sm" />
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <MoneyDisplay amount={BigInt(line.variance)} size="sm" showSign format="accounting" />
+                    </td>
+                    <td className={cn('px-4 py-2 text-right font-mono-figures', varianceColor(line.variancePercent))}>
+                      {line.variancePercent > 0 ? '+' : ''}{line.variancePercent.toFixed(1)}%
+                    </td>
+                  </tr>
+                  {isExpanded && line.costCenters?.map((cc) => (
+                    <tr
+                      key={`${line.code}-cc-${cc.costCenterId}`}
+                      className="border-b border-[var(--color-border)] bg-[var(--color-muted)]/20"
+                    >
+                      <td className="px-4 py-1.5" />
+                      <td className="px-4 py-1.5 pl-8 text-xs text-[var(--color-muted-foreground)]">
+                        {cc.costCenterName}
+                      </td>
+                      <td className="px-4 py-1.5" />
+                      <td className="px-4 py-1.5 text-right text-xs">
+                        <MoneyDisplay amount={BigInt(cc.budget)} size="sm" />
+                      </td>
+                      <td className="px-4 py-1.5 text-right text-xs">
+                        <MoneyDisplay amount={BigInt(cc.actual)} size="sm" />
+                      </td>
+                      <td className="px-4 py-1.5 text-right text-xs">
+                        <MoneyDisplay amount={BigInt(cc.variance)} size="sm" showSign format="accounting" />
+                      </td>
+                      <td className={cn('px-4 py-1.5 text-right font-mono-figures text-xs', varianceColor(cc.variancePercent))}>
+                        {cc.variancePercent > 0 ? '+' : ''}{cc.variancePercent.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              );
+            })}
           </tbody>
         </table>
       ) : (

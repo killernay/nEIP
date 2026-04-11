@@ -59,10 +59,25 @@ function parseEnv(raw: Record<string, string | undefined>): Env {
  * Validated, type-safe environment variables.
  *
  * Import this instead of `process.env` to get full type safety and
- * fail-fast validation.
+ * fail-fast validation. Validation is deferred until the first property
+ * access so that importing `@neip/shared` for error classes or types
+ * does not require env vars to be set (e.g. in tests).
  *
  * @example
  * import { env } from '@neip/shared';
  * const port = env.PORT; // number
  */
-export const env: Env = parseEnv(process.env);
+let _cached: Env | undefined;
+
+function _getEnv(): Env {
+  if (!_cached) {
+    _cached = parseEnv(process.env);
+  }
+  return _cached;
+}
+
+export const env: Env = new Proxy({} as Env, {
+  get(_target, prop: string) {
+    return _getEnv()[prop as keyof Env];
+  },
+});

@@ -260,6 +260,106 @@ export const HR_LEAVE_REQUEST_APPROVE = 'hr:leave:request:approve'  as const;
 export const HR_LEAVE_REQUEST_REJECT  = 'hr:leave:request:reject'   as const;
 
 // ---------------------------------------------------------------------------
+// Thai Compliance — VAT Return, e-Tax, PDPA, SSC
+// ---------------------------------------------------------------------------
+
+export const REPORT_VAT_RETURN_READ = 'report:vat-return:read' as const;
+export const REPORT_SSC_FILING_READ = 'report:ssc-filing:read' as const;
+export const FI_ETAX_READ           = 'fi:etax:read'           as const;
+export const PDPA_MANAGE            = 'pdpa:manage'            as const;
+
+// ---------------------------------------------------------------------------
+// Pricing & Payment Terms
+// ---------------------------------------------------------------------------
+
+export const PRICING_READ = 'pricing:read' as const;
+export const PRICING_MANAGE = 'pricing:manage' as const;
+
+// ---------------------------------------------------------------------------
+// Dunning
+// ---------------------------------------------------------------------------
+
+export const DUNNING_MANAGE = 'dunning:manage' as const;
+
+// ---------------------------------------------------------------------------
+// Purchase Requisition (MM-PR)
+// ---------------------------------------------------------------------------
+
+export const MM_PR_CREATE  = 'mm:pr:create'  as const;
+export const MM_PR_READ    = 'mm:pr:read'    as const;
+export const MM_PR_UPDATE  = 'mm:pr:update'  as const;
+export const MM_PR_APPROVE = 'mm:pr:approve' as const;
+
+// ---------------------------------------------------------------------------
+// RFQ (Request for Quotation)
+// ---------------------------------------------------------------------------
+
+export const MM_RFQ_CREATE = 'mm:rfq:create' as const;
+export const MM_RFQ_READ   = 'mm:rfq:read'   as const;
+
+// ---------------------------------------------------------------------------
+// Stock Count (Physical Inventory)
+// ---------------------------------------------------------------------------
+
+export const INV_COUNT_CREATE = 'inventory:count:create' as const;
+export const INV_COUNT_READ   = 'inventory:count:read'   as const;
+export const INV_COUNT_POST   = 'inventory:count:post'   as const;
+
+// ---------------------------------------------------------------------------
+// HR — Positions
+// ---------------------------------------------------------------------------
+
+export const HR_POSITION_CREATE = 'hr:position:create' as const;
+export const HR_POSITION_READ   = 'hr:position:read'   as const;
+export const HR_POSITION_UPDATE = 'hr:position:update' as const;
+
+// ---------------------------------------------------------------------------
+// HR — Attendance
+// ---------------------------------------------------------------------------
+
+export const HR_ATTENDANCE_CREATE = 'hr:attendance:create' as const;
+export const HR_ATTENDANCE_READ   = 'hr:attendance:read'   as const;
+
+// ---------------------------------------------------------------------------
+// CO — Budget Override
+// ---------------------------------------------------------------------------
+
+export const CO_BUDGET_OVERRIDE = 'co:budget:override' as const;
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Enterprise Features
+// ---------------------------------------------------------------------------
+
+// Multi-Currency
+export const FI_CURRENCY_CREATE = 'fi:currency:create' as const;
+export const FI_CURRENCY_READ   = 'fi:currency:read'   as const;
+export const FI_CURRENCY_UPDATE = 'fi:currency:update' as const;
+
+// Multi-Company
+export const COMPANY_CREATE = 'company:create' as const;
+export const COMPANY_READ   = 'company:read'   as const;
+export const COMPANY_UPDATE = 'company:update' as const;
+
+// Approval Chains
+export const APPROVAL_WORKFLOW_CREATE = 'approval:workflow:create' as const;
+export const APPROVAL_WORKFLOW_READ   = 'approval:workflow:read'   as const;
+export const APPROVAL_ACTION          = 'approval:action'          as const;
+
+// ---------------------------------------------------------------------------
+// AI & Analytics (Phase 6)
+// ---------------------------------------------------------------------------
+
+export const AI_SCAN       = 'ai:scan'       as const;
+export const AI_FORECAST   = 'ai:forecast'   as const;
+export const AI_CATEGORIZE = 'ai:categorize' as const;
+export const AI_RECONCILE  = 'ai:reconcile'  as const;
+export const AI_PARSE      = 'ai:parse'      as const;
+export const AI_PREDICT    = 'ai:predict'    as const;
+export const REPORT_CUSTOM_CREATE = 'report:custom:create' as const;
+export const REPORT_CUSTOM_READ   = 'report:custom:read'   as const;
+export const REPORT_CUSTOM_RUN    = 'report:custom:run'    as const;
+
+// ---------------------------------------------------------------------------
 // Union type — exhaustive set of all permission strings
 // ---------------------------------------------------------------------------
 
@@ -408,7 +508,52 @@ export type Permission =
   | typeof HR_LEAVE_REQUEST_CREATE
   | typeof HR_LEAVE_REQUEST_READ
   | typeof HR_LEAVE_REQUEST_APPROVE
-  | typeof HR_LEAVE_REQUEST_REJECT;
+  | typeof HR_LEAVE_REQUEST_REJECT
+  // Thai Compliance
+  | typeof REPORT_VAT_RETURN_READ
+  | typeof REPORT_SSC_FILING_READ
+  | typeof FI_ETAX_READ
+  | typeof PDPA_MANAGE
+  // Pricing & Dunning
+  | typeof PRICING_READ
+  | typeof PRICING_MANAGE
+  | typeof DUNNING_MANAGE
+  // Phase 4 Operations
+  | typeof MM_PR_CREATE
+  | typeof MM_PR_READ
+  | typeof MM_PR_UPDATE
+  | typeof MM_PR_APPROVE
+  | typeof MM_RFQ_CREATE
+  | typeof MM_RFQ_READ
+  | typeof INV_COUNT_CREATE
+  | typeof INV_COUNT_READ
+  | typeof INV_COUNT_POST
+  | typeof HR_POSITION_CREATE
+  | typeof HR_POSITION_READ
+  | typeof HR_POSITION_UPDATE
+  | typeof HR_ATTENDANCE_CREATE
+  | typeof HR_ATTENDANCE_READ
+  | typeof CO_BUDGET_OVERRIDE
+  // Phase 5 Enterprise
+  | typeof FI_CURRENCY_CREATE
+  | typeof FI_CURRENCY_READ
+  | typeof FI_CURRENCY_UPDATE
+  | typeof COMPANY_CREATE
+  | typeof COMPANY_READ
+  | typeof COMPANY_UPDATE
+  | typeof APPROVAL_WORKFLOW_CREATE
+  | typeof APPROVAL_WORKFLOW_READ
+  | typeof APPROVAL_ACTION
+  // AI & Analytics (Phase 6)
+  | typeof AI_SCAN
+  | typeof AI_FORECAST
+  | typeof AI_CATEGORIZE
+  | typeof AI_RECONCILE
+  | typeof AI_PARSE
+  | typeof AI_PREDICT
+  | typeof REPORT_CUSTOM_CREATE
+  | typeof REPORT_CUSTOM_READ
+  | typeof REPORT_CUSTOM_RUN;
 
 // ---------------------------------------------------------------------------
 // Permission sets — grouped by default role
@@ -559,6 +704,51 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   HR_LEAVE_REQUEST_READ,
   HR_LEAVE_REQUEST_APPROVE,
   HR_LEAVE_REQUEST_REJECT,
+  // Thai Compliance
+  REPORT_VAT_RETURN_READ,
+  REPORT_SSC_FILING_READ,
+  FI_ETAX_READ,
+  PDPA_MANAGE,
+  // Pricing & Dunning
+  PRICING_READ,
+  PRICING_MANAGE,
+  DUNNING_MANAGE,
+  // Phase 4 Operations
+  MM_PR_CREATE,
+  MM_PR_READ,
+  MM_PR_UPDATE,
+  MM_PR_APPROVE,
+  MM_RFQ_CREATE,
+  MM_RFQ_READ,
+  INV_COUNT_CREATE,
+  INV_COUNT_READ,
+  INV_COUNT_POST,
+  HR_POSITION_CREATE,
+  HR_POSITION_READ,
+  HR_POSITION_UPDATE,
+  HR_ATTENDANCE_CREATE,
+  HR_ATTENDANCE_READ,
+  CO_BUDGET_OVERRIDE,
+  // Phase 5 Enterprise
+  FI_CURRENCY_CREATE,
+  FI_CURRENCY_READ,
+  FI_CURRENCY_UPDATE,
+  COMPANY_CREATE,
+  COMPANY_READ,
+  COMPANY_UPDATE,
+  APPROVAL_WORKFLOW_CREATE,
+  APPROVAL_WORKFLOW_READ,
+  APPROVAL_ACTION,
+  // AI & Analytics (Phase 6)
+  AI_SCAN,
+  AI_FORECAST,
+  AI_CATEGORIZE,
+  AI_RECONCILE,
+  AI_PARSE,
+  AI_PREDICT,
+  REPORT_CUSTOM_CREATE,
+  REPORT_CUSTOM_READ,
+  REPORT_CUSTOM_RUN,
 ] as const;
 
 /**
@@ -695,6 +885,35 @@ export const ACCOUNTANT_PERMISSIONS: readonly Permission[] = [
   HR_LEAVE_REQUEST_READ,
   HR_LEAVE_REQUEST_APPROVE,
   HR_LEAVE_REQUEST_REJECT,
+  // Thai Compliance
+  REPORT_VAT_RETURN_READ,
+  REPORT_SSC_FILING_READ,
+  FI_ETAX_READ,
+  PDPA_MANAGE,
+  // Pricing & Dunning
+  PRICING_READ,
+  PRICING_MANAGE,
+  DUNNING_MANAGE,
+  // Phase 4 Operations
+  MM_PR_CREATE,
+  MM_PR_READ,
+  MM_PR_UPDATE,
+  MM_PR_APPROVE,
+  MM_RFQ_CREATE,
+  MM_RFQ_READ,
+  INV_COUNT_CREATE,
+  INV_COUNT_READ,
+  INV_COUNT_POST,
+  HR_POSITION_CREATE,
+  HR_POSITION_READ,
+  HR_POSITION_UPDATE,
+  HR_ATTENDANCE_CREATE,
+  HR_ATTENDANCE_READ,
+  // Phase 5 Enterprise
+  FI_CURRENCY_READ,
+  COMPANY_READ,
+  APPROVAL_WORKFLOW_READ,
+  APPROVAL_ACTION,
 ] as const;
 
 /**

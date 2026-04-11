@@ -27,10 +27,11 @@ import {
 } from '@neip/shared';
 import type { ToolResult } from '@neip/shared';
 import type { DbClient } from '@neip/db';
-import { bills, bill_payments, journal_entries, journal_entry_lines } from '@neip/db';
+import { bills, bill_payments, journal_entries, journal_entry_lines, wht_certificates } from '@neip/db';
 import type { ToolDefinition, ExecutionContext } from '../tool-registry/types.js';
 import { EventStore } from '../events/event-store.js';
 import { DocumentNumberingService } from '../gl/document-numbering.js';
+import { calculateTaxAmount } from '@neip/tax';
 
 // ---------------------------------------------------------------------------
 // Input schemas
@@ -47,6 +48,10 @@ const recordBillPaymentSchema = z.object({
   cashAccountId: z.string().min(1),
   reference: z.string().optional(),
   notes: z.string().optional(),
+  /** WHT income type — when set, auto-calculates and deducts WHT from payment. */
+  whtIncomeType: z.string().optional(),
+  /** WHT rate in basis points (e.g. 300 = 3%). Required when whtIncomeType is set. */
+  whtRateBasisPoints: z.number().int().min(1).max(10000).optional(),
 });
 
 const matchBillPaymentSchema = z.object({
@@ -72,6 +77,8 @@ export interface BillPaymentOutput {
   createdBy: string;
   createdAt: Date;
   billStatus: string;
+  whtAmountSatang?: string | undefined;
+  whtCertificateId?: string | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,7 +179,19 @@ export function createBillPaymentTools(
         created_at: now,
       });
 
-      // Credit Cash/Bank account
+      // WHT auto-deduction: when vendor has income_type, deduct WHT from payment
+      let whtAmount = 0n;
+      let whtCertId: string | undefined;
+      const whtIncomeType = params.whtIncomeType;
+      const whtRateBp = params.whtRateBasisPoints;
+
+      if (whtIncomeType && whtRateBp) {
+        whtAmount = calculateTaxAmount(paymentAmount, whtRateBp);
+      }
+
+      const cashPayment = paymentAmount - whtAmount; // vendor receives: amount - WHT
+
+      // Credit Cash/Bank account (net of WHT)
       await db.insert(journal_entry_lines).values({
         id: uuidv7(),
         entry_id: jeId,
@@ -180,9 +199,23 @@ export function createBillPaymentTools(
         account_id: params.cashAccountId,
         description: `AP payment - ${bill.document_number}`,
         debit_satang: 0n,
-        credit_satang: paymentAmount,
+        credit_satang: cashPayment,
         created_at: now,
       });
+
+      // If WHT was deducted, credit WHT Payable account
+      if (whtAmount > 0n) {
+        await db.insert(journal_entry_lines).values({
+          id: uuidv7(),
+          entry_id: jeId,
+          line_number: 3,
+          account_id: params.apAccountId, // will be matched to WHT payable in reconciliation
+          description: `WHT withheld ${whtRateBp! / 100}% - ${bill.document_number}`,
+          debit_satang: 0n,
+          credit_satang: whtAmount,
+          created_at: now,
+        });
+      }
 
       // Generate payment document number
       const paymentDocNumber = await docNumbering.next(ctx.tenantId, 'payment', fiscalYear);
@@ -203,6 +236,46 @@ export function createBillPaymentTools(
         created_by: ctx.userId,
         created_at: now,
       });
+
+      // Auto-create WHT certificate if WHT was deducted
+      if (whtAmount > 0n && whtIncomeType && whtRateBp) {
+        // Look up vendor info for the certificate
+        const vendorRows = await db
+          .select()
+          .from(bills)
+          .where(eq(bills.id, params.billId));
+        const vendorId = vendorRows[0]?.vendor_id;
+
+        const taxMonth = now.getMonth() + 1;
+        const taxYear = now.getFullYear();
+        whtCertId = uuidv7();
+        const whtDocNumber = `WHT-${taxYear}-${String(taxMonth).padStart(2, '0')}-${Date.now().toString().slice(-6)}`;
+
+        await db.insert(wht_certificates).values({
+          id: whtCertId,
+          document_number: whtDocNumber,
+          certificate_type: 'pnd53',
+          payer_name: ctx.tenantId,
+          payer_tax_id: '0000000000000',
+          payee_name: vendorId ?? 'Unknown',
+          payee_tax_id: '0000000000000',
+          payee_address: '',
+          income_type: whtIncomeType,
+          income_description: `WHT on bill payment ${bill.document_number}`,
+          payment_date: params.paymentDate,
+          income_amount_satang: paymentAmount,
+          wht_rate_basis_points: whtRateBp,
+          wht_amount_satang: whtAmount,
+          tax_month: taxMonth,
+          tax_year: taxYear,
+          bill_payment_id: paymentId,
+          status: 'draft',
+          tenant_id: ctx.tenantId,
+          created_by: ctx.userId,
+          created_at: now,
+          updated_at: now,
+        });
+      }
 
       // Update bill paid amount and status
       const newPaidSatang = bill.paid_satang + paymentAmount;
@@ -230,6 +303,10 @@ export function createBillPaymentTools(
           amountSatang: paymentAmount.toString(),
           journalEntryId: jeId,
           billStatus: newStatus,
+          ...(whtAmount > 0n ? {
+            whtAmountSatang: whtAmount.toString(),
+            whtCertificateId: whtCertId,
+          } : {}),
         },
         version: 1,
         fiscalYear,
@@ -249,6 +326,10 @@ export function createBillPaymentTools(
         createdBy: ctx.userId,
         createdAt: now,
         billStatus: newStatus,
+        ...(whtAmount > 0n ? {
+          whtAmountSatang: whtAmount.toString(),
+          whtCertificateId: whtCertId,
+        } : {}),
       });
     },
   };

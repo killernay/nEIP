@@ -667,4 +667,449 @@ export function registerListTools(server: McpServer): void {
       }
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_price_lists
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_price_lists',
+    'ดูรายการราคา — List price lists (SD-Pricing)',
+    {
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/pricing/price-lists?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_payment_terms
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_payment_terms',
+    'ดูเงื่อนไขการชำระเงิน — List payment terms',
+    {
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/payment-terms?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_dunning_cases
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_dunning_cases',
+    'ดูรายการทวงถาม — List dunning cases (AR-Dunning)',
+    {
+      status: z.string().optional().describe('Filter by status: open, closed, escalated'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/dunning?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_recurring_je_templates
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_recurring_je_templates',
+    'ดูแม่แบบรายการบัญชีรายงวด — List recurring journal entry templates',
+    {
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/recurring-journal-entries?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_purchase_requisitions
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_purchase_requisitions',
+    'ดูใบขอซื้อ — List purchase requisitions (MM-PR)',
+    {
+      status: z.string().optional().describe('Filter by status: draft, submitted, approved, rejected, converted'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/purchase-requisitions?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_rfqs
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_rfqs',
+    'ดูใบขอใบเสนอราคา — List requests for quotation (RFQ)',
+    {
+      status: z.string().optional().describe('Filter by status: draft, sent, received, closed'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/rfqs?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_stock_counts
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_stock_counts',
+    'ดูรายการตรวจนับสต็อก — List stock count sessions (MM-IM)',
+    {
+      status: z.string().optional().describe('Filter by status: planned, in_progress, completed, posted'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/stock-counts?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_positions
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_positions',
+    'ดูตำแหน่งงาน — List positions (HR-OM)',
+    {
+      departmentId: z.string().optional().describe('Filter by department ID'),
+      limit: z.number().optional().default(50).describe('Max items'),
+    },
+    async ({ departmentId, limit }) => {
+      try {
+        let path = `/positions?limit=${limit}`;
+        if (departmentId) path += `&departmentId=${departmentId}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_attendance_records
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_attendance_records',
+    'ดูบันทึกการเข้างาน — List attendance records (HR-TM)',
+    {
+      employeeId: z.string().optional().describe('Filter by employee ID'),
+      date: z.string().optional().describe('Filter by date (YYYY-MM-DD)'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ employeeId, date, limit }) => {
+      try {
+        let path = `/attendance?limit=${limit}`;
+        if (employeeId) path += `&employeeId=${employeeId}`;
+        if (date) path += `&date=${date}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_currencies
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_currencies',
+    'ดูสกุลเงิน — List currencies',
+    {
+      limit: z.number().optional().default(50).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/currencies?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_exchange_rates
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_exchange_rates',
+    'ดูอัตราแลกเปลี่ยน — List exchange rates (FI-FX)',
+    {
+      fromCurrency: z.string().optional().describe('Source currency code (e.g. USD)'),
+      toCurrency: z.string().optional().default('THB').describe('Target currency code'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ fromCurrency, toCurrency, limit }) => {
+      try {
+        let path = `/currencies/exchange-rates?limit=${limit}`;
+        if (fromCurrency) path += `&from=${fromCurrency}`;
+        if (toCurrency) path += `&to=${toCurrency}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_companies
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_companies',
+    'ดูรายการบริษัท — List companies (multi-company)',
+    {
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/companies?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_approval_workflows
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_approval_workflows',
+    'ดู workflow อนุมัติ — List approval workflows',
+    {
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/approvals/workflows?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_approval_requests
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_approval_requests',
+    'ดูคำขออนุมัติ — List approval requests',
+    {
+      status: z.string().optional().describe('Filter by status: pending, approved, rejected'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/approvals/requests?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_vendor_returns
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_vendor_returns',
+    'ดูใบส่งคืนสินค้า — List vendor returns (MM-RET)',
+    {
+      status: z.string().optional().describe('Filter by status: draft, sent, received_credit'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/vendor-returns?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_batches
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_batches',
+    'ดูรายการ Batch/Lot — List batches and lot numbers (MM-BT)',
+    {
+      productId: z.string().optional().describe('Filter by product ID'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ productId, limit }) => {
+      try {
+        let path = `/batches?limit=${limit}`;
+        if (productId) path += `&productId=${productId}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_serial_numbers
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_serial_numbers',
+    'ดูรายการ Serial Number — List serial numbers (MM-SN)',
+    {
+      productId: z.string().optional().describe('Filter by product ID'),
+      status: z.string().optional().describe('Filter by status: in_stock, sold, returned'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ productId, status, limit }) => {
+      try {
+        let path = `/serial-numbers?limit=${limit}`;
+        if (productId) path += `&productId=${productId}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_bank_matching_rules
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_bank_matching_rules',
+    'ดูกฎจับคู่ธนาคาร — List bank matching rules (FI-BL)',
+    {
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/bank-matching/rules?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_pdpa_requests
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_pdpa_requests',
+    'ดูคำขอ PDPA — List PDPA data subject requests',
+    {
+      status: z.string().optional().describe('Filter by status: pending, processing, completed, rejected'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/pdpa/requests?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_public_holidays
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_public_holidays',
+    'ดูวันหยุดราชการ — List public holidays (HR)',
+    {
+      year: z.number().optional().describe('Filter by year'),
+      limit: z.number().optional().default(50).describe('Max items'),
+    },
+    async ({ year, limit }) => {
+      try {
+        let path = `/public-holidays?limit=${limit}`;
+        if (year) path += `&year=${year}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
 }

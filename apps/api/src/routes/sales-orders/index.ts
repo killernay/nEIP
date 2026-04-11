@@ -19,6 +19,7 @@ import {
   AR_SO_UPDATE,
   AR_SO_CONFIRM,
 } from '../../lib/permissions.js';
+import { nextDocNumber } from '@neip/core';
 
 // ---------------------------------------------------------------------------
 // JSON Schemas
@@ -184,17 +185,6 @@ interface CountRow {
 }
 
 // ---------------------------------------------------------------------------
-// Document number generator
-// ---------------------------------------------------------------------------
-
-function generateDocNumber(prefix: string): string {
-  const now = new Date();
-  const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const seq = String(Date.now()).slice(-3);
-  return `${prefix}-${yyyymmdd}-${seq}`;
-}
-
-// ---------------------------------------------------------------------------
 // Route plugin
 // ---------------------------------------------------------------------------
 
@@ -239,7 +229,7 @@ export async function salesOrderRoutes(
       });
 
       const soId = crypto.randomUUID();
-      const documentNumber = generateDocNumber('SO');
+      const documentNumber = await nextDocNumber(fastify.sql, tenantId, 'sales_order', new Date().getFullYear());
 
       await fastify.sql`
         INSERT INTO sales_orders (id, document_number, customer_id, customer_name, status, order_date, expected_delivery_date, total_satang, quotation_id, notes, tenant_id, created_by)

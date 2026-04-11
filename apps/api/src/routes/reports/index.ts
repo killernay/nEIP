@@ -18,10 +18,14 @@
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { reportRoutes as reportHandlers } from './reports.js';
+import { customReportRoutes } from './custom-reports.js';
+import { cashFlowRoutes } from './cash-flow.js';
 
 export async function reportRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ): Promise<void> {
   await fastify.register(reportHandlers);
+  await fastify.register(customReportRoutes);
+  await fastify.register(cashFlowRoutes);
 }

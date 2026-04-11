@@ -75,6 +75,27 @@ import { bankRoutes } from './routes/bank/index.js';
 import { whtRoutes } from './routes/wht/index.js';
 import { costCenterRoutes } from './routes/cost-centers/index.js';
 import { profitCenterRoutes } from './routes/profit-centers/index.js';
+import { purchaseRequisitionRoutes } from './routes/purchase-requisitions/index.js';
+import { rfqRoutes } from './routes/rfqs/index.js';
+import { stockCountRoutes } from './routes/stock-counts/index.js';
+import { positionRoutes } from './routes/positions/index.js';
+import { attendanceRoutes } from './routes/attendance/index.js';
+import { pdpaRoutes } from './routes/pdpa/index.js';
+// Phase 3 — Core Business
+import { pricingRoutes } from './routes/pricing/index.js';
+import { paymentTermRoutes } from './routes/payment-terms/index.js';
+import { dunningRoutes } from './routes/dunning/index.js';
+import { recurringJeRoutes } from './routes/recurring-je/index.js';
+import { creditRoutes } from './routes/credit/index.js';
+// Phase 5 — Enterprise Features
+import { currencyRoutes } from './routes/currencies/index.js';
+import { companyRoutes } from './routes/companies/index.js';
+import { approvalRoutes } from './routes/approvals/index.js';
+import { vendorReturnRoutes } from './routes/vendor-returns/index.js';
+import { batchRoutes } from './routes/batches/index.js';
+import { bankMatchingRoutes } from './routes/bank-matching/index.js';
+// Phase 6 — AI & Analytics
+import { aiRoutes } from './routes/ai/index.js';
 
 // ---------------------------------------------------------------------------
 // Fastify type augmentation — extend FastifyInstance with db + sql clients
@@ -370,6 +391,13 @@ export async function createApp(config: AppConfig): Promise<App> {
         { name: 'receipts', description: 'Customer receipts and payments received' },
         { name: 'credit-notes', description: 'Credit notes and adjustments' },
         { name: 'purchase-orders', description: 'Purchase orders' },
+        { name: 'currencies', description: 'Multi-currency — currencies and exchange rates' },
+        { name: 'companies', description: 'Multi-company / branch management' },
+        { name: 'approvals', description: 'Approval chains and workflows' },
+        { name: 'vendor-returns', description: 'Vendor return management' },
+        { name: 'purchase-requisitions', description: 'Purchase requisitions (PR)' },
+        { name: 'rfqs', description: 'Request for Quotation (RFQ)' },
+        { name: 'ai', description: 'AI agents — anomaly detection, forecasting, categorization, reconciliation, parsing, predictions' },
       ],
     },
   });
@@ -472,6 +500,33 @@ export async function createApp(config: AppConfig): Promise<App> {
   await app.register(whtRoutes);
   await app.register(costCenterRoutes);
   await app.register(profitCenterRoutes);
+  // Thai Compliance (PDPA)
+  await app.register(pdpaRoutes);
+
+  // Phase 3 — Core Business
+  await app.register(pricingRoutes);
+  await app.register(paymentTermRoutes);
+  await app.register(dunningRoutes);
+  await app.register(recurringJeRoutes);
+  await app.register(creditRoutes);
+
+  // Phase 4 — Operations
+  await app.register(purchaseRequisitionRoutes);
+  await app.register(rfqRoutes);
+  await app.register(stockCountRoutes);
+  await app.register(positionRoutes);
+  await app.register(attendanceRoutes);
+
+  // Phase 5 — Enterprise Features
+  await app.register(currencyRoutes);
+  await app.register(companyRoutes);
+  await app.register(approvalRoutes);
+  await app.register(vendorReturnRoutes);
+  await app.register(batchRoutes);
+  await app.register(bankMatchingRoutes);
+
+  // Phase 6 — AI & Analytics
+  await app.register(aiRoutes);
 
   // ---------------------------------------------------------------------------
   // 13. 404 fallback — serve Next.js index.html for unrecognised non-API paths
