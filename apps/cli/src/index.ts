@@ -206,6 +206,11 @@ Global flags:
     '--explain',
     'Print a double-entry debit/credit breakdown before executing a mutation',
     false,
+  )
+  .option(
+    '--non-interactive',
+    'Disable interactive prompts — fail if required arguments are missing (for CI/scripts)',
+    false,
   );
 
 // Apply the global --format flag before any command action runs

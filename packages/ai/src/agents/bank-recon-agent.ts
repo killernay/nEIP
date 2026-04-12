@@ -113,6 +113,11 @@ export class BankReconAgent extends BaseAgent<
     const unmatched: string[] = [];
     const matchedLedgerIds = new Set<string>();
 
+    // NOTE (L-1 AI): Current matching is greedy — each bank transaction picks
+    // the best available ledger entry in order. This can produce suboptimal
+    // global matchings when two transactions compete for the same entry. A
+    // future improvement could use the Hungarian algorithm or min-cost
+    // bipartite matching for globally optimal reconciliation.
     for (const tx of input.bankTransactions) {
       let bestMatch: ReconMatch | null = null;
       let bestScore = 0;

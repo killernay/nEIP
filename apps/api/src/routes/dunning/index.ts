@@ -180,7 +180,7 @@ export async function dunningRoutes(
             INSERT INTO notification_log (id, tenant_id, channel, recipient, subject, body, status, created_at)
             VALUES (
               ${crypto.randomUUID()}, ${tenantId}, 'email', ${inv.customer_id},
-              ${'Dunning Notice Level ' + matchedLevel.level + ' — ' + inv.invoice_number},
+              ${'Dunning Notice Level ' + matchedLevel.level + ' — ' + inv.invoice_number.replace(/[<>&"']/g, '')},
               ${matchedLevel.template || 'Payment overdue for invoice ' + inv.invoice_number},
               'sent', NOW()
             )

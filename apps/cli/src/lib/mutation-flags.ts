@@ -31,6 +31,13 @@ export interface MutationFlags {
    * executing the write.  Can be combined with --dry-run.
    */
   explain: boolean;
+
+  /**
+   * When true, interactive prompts (readline, inquirer) must not be used.
+   * Commands should fail with a clear error if required arguments are missing
+   * instead of prompting. Intended for CI pipelines and scripted usage.
+   */
+  nonInteractive: boolean;
 }
 
 // ---------------------------------------------------------------------------

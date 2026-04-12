@@ -241,8 +241,14 @@ export async function paymentRoutes(
         if (inv.status === 'void') {
           throw new ConflictError({ detail: `Invoice ${invoiceId} is voided and cannot receive payments.` });
         }
-        // Check overpayment
-        const remaining = BigInt(inv.total_satang) - BigInt(inv.paid_satang);
+        // Check overpayment — use grandTotal (subtotal + VAT) not just subtotal
+        const subTotal = BigInt(inv.total_satang);
+        const vatScaled = subTotal * 700n;
+        const vatQ = vatScaled / 10000n;
+        const vatR = vatScaled % 10000n;
+        const vat = vatR * 2n >= 10000n ? vatQ + 1n : vatQ;
+        const grandTotal = subTotal + vat;
+        const remaining = grandTotal - BigInt(inv.paid_satang);
         if (amountBigInt > remaining) {
           throw new ValidationError({
             detail: `Payment amount ${amountSatang} exceeds outstanding balance ${remaining.toString()} satang.`,
@@ -260,11 +266,11 @@ export async function paymentRoutes(
       // C-5 FIX: Do NOT swallow JE creation errors — if JE fails, the entire payment must fail
       let journalEntryId: string | null = null;
       {
-        // Look up Cash/Bank account (code starting with "1010" or "1100")
+        // Look up Cash/Bank account (code starting with "1010")
         const cashRows = await fastify.sql<[{ id: string }?]>`
           SELECT id FROM chart_of_accounts
           WHERE tenant_id = ${tenantId} AND is_active = true
-            AND (code LIKE '1010%' OR code LIKE '1100%')
+            AND code LIKE '1010%'
             AND account_type = 'asset'
           ORDER BY code ASC LIMIT 1
         `;
@@ -504,7 +510,7 @@ export async function paymentRoutes(
       const originalJeId = jeRows[0]?.journal_entry_id;
 
       if (originalJeId) {
-        try {
+        {
           const { sub: userId } = request.user;
 
           // Get original JE lines to create reversal
@@ -548,8 +554,6 @@ export async function paymentRoutes(
 
             request.log.info({ originalJeId, reversalJeId, tenantId }, 'Journal entry reversed for voided AR payment');
           }
-        } catch (jeError) {
-          request.log.error({ err: jeError, originalJeId, tenantId }, 'Failed to reverse journal entry for voided AR payment');
         }
       }
 
@@ -631,7 +635,14 @@ export async function paymentRoutes(
           throw new NotFoundError({ detail: `Invoice ${invoiceId} not found.` });
         }
 
-        const outstanding = BigInt(invRows[0].total_satang) - BigInt(invRows[0].paid_satang);
+        // Use grandTotal (subtotal + VAT) for outstanding calculation
+        const invSubTotal = BigInt(invRows[0].total_satang);
+        const invVatScaled = invSubTotal * 700n;
+        const invVatQ = invVatScaled / 10000n;
+        const invVatR = invVatScaled % 10000n;
+        const invVat = invVatR * 2n >= 10000n ? invVatQ + 1n : invVatQ;
+        const invGrandTotal = invSubTotal + invVat;
+        const outstanding = invGrandTotal - BigInt(invRows[0].paid_satang);
         if (outstanding <= 0n) continue;
 
         // Allocate: min of remaining payment and outstanding balance

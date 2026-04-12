@@ -48,6 +48,11 @@ function calcSSC(grossSatang: bigint): bigint {
 /**
  * Thai PIT per Revenue Department brackets (BigInt, basis-point arithmetic).
  * Input: monthly gross in satang. Returns monthly PIT in satang.
+ *
+ * TODO: L-16 — Current implementation annualises a single month's gross (×12)
+ * which can over-/under-estimate when income varies. A future improvement
+ * should use YTD cumulative gross + remaining months to project annual tax
+ * more accurately (YTD-based progressive recalculation).
  */
 function calcPIT(monthlyGrossSatang: bigint): bigint {
   const annual = monthlyGrossSatang * 12n;

@@ -124,7 +124,7 @@ export async function attendanceRoutes(
           hours_worked = ${hoursWorked},
           overtime_hours = ${overtimeHours},
           updated_at = NOW()
-        WHERE id = ${existing[0].id}
+        WHERE id = ${existing[0].id} AND tenant_id = ${tenantId}
         RETURNING *
       `;
 

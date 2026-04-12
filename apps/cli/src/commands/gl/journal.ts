@@ -354,6 +354,7 @@ Note: Amounts are entered in THB (Thai Baht). The system stores as satang.
       await journalCreate({
         dryRun: globals.dryRun === true,
         explain: globals.explain === true,
+        nonInteractive: globals.nonInteractive === true,
       });
     });
 
