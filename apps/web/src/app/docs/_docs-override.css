@@ -1,0 +1,68 @@
+/* Force dark readable text in docs pages */
+.docs-content p,
+.docs-content span,
+.docs-content td,
+.docs-content li,
+.docs-content label,
+.docs-content div {
+  color: #111827 !important;
+}
+
+.docs-content h1,
+.docs-content h2,
+.docs-content h3,
+.docs-content h4 {
+  color: #000000 !important;
+}
+
+.docs-content code {
+  color: #1e293b !important;
+  background-color: #e2e8f0 !important;
+}
+
+.docs-content th {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* Keep colored elements */
+.docs-content .text-green-700,
+.docs-content .text-green-600 { color: #15803d !important; }
+.docs-content .text-red-700,
+.docs-content .text-red-600 { color: #b91c1c !important; }
+.docs-content .text-blue-700,
+.docs-content .text-blue-600 { color: #1d4ed8 !important; }
+.docs-content .text-blue-900 { color: #1e3a5f !important; }
+.docs-content .text-blue-800 { color: #1e40af !important; }
+
+/* White text in dark headers stays white */
+.docs-content .bg-slate-800 *,
+.docs-content .bg-slate-800 {
+  color: #ffffff !important;
+}
+
+/* Badges & pills keep their own color */
+.docs-content .bg-green-600,
+.docs-content .bg-gray-400 {
+  color: #ffffff !important;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  .docs-content p,
+  .docs-content span,
+  .docs-content td,
+  .docs-content li,
+  .docs-content div {
+    color: #e5e7eb !important;
+  }
+  .docs-content h1,
+  .docs-content h2,
+  .docs-content h3 {
+    color: #ffffff !important;
+  }
+  .docs-content code {
+    color: #cbd5e1 !important;
+    background-color: #334155 !important;
+  }
+}

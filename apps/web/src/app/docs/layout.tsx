@@ -1,5 +1,6 @@
 'use client';
 
+import './_docs-override.css';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -218,7 +219,7 @@ export default function DocsLayout({
   );
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="docs-content flex min-h-0 flex-1">
       {/* Desktop sidebar — hidden on hub page and below lg */}
       {!isHubPage && (
         <aside
