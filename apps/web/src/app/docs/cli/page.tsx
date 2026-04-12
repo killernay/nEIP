@@ -214,7 +214,7 @@ function GroupSection({ group, filter }: { group: CliGroup; filter: string }) {
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-lg bg-gray-50 px-4 py-2 text-left font-semibold text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+        className="flex w-full items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-left font-semibold text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
       >
         <Terminal className="h-4 w-4 text-green-600 dark:text-green-400" />
         <span className="flex-1">{group.name}</span>
@@ -222,9 +222,9 @@ function GroupSection({ group, filter }: { group: CliGroup; filter: string }) {
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
       {open && (
-        <div className="mt-1 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="mt-1 overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-700">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800">
+            <thead className="bg-gray-100 dark:bg-gray-800">
               <tr>
                 <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Command</th>
                 <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Description</th>
@@ -234,7 +234,7 @@ function GroupSection({ group, filter }: { group: CliGroup; filter: string }) {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {filtered.map((cmd) => (
-                <tr key={cmd.command} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <tr key={cmd.command} className="hover:bg-gray-100 dark:hover:bg-gray-800/50">
                   <td className="px-4 py-2">
                     <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-900 dark:bg-gray-700 dark:text-gray-100">
                       {cmd.command}
@@ -243,11 +243,11 @@ function GroupSection({ group, filter }: { group: CliGroup; filter: string }) {
                       <p className="mt-1 font-mono text-[10px] text-gray-400">{cmd.example}</p>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
+                  <td className="px-4 py-2 text-gray-800 dark:text-gray-300">
                     <p className="text-xs">{cmd.description}</p>
                     <p className="text-xs text-gray-400">{cmd.descriptionTh}</p>
                   </td>
-                  <td className="px-4 py-2 font-mono text-xs text-gray-500">{cmd.flags || '—'}</td>
+                  <td className="px-4 py-2 font-mono text-xs text-gray-600">{cmd.flags || '—'}</td>
                   <td className="px-2 py-2">
                     <CopyButton text={cmd.example || cmd.command} />
                   </td>
@@ -272,8 +272,8 @@ export default function CliDocsPage() {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar TOC */}
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-gray-200 p-4 lg:block dark:border-gray-700">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-gray-300 p-4 lg:block dark:border-gray-700">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-400">
           Modules
         </p>
         <nav className="space-y-1">
@@ -291,19 +291,19 @@ export default function CliDocsPage() {
 
       {/* Main */}
       <main className="flex-1 px-6 py-8 lg:px-12">
-        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
           <Link href="/docs" className="hover:text-gray-700 dark:hover:text-gray-200">Docs</Link>
           <span>/</span>
           <span className="text-gray-900 dark:text-gray-100">CLI Reference</span>
         </nav>
 
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CLI Reference</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-gray-800 dark:text-gray-300">
           คู่มืออ้างอิง CLI ฉบับสมบูรณ์ — {totalCommands} Commands | Version 0.9.0
         </p>
 
         {/* Global Flags */}
-        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="mt-4 rounded-lg border border-gray-300 bg-gray-100 p-4 dark:border-gray-700 dark:bg-gray-800">
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Global Flags</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {[
@@ -314,7 +314,7 @@ export default function CliDocsPage() {
               { flag: '-v, --version', desc: 'Show version' },
               { flag: '--help', desc: 'Show help' },
             ].map((f) => (
-              <span key={f.flag} className="rounded border border-gray-200 px-2 py-1 font-mono text-xs dark:border-gray-600">
+              <span key={f.flag} className="rounded border border-gray-300 px-2 py-1 font-mono text-xs dark:border-gray-600">
                 <span className="text-green-700 dark:text-green-400">{f.flag}</span>
                 <span className="ml-1 text-gray-400">— {f.desc}</span>
               </span>
@@ -330,7 +330,7 @@ export default function CliDocsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search commands... (e.g. invoice, payroll, ใบแจ้งหนี้)"
-            className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
           />
         </div>
 
