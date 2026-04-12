@@ -1,4 +1,4 @@
--- 0009_phase4_operations.sql
+-- 0012_phase4_operations.sql
 -- Phase 4: Operations — PR, RFQ, Stock Count, HR Org/Positions, Attendance,
 --                        Leave Enhancements, Payroll Enhancements, CO Budget Control
 

@@ -176,12 +176,13 @@ export async function purchaseRequisitionRoutes(
           notes = COALESCE(${(b['notes'] as string | undefined) ?? null}, notes),
           department_id = COALESCE(${(b['departmentId'] as string | undefined) ?? null}, department_id),
           updated_at = NOW()
-        WHERE id = ${id}
+        WHERE id = ${id} AND tenant_id = ${tenantId}
       `;
 
       const lines = b['lines'] as Array<{ description: string; quantity: number; estimatedPriceSatang: string; productId?: string }> | undefined;
       if (lines) {
-        await fastify.sql`DELETE FROM pr_lines WHERE purchase_requisition_id = ${id}`;
+        await fastify.sql`DELETE FROM pr_lines WHERE purchase_requisition_id = ${id}
+          AND purchase_requisition_id IN (SELECT pr.id FROM purchase_requisitions pr WHERE pr.id = ${id} AND pr.tenant_id = ${tenantId})`;
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i]!;
           const price = BigInt(line.estimatedPriceSatang ?? '0');
@@ -298,21 +299,24 @@ export async function purchaseRequisitionRoutes(
       let totalSatang = 0n;
       for (const l of prLines) totalSatang += l.amount_satang;
 
-      await fastify.sql`
-        INSERT INTO purchase_orders (id, document_number, vendor_id, status, order_date, total_satang, notes, tenant_id, created_by)
-        VALUES (${poId}, ${poDocNumber}, ${vendorId}, 'draft', ${orderDate},
-                ${totalSatang.toString()}::bigint, ${'Converted from PR ' + prRows[0].document_number}, ${tenantId}, ${userId})
-      `;
-
-      for (const line of prLines) {
-        await fastify.sql`
-          INSERT INTO purchase_order_lines (id, purchase_order_id, line_number, description, quantity, received_quantity, unit_price_satang, amount_satang, product_id)
-          VALUES (${crypto.randomUUID()}, ${poId}, ${line.line_number}, ${line.description}, ${line.quantity}, 0,
-                  ${line.estimated_price_satang.toString()}::bigint, ${line.amount_satang.toString()}::bigint, ${line.product_id})
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await fastify.sql.begin(async (sql: any) => {
+        await sql`
+          INSERT INTO purchase_orders (id, document_number, vendor_id, status, order_date, total_satang, notes, tenant_id, created_by)
+          VALUES (${poId}, ${poDocNumber}, ${vendorId}, 'draft', ${orderDate},
+                  ${totalSatang.toString()}::bigint, ${'Converted from PR ' + prRows[0]!.document_number}, ${tenantId}, ${userId})
         `;
-      }
 
-      await fastify.sql`UPDATE purchase_requisitions SET status = 'converted', updated_at = NOW() WHERE id = ${id}`;
+        for (const line of prLines) {
+          await sql`
+            INSERT INTO purchase_order_lines (id, purchase_order_id, line_number, description, quantity, received_quantity, unit_price_satang, amount_satang, product_id)
+            VALUES (${crypto.randomUUID()}, ${poId}, ${line.line_number}, ${line.description}, ${line.quantity}, 0,
+                    ${line.estimated_price_satang.toString()}::bigint, ${line.amount_satang.toString()}::bigint, ${line.product_id})
+          `;
+        }
+
+        await sql`UPDATE purchase_requisitions SET status = 'converted', updated_at = NOW() WHERE id = ${id} AND tenant_id = ${tenantId}`;
+      });
 
       request.log.info({ prId: id, poId, tenantId }, 'PR converted to PO');
       return reply.status(201).send({ purchaseOrderId: poId, purchaseOrderDocumentNumber: poDocNumber });

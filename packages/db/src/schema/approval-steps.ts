@@ -1,6 +1,13 @@
 import { pgTable, text, integer, bigint, timestamp, unique } from 'drizzle-orm/pg-core';
 import { approval_workflows } from './approval-workflows.js';
 
+/**
+ * approval_steps — Steps within an approval workflow.
+ *
+ * Tenant isolation: inherited via workflow_id FK → approval_workflows.tenant_id.
+ * A direct tenant_id column is intentionally omitted to avoid denormalization;
+ * all queries join through the parent workflow which enforces tenant scoping.
+ */
 export const approval_steps = pgTable('approval_steps', {
   id: text('id').primaryKey(),
   workflow_id: text('workflow_id')

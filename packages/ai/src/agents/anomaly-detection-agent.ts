@@ -16,8 +16,6 @@
  * Story: 6.1
  */
 
-import { ValidationError } from '@neip/shared';
-
 import type {
   AgentContext,
   AgentResult,
@@ -124,13 +122,14 @@ export class AnomalyDetectionAgent extends BaseAgent<
     });
 
     if (input.journalEntries.length === 0) {
-      return this.buildFailure(
-        new ValidationError({
-          detail: `No journal entries found for period ${input.period}.`,
-        }),
-        trace,
-        startMs,
-      );
+      const emptyOutput: AnomalyScanOutput = {
+        period: input.period,
+        totalEntriesScanned: 0,
+        findings: [],
+        summary: { highCount: 0, mediumCount: 0, lowCount: 0 },
+      };
+      trace.addStep('final-answer', 'No journal entries to scan — returning empty result');
+      return this.buildSuccess(emptyOutput, 1.0, trace, startMs);
     }
 
     const postedEntries = input.journalEntries.filter(

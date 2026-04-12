@@ -203,18 +203,21 @@ export async function vendorReturnRoutes(
         SELECT * FROM vendor_return_lines WHERE vendor_return_id = ${id}
       `;
 
-      // Create stock movements (negative = outbound return)
-      for (const line of lines) {
-        const mvtId = crypto.randomUUID();
-        await fastify.sql`
-          INSERT INTO stock_movements (id, product_id, warehouse_id, movement_type, quantity, reference_type, reference_id, notes, tenant_id, created_by)
-          VALUES (${mvtId}, ${line.product_id}, ${warehouseId}, 'return', ${-line.quantity}, 'purchase_order', ${ret[0].po_id ?? null}, ${'Vendor return: ' + id}, ${tenantId}, ${userId})
-        `;
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await fastify.sql.begin(async (sql: any) => {
+        // Create stock movements (negative = outbound return)
+        for (const line of lines) {
+          const mvtId = crypto.randomUUID();
+          await sql`
+            INSERT INTO stock_movements (id, product_id, warehouse_id, movement_type, quantity, reference_type, reference_id, notes, tenant_id, created_by)
+            VALUES (${mvtId}, ${line.product_id}, ${warehouseId}, 'return', ${-line.quantity}, 'purchase_order', ${ret[0]!.po_id ?? null}, ${'Vendor return: ' + id}, ${tenantId}, ${userId})
+          `;
+        }
 
-      await fastify.sql`
-        UPDATE vendor_returns SET status = 'shipped', updated_at = NOW() WHERE id = ${id}
-      `;
+        await sql`
+          UPDATE vendor_returns SET status = 'shipped', updated_at = NOW() WHERE id = ${id} AND tenant_id = ${tenantId}
+        `;
+      });
 
       return reply.send({ id, status: 'shipped', message: `Shipped ${lines.length} items back to vendor.` });
     },
@@ -251,16 +254,20 @@ export async function vendorReturnRoutes(
         totalSatang += BigInt(line.unit_price_satang) * BigInt(line.quantity);
       }
 
-      // Create credit bill (negative bill)
       const billId = crypto.randomUUID();
-      await fastify.sql`
-        INSERT INTO bills (id, document_number, vendor_id, total_satang, paid_satang, due_date, notes, status, tenant_id, created_by)
-        VALUES (${billId}, ${'VR-CREDIT-' + Date.now()}, ${ret[0].vendor_id}, ${(-totalSatang).toString()}::bigint, 0, ${new Date().toISOString().slice(0, 10)}, ${'Credit from vendor return ' + id}, 'posted', ${tenantId}, ${userId})
-      `;
 
-      await fastify.sql`
-        UPDATE vendor_returns SET status = 'received_credit', updated_at = NOW() WHERE id = ${id}
-      `;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await fastify.sql.begin(async (sql: any) => {
+        // Create credit bill (negative bill)
+        await sql`
+          INSERT INTO bills (id, document_number, vendor_id, total_satang, paid_satang, due_date, notes, status, tenant_id, created_by)
+          VALUES (${billId}, ${'VR-CREDIT-' + Date.now()}, ${ret[0]!.vendor_id}, ${(-totalSatang).toString()}::bigint, 0, ${new Date().toISOString().slice(0, 10)}, ${'Credit from vendor return ' + id}, 'posted', ${tenantId}, ${userId})
+        `;
+
+        await sql`
+          UPDATE vendor_returns SET status = 'received_credit', updated_at = NOW() WHERE id = ${id} AND tenant_id = ${tenantId}
+        `;
+      });
 
       return reply.send({
         id,

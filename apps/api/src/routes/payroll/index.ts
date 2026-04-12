@@ -30,43 +30,58 @@ const HR_PAY_APPROVE   = 'hr:payroll:approve'   as const;
 const HR_PAY_PAY       = 'hr:payroll:pay'       as const;
 
 // ---------------------------------------------------------------------------
-// SSC calculation helpers
+// SSC calculation helpers (BigInt — basis-point arithmetic, no floats)
 // ---------------------------------------------------------------------------
-const SSC_RATE = 0.05;
-const SSC_SALARY_CAP_SATANG = 1_500_000; // 15,000 THB × 100
-const SSC_MAX_SATANG        = 75_000;    // 750 THB × 100
+const SSC_RATE_BP            = 500n;        // 5% in basis points
+const SSC_SALARY_CAP_SATANG  = 1_500_000n;  // 15,000 THB × 100
+const SSC_MAX_SATANG         = 75_000n;     // 750 THB × 100
+const SSC_SALARY_FLOOR_SATANG = 165_000n;   // 1,650 THB minimum wage floor
 
-function calcSSC(grossSatang: number): number {
-  const cappedSalary = Math.min(grossSatang, SSC_SALARY_CAP_SATANG);
-  return Math.min(Math.round(cappedSalary * SSC_RATE), SSC_MAX_SATANG);
+function calcSSC(grossSatang: bigint): bigint {
+  if (grossSatang === 0n) return 0n; // unpaid leave — no floor applied
+  const base = grossSatang > SSC_SALARY_FLOOR_SATANG ? grossSatang : SSC_SALARY_FLOOR_SATANG;
+  const cappedSalary = base < SSC_SALARY_CAP_SATANG ? base : SSC_SALARY_CAP_SATANG;
+  const ssc = (cappedSalary * SSC_RATE_BP + 5000n) / 10000n;
+  return ssc < SSC_MAX_SATANG ? ssc : SSC_MAX_SATANG;
 }
 
-/** Very simplified Thai PIT: 0% up to 150k THB/month. 5% 150k–300k etc. */
-function calcPIT(annualGrossSatang: number): number {
-  // Monthly → annualise for bracket calculation
-  const annual = annualGrossSatang * 12;
-  // Deduct expenses (50%, max 100k THB = 10_000_000 sat) + personal allowance (60k = 6_000_000 sat)
-  const expenseDeduction = Math.min(Math.round(annual * 0.5), 10_000_000);
-  const personalAllowance = 6_000_000;
-  const taxableIncome = Math.max(0, annual - expenseDeduction - personalAllowance);
+/**
+ * Thai PIT per Revenue Department brackets (BigInt, basis-point arithmetic).
+ * Input: monthly gross in satang. Returns monthly PIT in satang.
+ */
+function calcPIT(monthlyGrossSatang: bigint): bigint {
+  const annual = monthlyGrossSatang * 12n;
+  // Expense deduction: 50%, max 100k THB = 10,000,000 satang
+  const halfAnnual = (annual * 5000n + 5000n) / 10000n;
+  const expenseDeduction = halfAnnual < 10_000_000n ? halfAnnual : 10_000_000n;
+  const personalAllowance = 6_000_000n;
+  const totalDeduction = expenseDeduction + personalAllowance;
+  const taxableIncome = annual > totalDeduction ? annual - totalDeduction : 0n;
 
-  let annualTax = 0;
-  const brackets: [number, number][] = [
-    [15_000_000, 0.05],
-    [15_000_000, 0.10],
-    [20_000_000, 0.15],
-    [20_000_000, 0.20],
-    [Infinity,   0.25],
+  let annualTax = 0n;
+  // Correct Thai Revenue Department brackets (satang, basis points)
+  const brackets: [bigint, bigint][] = [
+    [15_000_000n, 0n],      // 0–150k THB: exempt
+    [15_000_000n, 500n],    // 150k–300k: 5%
+    [20_000_000n, 1000n],   // 300k–500k: 10%
+    [25_000_000n, 1500n],   // 500k–750k: 15%
+    [25_000_000n, 2000n],   // 750k–1M: 20%
+    [100_000_000n, 2500n],  // 1M–2M: 25%
+    [300_000_000n, 3000n],  // 2M–5M: 30%
   ];
   let remaining = taxableIncome;
-  for (const [bracketSize, rate] of brackets) {
-    if (remaining <= 0) break;
-    const taxable = Math.min(remaining, bracketSize);
-    annualTax += Math.round(taxable * rate);
-    remaining -= taxable;
+  for (const [bracketSize, rateBp] of brackets) {
+    if (remaining <= 0n) break;
+    const taxable = remaining < bracketSize ? remaining : bracketSize;
+    annualTax += (taxable * rateBp + 5000n) / 10000n;
+    remaining -= bracketSize;
+  }
+  // 5M+ bracket: 35%
+  if (remaining > 0n) {
+    annualTax += (remaining * 3500n + 5000n) / 10000n;
   }
 
-  return Math.round(annualTax / 12);
+  return (annualTax + 6n) / 12n; // round monthly
 }
 
 // ---------------------------------------------------------------------------
@@ -284,18 +299,18 @@ export async function payrollRoutes(
       // Delete existing items for this run (recalculate)
       await fastify.sql`DELETE FROM payroll_items WHERE payroll_run_id = ${id}`;
 
-      let totalGross = 0;
-      let totalDeductions = 0;
-      let totalNet = 0;
-      let totalEmployerSSC = 0;
-      let totalTax = 0;
+      let totalGross = 0n;
+      let totalDeductions = 0n;
+      let totalNet = 0n;
+      let totalEmployerSSC = 0n;
+      let totalTax = 0n;
 
       for (const emp of employees) {
-        const baseSalary   = emp.salary_satang;
+        const baseSalary   = BigInt(emp.salary_satang);
         const gross        = baseSalary; // no OT/bonus in basic payroll
         const ssc          = calcSSC(gross);
-        const pfPercent    = emp.provident_fund_percent;
-        const pfSatang     = Math.round(gross * pfPercent / 100);
+        const pfPercent    = BigInt(emp.provident_fund_percent);
+        const pfSatang     = (gross * pfPercent * 100n + 5000n) / 10000n;
         const pitSatang    = calcPIT(gross);
         const totalDed     = ssc + pfSatang + pitSatang;
         const net          = gross - totalDed;
@@ -312,10 +327,10 @@ export async function payrollRoutes(
             payment_method, status
           ) VALUES (
             ${itemId}, ${id}, ${emp.id},
-            ${baseSalary}, 0, 0, 0,
-            ${gross}, ${ssc}, ${pfSatang},
-            ${pitSatang}, 0,
-            ${totalDed}, ${net}, ${employerSSC},
+            ${Number(baseSalary)}, 0, 0, 0,
+            ${Number(gross)}, ${Number(ssc)}, ${Number(pfSatang)},
+            ${Number(pitSatang)}, 0,
+            ${Number(totalDed)}, ${Number(net)}, ${Number(employerSSC)},
             'bank_transfer', 'calculated'
           )
         `;
@@ -330,11 +345,11 @@ export async function payrollRoutes(
       const updatedRun = await fastify.sql<PayrollRunRow[]>`
         UPDATE payroll_runs SET
           status                    = 'calculated',
-          total_gross_satang        = ${totalGross},
-          total_deductions_satang   = ${totalDeductions},
-          total_net_satang          = ${totalNet},
-          total_employer_ssc_satang = ${totalEmployerSSC},
-          total_tax_satang          = ${totalTax},
+          total_gross_satang        = ${Number(totalGross)},
+          total_deductions_satang   = ${Number(totalDeductions)},
+          total_net_satang          = ${Number(totalNet)},
+          total_employer_ssc_satang = ${Number(totalEmployerSSC)},
+          total_tax_satang          = ${Number(totalTax)},
           updated_at                = NOW()
         WHERE id = ${id} AND tenant_id = ${tenantId}
         RETURNING *
@@ -428,7 +443,7 @@ export async function payrollRoutes(
         const glAccounts = await fastify.sql<{ code: string; id: string }[]>`
           SELECT code, id FROM chart_of_accounts
           WHERE tenant_id = ${tenantId}
-            AND code IN ('5200','1100','2300','2500')
+            AND code IN ('5200','1100','2300','2400','2500')
             AND is_active = true
         `;
         const glMap: Record<string, string> = {};
@@ -455,6 +470,12 @@ export async function payrollRoutes(
           `;
           if (r[0]) glMap['2300'] = r[0].id;
         }
+        if (!glMap['2400']) {
+          const r = await fastify.sql<[{ id: string }?]>`
+            SELECT id FROM chart_of_accounts WHERE tenant_id = ${tenantId} AND code LIKE '2400%' AND account_type = 'liability' AND is_active = true ORDER BY code LIMIT 1
+          `;
+          if (r[0]) glMap['2400'] = r[0].id;
+        }
         if (!glMap['2500']) {
           const r = await fastify.sql<[{ id: string }?]>`
             SELECT id FROM chart_of_accounts WHERE tenant_id = ${tenantId} AND code LIKE '2500%' AND account_type = 'liability' AND is_active = true ORDER BY code LIMIT 1
@@ -466,9 +487,16 @@ export async function payrollRoutes(
         const totalNet = run.total_net_satang;
         const totalEmployerSsc = run.total_employer_ssc_satang;
         const totalTax = run.total_tax_satang;
-        // Employee SSC = total deductions - employer SSC - tax = (gross - net) - employerSSC - tax
-        const totalDeductions = run.total_deductions_satang;
-        const employeeSsc = Math.max(0, totalDeductions - totalEmployerSsc - totalTax);
+
+        // M-12: Query actual employee SSC & PF directly from payroll items
+        const itemAgg = await fastify.sql<[{ total_employee_ssc: string; total_pf: string }]>`
+          SELECT
+            COALESCE(SUM(social_security_satang), 0)::text as total_employee_ssc,
+            COALESCE(SUM(provident_fund_satang), 0)::text as total_pf
+          FROM payroll_items WHERE payroll_run_id = ${id}
+        `;
+        const employeeSsc = parseInt(itemAgg[0].total_employee_ssc, 10);
+        const totalPf = parseInt(itemAgg[0].total_pf, 10);
         const totalSsc = totalEmployerSsc + employeeSsc;
 
         const jeId = crypto.randomUUID();
@@ -512,6 +540,15 @@ export async function payrollRoutes(
           await fastify.sql`
             INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
             VALUES (${crypto.randomUUID()}, ${jeId}, ${lineNum}, ${glMap['2300']}, 'Social Security Contribution Payable', 0, ${totalSsc})
+          `;
+          lineNum++;
+        }
+
+        // Cr 2400 PF Payable = total provident fund deductions
+        if (glMap['2400'] && totalPf > 0) {
+          await fastify.sql`
+            INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+            VALUES (${crypto.randomUUID()}, ${jeId}, ${lineNum}, ${glMap['2400']}, 'Provident Fund Payable', 0, ${totalPf})
           `;
           lineNum++;
         }
@@ -617,12 +654,13 @@ export async function payrollRoutes(
       const otherDed  = b['otherDeductionsSatang'] != null ? Number(b['otherDeductionsSatang']) : existing[0].other_deductions_satang;
 
       const gross   = base + ot + bonus + allowance;
-      const ssc     = calcSSC(gross);
+      const grossBig = BigInt(gross);
+      const ssc     = Number(calcSSC(grossBig));
       const pf      = b['providentFundSatang'] != null ? Number(b['providentFundSatang']) : existing[0].provident_fund_satang;
-      const pit     = b['personalIncomeTaxSatang'] != null ? Number(b['personalIncomeTaxSatang']) : calcPIT(gross);
+      const pit     = b['personalIncomeTaxSatang'] != null ? Number(b['personalIncomeTaxSatang']) : Number(calcPIT(grossBig));
       const totalDed = ssc + pf + pit + otherDed;
       const net     = gross - totalDed;
-      const emplSSC = calcSSC(gross);
+      const emplSSC = Number(calcSSC(grossBig));
 
       const updatedItems = await fastify.sql<PayrollItemRow[]>`
         UPDATE payroll_items SET
@@ -768,10 +806,10 @@ export async function payrollRoutes(
       const monthsProcessed = items.length;
 
       // Project annual tax: ytdGross / monthsProcessed * 12, then calculate PIT
-      let projectedAnnualTax = 0;
+      let projectedAnnualTax = 0n;
       if (monthsProcessed > 0) {
-        const monthlyAvg = Math.round(ytdGross / monthsProcessed);
-        projectedAnnualTax = calcPIT(monthlyAvg) * 12;
+        const monthlyAvg = BigInt(Math.round(ytdGross / monthsProcessed));
+        projectedAnnualTax = calcPIT(monthlyAvg) * 12n;
       }
 
       return reply.status(200).send({

@@ -426,7 +426,27 @@ export async function journalEntryRoutes(
       const { id } = request.params;
       const { tenantId } = request.user;
 
-      // TODO: Call gl.postJournalEntry tool when available.
+      // H-2 FIX: Check fiscal period is open before posting
+      const jeForPeriodCheck = await fastify.sql<[{ fiscal_year: number; fiscal_period: number }?]>`
+        SELECT fiscal_year, fiscal_period FROM journal_entries
+        WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
+      `;
+      if (jeForPeriodCheck[0]) {
+        const periodCheck = await fastify.sql<[{ status: string }?]>`
+          SELECT fp.status FROM fiscal_periods fp
+          JOIN fiscal_years fy ON fp.fiscal_year_id = fy.id
+          WHERE fy.tenant_id = ${tenantId}
+            AND fy.year = ${jeForPeriodCheck[0].fiscal_year}
+            AND fp.period_number = ${jeForPeriodCheck[0].fiscal_period}
+          LIMIT 1
+        `;
+        if (periodCheck[0]?.status === 'closed') {
+          throw new ConflictError({
+            detail: `Cannot post to closed fiscal period ${jeForPeriodCheck[0].fiscal_period}/${jeForPeriodCheck[0].fiscal_year}.`,
+          });
+        }
+      }
+
       const rows = await fastify.sql<[JournalEntryRow?]>`
         UPDATE journal_entries
         SET status = 'posted', posted_at = NOW(), updated_at = NOW()
@@ -497,8 +517,6 @@ export async function journalEntryRoutes(
       const { id } = request.params;
       const { tenantId, sub: userId } = request.user;
 
-      // TODO: Call gl.reverseJournalEntry tool when available.
-
       // Verify original entry exists and is posted.
       const origRows = await fastify.sql<[JournalEntryRow?]>`
         SELECT * FROM journal_entries WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
@@ -510,6 +528,21 @@ export async function journalEntryRoutes(
       if (original.status !== 'posted') {
         throw new ConflictError({
           detail: `Only posted entries can be reversed. Current status: "${original.status}".`,
+        });
+      }
+
+      // H-3 FIX: Check fiscal period is open before reversing
+      const reversalPeriodCheck = await fastify.sql<[{ status: string }?]>`
+        SELECT fp.status FROM fiscal_periods fp
+        JOIN fiscal_years fy ON fp.fiscal_year_id = fy.id
+        WHERE fy.tenant_id = ${tenantId}
+          AND fy.year = ${original.fiscal_year}
+          AND fp.period_number = ${original.fiscal_period}
+        LIMIT 1
+      `;
+      if (reversalPeriodCheck[0]?.status === 'closed') {
+        throw new ConflictError({
+          detail: `Cannot reverse in closed fiscal period ${original.fiscal_period}/${original.fiscal_year}.`,
         });
       }
 

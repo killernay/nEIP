@@ -251,8 +251,9 @@ export async function paymentRoutes(
       const status = invoiceId ? 'matched' : 'unmatched';
 
       // --- Auto-create Journal Entry: Dr Cash/Bank, Cr Accounts Receivable ---
+      // C-5 FIX: Do NOT swallow JE creation errors — if JE fails, the entire payment must fail
       let journalEntryId: string | null = null;
-      try {
+      {
         // Look up Cash/Bank account (code starting with "1010" or "1100")
         const cashRows = await fastify.sql<[{ id: string }?]>`
           SELECT id FROM chart_of_accounts
@@ -279,25 +280,8 @@ export async function paymentRoutes(
           const fiscalYear = now.getFullYear();
           const fiscalPeriod = now.getMonth() + 1;
 
-          // Generate JE document number via sequence
-          const seqRows = await fastify.sql<[{ next_val: string }?]>`
-            UPDATE document_sequences
-            SET current_value = current_value + 1, updated_at = NOW()
-            WHERE tenant_id = ${tenantId} AND document_type = 'journal_entry' AND fiscal_year = ${fiscalYear}
-            RETURNING current_value::text as next_val
-          `;
-          let jeDocNumber: string;
-          if (seqRows[0]) {
-            jeDocNumber = `JE-${fiscalYear}-${seqRows[0].next_val.padStart(6, '0')}`;
-          } else {
-            // Create sequence if it doesn't exist
-            await fastify.sql`
-              INSERT INTO document_sequences (id, tenant_id, document_type, fiscal_year, current_value, prefix, created_at, updated_at)
-              VALUES (${crypto.randomUUID()}, ${tenantId}, 'journal_entry', ${fiscalYear}, 1, 'JE', NOW(), NOW())
-              ON CONFLICT (tenant_id, document_type, fiscal_year) DO UPDATE SET current_value = document_sequences.current_value + 1, updated_at = NOW()
-            `;
-            jeDocNumber = `JE-${fiscalYear}-000001`;
-          }
+          // C-4 FIX: Use canonical nextDocNumber() instead of custom sequence query
+          const jeDocNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', fiscalYear);
 
           // Insert journal entry header (posted immediately, like AP)
           await fastify.sql`
@@ -319,13 +303,10 @@ export async function paymentRoutes(
 
           journalEntryId = jeId;
         } else {
-          request.log.warn(
-            { tenantId, cashAccountId, arAccountId },
-            'Could not find distinct Cash and AR accounts for JE creation — payment recorded without JE',
-          );
+          throw new ValidationError({
+            detail: 'Cannot record payment: Could not find distinct Cash and AR accounts for JE creation.',
+          });
         }
-      } catch (jeError) {
-        request.log.error({ err: jeError, tenantId }, 'Failed to create journal entry for AR payment — payment will proceed without JE');
       }
 
       await fastify.sql`
@@ -632,12 +613,32 @@ export async function paymentRoutes(
         throw new NotFoundError({ detail: `Payment ${id} not found.` });
       }
 
-      // Create matching records for invoices.
+      // H-7 FIX: Allocate payment amount sequentially across invoices (not full amount to each)
+      let remainingPayment = BigInt(payment.amount_satang);
+
       for (const invoiceId of invoiceIds) {
+        if (remainingPayment <= 0n) break;
+
+        // Get invoice outstanding balance
+        const invRows = await fastify.sql<[{ total_satang: string; paid_satang: string }?]>`
+          SELECT total_satang::text, paid_satang::text FROM invoices
+          WHERE id = ${invoiceId} AND tenant_id = ${tenantId} LIMIT 1
+        `;
+        if (!invRows[0]) {
+          throw new NotFoundError({ detail: `Invoice ${invoiceId} not found.` });
+        }
+
+        const outstanding = BigInt(invRows[0].total_satang) - BigInt(invRows[0].paid_satang);
+        if (outstanding <= 0n) continue;
+
+        // Allocate: min of remaining payment and outstanding balance
+        const allocatedAmount = remainingPayment < outstanding ? remainingPayment : outstanding;
+        remainingPayment -= allocatedAmount;
+
         const matchId = crypto.randomUUID();
         await fastify.sql`
           INSERT INTO invoice_payments (id, invoice_id, payment_id, amount_satang)
-          VALUES (${matchId}, ${invoiceId}, ${id}, ${payment.amount_satang.toString()}::bigint)
+          VALUES (${matchId}, ${invoiceId}, ${id}, ${allocatedAmount.toString()}::bigint)
           ON CONFLICT (invoice_id, payment_id) DO NOTHING
         `;
         await updateInvoiceAfterPayment(fastify, invoiceId, tenantId);

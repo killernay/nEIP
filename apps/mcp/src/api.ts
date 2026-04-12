@@ -17,11 +17,20 @@ export async function apiCall<T>(method: string, path: string, body?: unknown): 
     headers['Authorization'] = `Bearer ${authToken}`;
   }
 
-  const init: RequestInit = { method, headers };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+  const init: RequestInit = { method, headers, signal: controller.signal };
   if (body) {
     init.body = JSON.stringify(body);
   }
-  const res = await fetch(`${API_BASE}/api/v1${path}`, init);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/v1${path}`, init);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText })) as Record<string, unknown>;

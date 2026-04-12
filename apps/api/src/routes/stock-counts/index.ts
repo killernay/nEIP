@@ -178,6 +178,7 @@ export async function stockCountRoutes(
           await fastify.sql`
             UPDATE stock_count_lines SET actual_quantity = ${entry.actualQuantity}, variance = ${variance}
             WHERE stock_count_id = ${id} AND product_id = ${entry.productId}
+              AND stock_count_id IN (SELECT sc.id FROM stock_counts sc WHERE sc.id = ${id} AND sc.tenant_id = ${tenantId})
           `;
         } else {
           await fastify.sql`
@@ -189,7 +190,7 @@ export async function stockCountRoutes(
 
       // Update status to counting
       if (scRows[0].status === 'open') {
-        await fastify.sql`UPDATE stock_counts SET status = 'counting', updated_at = NOW() WHERE id = ${id}`;
+        await fastify.sql`UPDATE stock_counts SET status = 'counting', updated_at = NOW() WHERE id = ${id} AND tenant_id = ${tenantId}`;
       }
 
       const updated = await fastify.sql<[ScRow]>`SELECT * FROM stock_counts WHERE id = ${id} LIMIT 1`;
@@ -219,40 +220,38 @@ export async function stockCountRoutes(
 
       const warehouseId = scRows[0].warehouse_id;
 
-      // Create stock movements for variances and update stock levels
-      for (const line of lines) {
-        if (line.variance === null || line.variance === 0) continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await fastify.sql.begin(async (sql: any) => {
+        // Create stock movements for variances and update stock levels
+        for (const line of lines) {
+          if (line.variance === null || line.variance === 0) continue;
 
-        const movementType = line.variance! > 0 ? 'adjustment_in' : 'adjustment_out';
-        const absVariance = Math.abs(line.variance!);
+          const movementType = line.variance! > 0 ? 'adjustment_in' : 'adjustment_out';
+          const absVariance = Math.abs(line.variance!);
 
-        // Update stock level
-        await fastify.sql`
-          INSERT INTO stock_levels (product_id, warehouse_id, quantity_on_hand, quantity_reserved, quantity_available)
-          VALUES (${line.product_id}, ${warehouseId}, ${line.actual_quantity!}, 0, ${line.actual_quantity!})
-          ON CONFLICT (product_id, warehouse_id)
-          DO UPDATE SET
-            quantity_on_hand = ${line.actual_quantity!},
-            quantity_available = ${line.actual_quantity!} - stock_levels.quantity_reserved
-        `;
+          await sql`
+            INSERT INTO stock_levels (product_id, warehouse_id, quantity_on_hand, quantity_reserved, quantity_available)
+            VALUES (${line.product_id}, ${warehouseId}, ${line.actual_quantity!}, 0, ${line.actual_quantity!})
+            ON CONFLICT (product_id, warehouse_id)
+            DO UPDATE SET
+              quantity_on_hand = ${line.actual_quantity!},
+              quantity_available = ${line.actual_quantity!} - stock_levels.quantity_reserved
+          `;
 
-        // Create stock movement
-        await fastify.sql`
-          INSERT INTO stock_movements (id, product_id, warehouse_id, movement_type, quantity, reference_type, reference_id, balance_after, tenant_id, created_by)
-          VALUES (${crypto.randomUUID()}, ${line.product_id}, ${warehouseId}, ${movementType}, ${absVariance},
-                  'stock_count', ${id}, ${line.actual_quantity!}, ${tenantId}, ${userId})
-        `;
-      }
+          await sql`
+            INSERT INTO stock_movements (id, product_id, warehouse_id, movement_type, quantity, reference_type, reference_id, balance_after, tenant_id, created_by)
+            VALUES (${crypto.randomUUID()}, ${line.product_id}, ${warehouseId}, ${movementType}, ${absVariance},
+                    'stock_count', ${id}, ${line.actual_quantity!}, ${tenantId}, ${userId})
+          `;
+        }
 
-      // Create JE for inventory variance
-      const varianceLines = lines.filter((l) => l.variance !== null && l.variance !== 0);
-      if (varianceLines.length > 0) {
-        try {
-          // Look up inventory and variance expense accounts
-          const invAcctRows = await fastify.sql<[{ id: string }?]>`
+        // Create JE for inventory variance
+        const varianceLines = lines.filter((l) => l.variance !== null && l.variance !== 0);
+        if (varianceLines.length > 0) {
+          const invAcctRows = await sql<[{ id: string }?]>`
             SELECT id FROM chart_of_accounts WHERE tenant_id = ${tenantId} AND code LIKE '1300%' AND account_type = 'asset' AND is_active = true ORDER BY code LIMIT 1
           `;
-          const varAcctRows = await fastify.sql<[{ id: string }?]>`
+          const varAcctRows = await sql<[{ id: string }?]>`
             SELECT id FROM chart_of_accounts WHERE tenant_id = ${tenantId} AND code LIKE '5100%' AND account_type = 'expense' AND is_active = true ORDER BY code LIMIT 1
           `;
 
@@ -262,43 +261,37 @@ export async function stockCountRoutes(
             const fiscalYear = now.getFullYear();
             const fiscalPeriod = now.getMonth() + 1;
 
-            // Calculate total variance value (simplified: using a unit cost assumption)
             let totalVarianceSatang = 0;
-            for (const line of varianceLines) {
-              // Use approximate unit value from stock valuation or default 100 satang per unit
-              totalVarianceSatang += Math.abs(line.variance!) * 100;
+            for (const vl of varianceLines) {
+              totalVarianceSatang += Math.abs(vl.variance!) * 100;
             }
 
-            await fastify.sql`
+            await sql`
               INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, tenant_id, created_by, posted_at)
-              VALUES (${jeId}, ${'SC-' + Date.now()}, ${'Stock count variance: ' + scRows[0].document_number},
+              VALUES (${jeId}, ${'SC-' + Date.now()}, ${'Stock count variance: ' + scRows[0]!.document_number},
                       'posted', ${fiscalYear}, ${fiscalPeriod}, ${tenantId}, ${userId}, NOW())
             `;
 
-            // Net positive variance: Dr Inventory, Cr Variance Expense
-            // Net negative variance: Dr Variance Expense, Cr Inventory
             const netVariance = varianceLines.reduce((sum, l) => sum + (l.variance ?? 0), 0);
             if (netVariance > 0) {
-              await fastify.sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+              await sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
                 VALUES (${crypto.randomUUID()}, ${jeId}, 1, ${invAcctRows[0].id}, 'Inventory adjustment (gain)', ${totalVarianceSatang}, 0)`;
-              await fastify.sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+              await sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
                 VALUES (${crypto.randomUUID()}, ${jeId}, 2, ${varAcctRows[0].id}, 'Inventory variance', 0, ${totalVarianceSatang})`;
             } else {
-              await fastify.sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+              await sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
                 VALUES (${crypto.randomUUID()}, ${jeId}, 1, ${varAcctRows[0].id}, 'Inventory variance (loss)', ${totalVarianceSatang}, 0)`;
-              await fastify.sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+              await sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
                 VALUES (${crypto.randomUUID()}, ${jeId}, 2, ${invAcctRows[0].id}, 'Inventory adjustment', 0, ${totalVarianceSatang})`;
             }
 
             request.log.info({ stockCountId: id, jeId, tenantId }, 'Stock count variance JE created');
           }
-        } catch (err) {
-          request.log.error({ stockCountId: id, err }, 'Failed to create variance JE');
         }
-      }
 
-      // Mark stock count as posted
-      await fastify.sql`UPDATE stock_counts SET status = 'posted', posted_at = NOW(), updated_at = NOW() WHERE id = ${id}`;
+        // Mark stock count as posted
+        await sql`UPDATE stock_counts SET status = 'posted', posted_at = NOW(), updated_at = NOW() WHERE id = ${id} AND tenant_id = ${tenantId}`;
+      });
 
       const updated = await fastify.sql<[ScRow]>`SELECT * FROM stock_counts WHERE id = ${id} LIMIT 1`;
       const updatedLines = await fastify.sql<ScLineRow[]>`SELECT * FROM stock_count_lines WHERE stock_count_id = ${id}`;

@@ -184,7 +184,7 @@ export async function rfqRoutes(
 
       // Update RFQ status to received if it was sent
       if (rfqRows[0].status === 'sent') {
-        await fastify.sql`UPDATE rfqs SET status = 'received', updated_at = NOW() WHERE id = ${id}`;
+        await fastify.sql`UPDATE rfqs SET status = 'received', updated_at = NOW() WHERE id = ${id} AND tenant_id = ${tenantId}`;
       }
 
       const vendors = await fastify.sql<RfqVendorRow[]>`SELECT * FROM rfq_vendors WHERE rfq_id = ${id} ORDER BY total_amount_satang`;
@@ -243,9 +243,13 @@ export async function rfqRoutes(
       if (!rfqRows[0]) throw new NotFoundError({ detail: `RFQ ${id} not found.` });
       if (rfqRows[0].status === 'closed') throw new ConflictError({ detail: 'RFQ is already closed.' });
 
-      // Mark vendor as selected
-      await fastify.sql`UPDATE rfq_vendors SET selected = FALSE WHERE rfq_id = ${id}`;
-      await fastify.sql`UPDATE rfq_vendors SET selected = TRUE, updated_at = NOW() WHERE rfq_id = ${id} AND vendor_id = ${vendorId}`;
+      // Mark vendor as selected (tenant-scoped via rfq join)
+      await fastify.sql`UPDATE rfq_vendors SET selected = FALSE
+        WHERE rfq_id = ${id}
+          AND rfq_id IN (SELECT r.id FROM rfqs r WHERE r.id = ${id} AND r.tenant_id = ${tenantId})`;
+      await fastify.sql`UPDATE rfq_vendors SET selected = TRUE, updated_at = NOW()
+        WHERE rfq_id = ${id} AND vendor_id = ${vendorId}
+          AND rfq_id IN (SELECT r.id FROM rfqs r WHERE r.id = ${id} AND r.tenant_id = ${tenantId})`;
 
       // Get selected vendor's amount
       const vendorRows = await fastify.sql<[RfqVendorRow?]>`SELECT * FROM rfq_vendors WHERE rfq_id = ${id} AND vendor_id = ${vendorId} LIMIT 1`;
@@ -285,7 +289,7 @@ export async function rfqRoutes(
       }
 
       // Close RFQ
-      await fastify.sql`UPDATE rfqs SET status = 'closed', updated_at = NOW() WHERE id = ${id}`;
+      await fastify.sql`UPDATE rfqs SET status = 'closed', updated_at = NOW() WHERE id = ${id} AND tenant_id = ${tenantId}`;
 
       request.log.info({ rfqId: id, poId, vendorId, tenantId }, 'RFQ winner selected, PO created');
       return reply.status(201).send({ purchaseOrderId: poId, purchaseOrderDocumentNumber: poDocNumber, selectedVendorId: vendorId });

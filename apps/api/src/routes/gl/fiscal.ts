@@ -517,20 +517,16 @@ export async function fiscalRoutes(
         });
       }
 
-      // 5. Create Closing JE: Dr all Revenue accounts / Cr all Expense accounts → zero them out
-      const closingJeId = crypto.randomUUID();
-      const closingDocNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', fy.year);
+      // H-6 FIX: Check if there are any non-zero revenue/expense balances
+      const hasNonZeroAccounts = accountBalances.some((acc) => {
+        const netBalance = acc.account_type === 'revenue'
+          ? BigInt(acc.total_credit) - BigInt(acc.total_debit)
+          : BigInt(acc.total_debit) - BigInt(acc.total_credit);
+        return netBalance !== 0n;
+      });
 
-      await fastify.sql`
-        INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, tenant_id, created_by, posted_at)
-        VALUES (
-          ${closingJeId}, ${closingDocNumber},
-          ${'Year-end closing entry for fiscal year ' + String(fy.year)},
-          'posted', ${fy.year}, 12,
-          ${tenantId}, ${userId}, NOW()
-        )
-      `;
-
+      let closingJeId: string | null = null;
+      let closingDocNumber: string | null = null;
       const closingLines: Array<{
         lineNumber: number;
         accountId: string;
@@ -539,75 +535,92 @@ export async function fiscalRoutes(
         debitSatang: string;
         creditSatang: string;
       }> = [];
-      let lineNum = 1;
 
-      // Dr Revenue accounts (to zero out their credit balances)
-      for (const acc of revenueAccounts) {
-        const netBalance = BigInt(acc.total_credit) - BigInt(acc.total_debit);
-        if (netBalance === 0n) continue;
-
-        const debit = netBalance > 0n ? netBalance.toString() : '0';
-        const credit = netBalance < 0n ? (-netBalance).toString() : '0';
+      if (hasNonZeroAccounts) {
+        // 5. Create Closing JE: Dr all Revenue accounts / Cr all Expense accounts → zero them out
+        closingJeId = crypto.randomUUID();
+        closingDocNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', fy.year);
 
         await fastify.sql`
-          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-          VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${acc.account_id},
-                  ${'Close revenue: ' + acc.name_en}, ${debit}::bigint, ${credit}::bigint)
+          INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, tenant_id, created_by, posted_at)
+          VALUES (
+            ${closingJeId}, ${closingDocNumber},
+            ${'Year-end closing entry for fiscal year ' + String(fy.year)},
+            'posted', ${fy.year}, 12,
+            ${tenantId}, ${userId}, NOW()
+          )
         `;
-        closingLines.push({
-          lineNumber: lineNum,
-          accountId: acc.account_id,
-          accountCode: acc.code,
-          description: 'Close revenue: ' + acc.name_en,
-          debitSatang: debit,
-          creditSatang: credit,
-        });
-        lineNum++;
-      }
 
-      // Cr Expense accounts (to zero out their debit balances)
-      for (const acc of expenseAccounts) {
-        const netBalance = BigInt(acc.total_debit) - BigInt(acc.total_credit);
-        if (netBalance === 0n) continue;
+        let lineNum = 1;
 
-        const debit = netBalance < 0n ? (-netBalance).toString() : '0';
-        const credit = netBalance > 0n ? netBalance.toString() : '0';
+        // Dr Revenue accounts (to zero out their credit balances)
+        for (const acc of revenueAccounts) {
+          const netBalance = BigInt(acc.total_credit) - BigInt(acc.total_debit);
+          if (netBalance === 0n) continue;
 
-        await fastify.sql`
-          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-          VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${acc.account_id},
-                  ${'Close expense: ' + acc.name_en}, ${debit}::bigint, ${credit}::bigint)
-        `;
-        closingLines.push({
-          lineNumber: lineNum,
-          accountId: acc.account_id,
-          accountCode: acc.code,
-          description: 'Close expense: ' + acc.name_en,
-          debitSatang: debit,
-          creditSatang: credit,
-        });
-        lineNum++;
-      }
+          const debit = netBalance > 0n ? netBalance.toString() : '0';
+          const credit = netBalance < 0n ? (-netBalance).toString() : '0';
 
-      // Balance to Income Summary / Retained Earnings in the closing JE
-      // Net income goes to RE: if profit → Cr RE; if loss → Dr RE
-      if (netIncome !== 0n) {
-        const reDebit = netIncome < 0n ? (-netIncome).toString() : '0';
-        const reCredit = netIncome > 0n ? netIncome.toString() : '0';
+          await fastify.sql`
+            INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+            VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${acc.account_id},
+                    ${'Close revenue: ' + acc.name_en}, ${debit}::bigint, ${credit}::bigint)
+          `;
+          closingLines.push({
+            lineNumber: lineNum,
+            accountId: acc.account_id,
+            accountCode: acc.code,
+            description: 'Close revenue: ' + acc.name_en,
+            debitSatang: debit,
+            creditSatang: credit,
+          });
+          lineNum++;
+        }
 
-        await fastify.sql`
-          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-          VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${retainedEarningsId},
-                  ${'Net income to Retained Earnings — FY' + String(fy.year)}, ${reDebit}::bigint, ${reCredit}::bigint)
-        `;
-        closingLines.push({
-          lineNumber: lineNum,
-          accountId: retainedEarningsId,
-          accountCode: 'RE',
-          description: 'Net income to Retained Earnings — FY' + String(fy.year),
-          debitSatang: reDebit,
-          creditSatang: reCredit,
-        });
+        // Cr Expense accounts (to zero out their debit balances)
+        for (const acc of expenseAccounts) {
+          const netBalance = BigInt(acc.total_debit) - BigInt(acc.total_credit);
+          if (netBalance === 0n) continue;
+
+          const debit = netBalance < 0n ? (-netBalance).toString() : '0';
+          const credit = netBalance > 0n ? netBalance.toString() : '0';
+
+          await fastify.sql`
+            INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+            VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${acc.account_id},
+                    ${'Close expense: ' + acc.name_en}, ${debit}::bigint, ${credit}::bigint)
+          `;
+          closingLines.push({
+            lineNumber: lineNum,
+            accountId: acc.account_id,
+            accountCode: acc.code,
+            description: 'Close expense: ' + acc.name_en,
+            debitSatang: debit,
+            creditSatang: credit,
+          });
+          lineNum++;
+        }
+
+        // Balance to Income Summary / Retained Earnings in the closing JE
+        // Net income goes to RE: if profit → Cr RE; if loss → Dr RE
+        if (netIncome !== 0n) {
+          const reDebit = netIncome < 0n ? (-netIncome).toString() : '0';
+          const reCredit = netIncome > 0n ? netIncome.toString() : '0';
+
+          await fastify.sql`
+            INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+            VALUES (${crypto.randomUUID()}, ${closingJeId}, ${lineNum}, ${retainedEarningsId},
+                    ${'Net income to Retained Earnings — FY' + String(fy.year)}, ${reDebit}::bigint, ${reCredit}::bigint)
+          `;
+          closingLines.push({
+            lineNumber: lineNum,
+            accountId: retainedEarningsId,
+            accountCode: 'RE',
+            description: 'Net income to Retained Earnings — FY' + String(fy.year),
+            debitSatang: reDebit,
+            creditSatang: reCredit,
+          });
+        }
       }
 
       // 6. Mark fiscal year as closed
@@ -625,7 +638,7 @@ export async function fiscalRoutes(
 
       request.log.info(
         { fiscalYearId: id, closingJeId, netIncomeSatang: netIncome.toString(), tenantId },
-        'Fiscal year closed with closing JE',
+        closingJeId ? 'Fiscal year closed with closing JE' : 'Fiscal year closed — no closing entry needed (zero balances)',
       );
 
       return reply.status(200).send({
@@ -643,17 +656,22 @@ export async function fiscalRoutes(
           })),
           createdAt: toISO(updated.created_at),
         },
-        closingJournalEntry: {
+        closingJournalEntry: closingJeId ? {
           id: closingJeId,
           documentNumber: closingDocNumber,
           description: 'Year-end closing entry for fiscal year ' + String(fy.year),
           lines: closingLines,
-        },
-        carryForwardJournalEntry: {
+        } : null,
+        carryForwardJournalEntry: closingJeId ? {
           id: closingJeId,
           documentNumber: closingDocNumber,
           description: 'Net income carried forward to Retained Earnings',
           netIncomeSatang: netIncome.toString(),
+        } : {
+          id: null,
+          documentNumber: null,
+          description: 'No closing entry needed — no revenue/expense balances for FY' + String(fy.year),
+          netIncomeSatang: '0',
         },
       });
     },

@@ -1,4 +1,4 @@
--- Migration 0008: Document Flow — QT→SO→DO→INV
+-- Migration 0009: Document Flow — QT→SO→DO→INV
 --
 -- Adds columns to support the full SAP-style document flow:
 --   Quotation → Sales Order → Delivery Note → Invoice → Payment

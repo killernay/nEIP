@@ -140,6 +140,7 @@ export class CashFlowForecastAgent extends BaseAgent<
 
     // Map recurring JEs across the forecast window
     for (const rje of input.recurringJes) {
+      if (rje.frequencyDays < 1) continue;
       let nextDate = new Date(rje.nextOccurrence);
       const endDate = new Date(today);
       endDate.setDate(endDate.getDate() + input.forecastDays);

@@ -355,6 +355,8 @@ export const AI_CATEGORIZE = 'ai:categorize' as const;
 export const AI_RECONCILE  = 'ai:reconcile'  as const;
 export const AI_PARSE      = 'ai:parse'      as const;
 export const AI_PREDICT    = 'ai:predict'    as const;
+export const AI_CATEGORIZE_EXECUTE = 'ai:categorize:execute' as const;
+export const AI_PARSE_EXECUTE      = 'ai:parse:execute'      as const;
 export const REPORT_CUSTOM_CREATE = 'report:custom:create' as const;
 export const REPORT_CUSTOM_READ   = 'report:custom:read'   as const;
 export const REPORT_CUSTOM_RUN    = 'report:custom:run'    as const;
@@ -551,6 +553,8 @@ export type Permission =
   | typeof AI_RECONCILE
   | typeof AI_PARSE
   | typeof AI_PREDICT
+  | typeof AI_CATEGORIZE_EXECUTE
+  | typeof AI_PARSE_EXECUTE
   | typeof REPORT_CUSTOM_CREATE
   | typeof REPORT_CUSTOM_READ
   | typeof REPORT_CUSTOM_RUN;
@@ -746,6 +750,8 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   AI_RECONCILE,
   AI_PARSE,
   AI_PREDICT,
+  AI_CATEGORIZE_EXECUTE,
+  AI_PARSE_EXECUTE,
   REPORT_CUSTOM_CREATE,
   REPORT_CUSTOM_READ,
   REPORT_CUSTOM_RUN,

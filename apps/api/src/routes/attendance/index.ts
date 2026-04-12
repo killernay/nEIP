@@ -59,7 +59,7 @@ export async function attendanceRoutes(
 
       // Check if already clocked in today
       const existing = await fastify.sql<[AttendanceRow?]>`
-        SELECT * FROM attendance_records WHERE employee_id = ${employeeId} AND date = ${today} LIMIT 1
+        SELECT * FROM attendance_records WHERE employee_id = ${employeeId} AND date = ${today} AND tenant_id = ${tenantId} LIMIT 1
       `;
       if (existing[0] && existing[0].clock_in) {
         throw new ConflictError({ detail: `Employee already clocked in today at ${toISO(existing[0].clock_in)}.` });
@@ -73,7 +73,7 @@ export async function attendanceRoutes(
         // Update existing record
         const rows = await fastify.sql<[AttendanceRow]>`
           UPDATE attendance_records SET clock_in = ${now.toISOString()}, status = ${status}, updated_at = NOW()
-          WHERE id = ${existing[0].id} RETURNING *
+          WHERE id = ${existing[0].id} AND tenant_id = ${tenantId} RETURNING *
         `;
         return reply.status(200).send(mapAttendance(rows[0]));
       }

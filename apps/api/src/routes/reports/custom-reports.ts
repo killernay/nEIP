@@ -293,25 +293,24 @@ export async function customReportRoutes(
         return reply.status(400).send({ error: 'No valid dimensions or measures' });
       }
 
-      // Build tenant filter
-      const tenantCol = `${source.alias}.tenant_id`;
-      const whereClause = `WHERE ${tenantCol} = '${tenantId}'`;
-      const groupByClause = groupByParts.length > 0
-        ? `GROUP BY ${groupByParts.join(', ')}`
-        : '';
+      // Build safe query using tagged template — all column references come from whitelist
+      const selectExpr = selectParts.join(', ');
+      const groupByExpr = groupByParts.join(', ');
 
-      const query = `
-        SELECT ${selectParts.join(', ')}
+      // Since selectParts, source.table, source.alias, source.joins, and groupByParts
+      // are all derived from whitelisted constants (not user input), they are safe to
+      // interpolate as identifiers. Only tenantId is parameterized as a value.
+      const queryText = `
+        SELECT ${selectExpr}
         FROM ${source.table} ${source.alias}
         ${source.joins}
-        ${whereClause}
-        ${groupByClause}
+        WHERE ${source.alias}.tenant_id = $1
+        ${groupByParts.length > 0 ? `GROUP BY ${groupByExpr}` : ''}
         ORDER BY 1
         LIMIT 10000
       `;
 
-      // Execute with raw SQL (parameterized tenant_id is embedded above)
-      const rows = await fastify.sql.unsafe(query);
+      const rows = await fastify.sql.unsafe(queryText, [tenantId]);
 
       return reply.status(200).send({
         reportId: id,

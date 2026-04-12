@@ -481,6 +481,27 @@ export async function invoiceRoutes(
       const revAccountId = revAccounts[0]?.id ?? null;
       const vatPayableAccountId = vatPayableAccounts[0]?.id ?? null;
 
+      // C-1 FIX: Validate ALL required accounts exist before creating JE
+      if (!arAccountId) {
+        throw new ValidationError({
+          detail: 'Cannot post: Accounts Receivable account (code 1100*) not found in Chart of Accounts.',
+        });
+      }
+      if (!revAccountId) {
+        // Check if all lines have explicit accountId
+        const missingAccount = lines.some((l) => !l.account_id);
+        if (missingAccount) {
+          throw new ValidationError({
+            detail: 'Cannot post: Revenue account not found in Chart of Accounts and not all invoice lines have an explicit account.',
+          });
+        }
+      }
+      if (!vatPayableAccountId) {
+        throw new ValidationError({
+          detail: 'Cannot post: VAT Payable account (code 2110*) not found in Chart of Accounts.',
+        });
+      }
+
       // Create Journal Entry: Dr AR (grandTotal), Cr Revenue per line (subTotal), Cr VAT Payable (vatAmount)
       const jeId = crypto.randomUUID();
       const now = new Date();
@@ -502,38 +523,34 @@ export async function invoiceRoutes(
       `;
 
       // Dr AR (grandTotal = subTotal + VAT)
-      if (arAccountId) {
-        await fastify.sql`
-          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-          VALUES (
-            ${crypto.randomUUID()}, ${jeId}, 1,
-            ${arAccountId},
-            ${'Accounts Receivable — ' + inv.invoice_number},
-            ${grandTotalSatang.toString()}::bigint, 0
-          )
-        `;
-      }
+      await fastify.sql`
+        INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+        VALUES (
+          ${crypto.randomUUID()}, ${jeId}, 1,
+          ${arAccountId},
+          ${'Accounts Receivable — ' + inv.invoice_number},
+          ${grandTotalSatang.toString()}::bigint, 0
+        )
+      `;
 
       // Cr Revenue — one line per invoice line item (subTotal breakdown)
       let lineNum = 2;
       for (const line of lines) {
         const accountId = line.account_id ?? revAccountId;
-        if (accountId) {
-          await fastify.sql`
-            INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-            VALUES (
-              ${crypto.randomUUID()}, ${jeId}, ${lineNum},
-              ${accountId},
-              ${line.description},
-              0, ${BigInt(line.total_satang).toString()}::bigint
-            )
-          `;
-          lineNum++;
-        }
+        await fastify.sql`
+          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
+          VALUES (
+            ${crypto.randomUUID()}, ${jeId}, ${lineNum},
+            ${accountId},
+            ${line.description},
+            0, ${BigInt(line.total_satang).toString()}::bigint
+          )
+        `;
+        lineNum++;
       }
 
       // Cr VAT Payable (7% VAT on subTotal)
-      if (vatPayableAccountId && vatAmountSatang > 0n) {
+      if (vatAmountSatang > 0n) {
         await fastify.sql`
           INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
           VALUES (
@@ -627,6 +644,51 @@ export async function invoiceRoutes(
         throw new ValidationError({
           detail: `Invoice ${id} cannot be voided — current status is "${existing[0].status}".`,
         });
+      }
+
+      // H-4 FIX: If invoice has a posted JE, create a reversal JE
+      if (inv.journal_entry_id) {
+        const { sub: userId } = request.user;
+
+        // Get original JE lines
+        const jeLineRows = await fastify.sql<Array<{ line_number: number; account_id: string; description: string | null; debit_satang: string; credit_satang: string }>>`
+          SELECT line_number, account_id, description, debit_satang::text, credit_satang::text
+          FROM journal_entry_lines WHERE entry_id = ${inv.journal_entry_id}
+        `;
+
+        // Get original JE for fiscal info
+        const origJeRows = await fastify.sql<[{ document_number: string; fiscal_year: number; fiscal_period: number }?]>`
+          SELECT document_number, fiscal_year, fiscal_period FROM journal_entries WHERE id = ${inv.journal_entry_id} LIMIT 1
+        `;
+        const origJe = origJeRows[0];
+
+        if (origJe && jeLineRows.length > 0) {
+          // Mark original JE as reversed
+          await fastify.sql`
+            UPDATE journal_entries SET status = 'reversed', updated_at = NOW()
+            WHERE id = ${inv.journal_entry_id}
+          `;
+
+          // Create reversal JE
+          const reversalJeId = crypto.randomUUID();
+          const now = new Date();
+          const reversalDocNumber = await nextDocNumber(fastify.sql, tenantId, 'journal_entry', origJe.fiscal_year);
+
+          await fastify.sql`
+            INSERT INTO journal_entries (id, document_number, description, status, fiscal_year, fiscal_period, reversed_entry_id, tenant_id, created_by, posted_at, created_at, updated_at)
+            VALUES (${reversalJeId}, ${reversalDocNumber}, ${'Reversal of ' + origJe.document_number + ' (invoice void)'}, 'posted', ${origJe.fiscal_year}, ${origJe.fiscal_period}, ${inv.journal_entry_id}, ${tenantId}, ${userId}, ${now.toISOString()}::timestamptz, ${now.toISOString()}::timestamptz, ${now.toISOString()}::timestamptz)
+          `;
+
+          // Create reversed lines (swap debit/credit)
+          for (const line of jeLineRows) {
+            await fastify.sql`
+              INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang, created_at)
+              VALUES (${crypto.randomUUID()}, ${reversalJeId}, ${line.line_number}, ${line.account_id}, ${line.description}, ${line.credit_satang}::bigint, ${line.debit_satang}::bigint, ${now.toISOString()}::timestamptz)
+            `;
+          }
+
+          request.log.info({ invoiceId: id, originalJeId: inv.journal_entry_id, reversalJeId, tenantId }, 'Invoice JE reversed on void');
+        }
       }
 
       request.log.info({ invoiceId: id, tenantId }, 'Invoice voided');

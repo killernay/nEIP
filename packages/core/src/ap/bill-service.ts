@@ -17,7 +17,7 @@
  */
 
 import { z } from 'zod';
-import { eq, and, like } from 'drizzle-orm';
+import { eq, and, like, desc } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import {
   ValidationError,
@@ -325,6 +325,22 @@ export function createBillTools(
       const apAccountId = apAccounts[0]?.id ?? null;
       const inputVatAccountId = inputVatAccounts[0]?.id ?? null;
 
+      // C-2 FIX: Validate ALL required accounts exist before creating JE
+      if (!apAccountId) {
+        return err(
+          new ValidationError({
+            detail: 'Cannot post: Accounts Payable account (code 2100*) not found in Chart of Accounts.',
+          }),
+        );
+      }
+      if (!inputVatAccountId) {
+        return err(
+          new ValidationError({
+            detail: 'Cannot post: Input VAT account (code 1170*) not found in Chart of Accounts.',
+          }),
+        );
+      }
+
       // Calculate VAT
       const subTotalSatang = BigInt(bill.total_satang);
       const vatAmountSatang = calcVat(subTotalSatang);
@@ -372,7 +388,7 @@ export function createBillTools(
       }
 
       // Dr Input VAT (7% VAT on subTotal)
-      if (inputVatAccountId && vatAmountSatang > 0n) {
+      if (vatAmountSatang > 0n) {
         await db.insert(journal_entry_lines).values({
           id: uuidv7(),
           entry_id: jeId,
@@ -387,18 +403,16 @@ export function createBillTools(
       }
 
       // Cr Accounts Payable (grandTotal = subTotal + VAT)
-      if (apAccountId) {
-        await db.insert(journal_entry_lines).values({
-          id: uuidv7(),
-          entry_id: jeId,
-          line_number: jeLineNum,
-          account_id: apAccountId,
-          description: `Accounts Payable — ${bill.document_number}`,
-          debit_satang: 0n,
-          credit_satang: grandTotalSatang,
-          created_at: postedAt,
-        });
-      }
+      await db.insert(journal_entry_lines).values({
+        id: uuidv7(),
+        entry_id: jeId,
+        line_number: jeLineNum,
+        account_id: apAccountId,
+        description: `Accounts Payable — ${bill.document_number}`,
+        debit_satang: 0n,
+        credit_satang: grandTotalSatang,
+        created_at: postedAt,
+      });
 
       // Update bill: draft → posted
       await db
@@ -490,6 +504,76 @@ export function createBillTools(
           updated_at: new Date(),
         })
         .where(eq(bills.id, params.billId));
+
+      // H-5 FIX: If the bill was posted (has a JE), create a reversal JE
+      if (bill.status === 'posted') {
+        // Find the JE created when this bill was posted
+        const relatedJeRows = await db
+          .select()
+          .from(journal_entries)
+          .where(
+            and(
+              eq(journal_entries.tenant_id, ctx.tenantId),
+              eq(journal_entries.status, 'posted'),
+              like(journal_entries.description, `Bill posted: ${bill.document_number}`),
+            ),
+          )
+          .orderBy(desc(journal_entries.created_at))
+          .limit(1);
+
+        const originalJe = relatedJeRows[0];
+        if (originalJe) {
+          // Mark original JE as reversed
+          await db
+            .update(journal_entries)
+            .set({ status: 'reversed', updated_at: new Date() })
+            .where(eq(journal_entries.id, originalJe.id));
+
+          // Get original JE lines
+          const origJeLines = await db
+            .select()
+            .from(journal_entry_lines)
+            .where(eq(journal_entry_lines.entry_id, originalJe.id));
+
+          // Create reversal JE
+          const reversalJeId = uuidv7();
+          const now = new Date();
+          const reversalDocNumber = await docNumbering.next(
+            ctx.tenantId,
+            'journal_entry',
+            originalJe.fiscal_year,
+          );
+
+          await db.insert(journal_entries).values({
+            id: reversalJeId,
+            document_number: reversalDocNumber,
+            description: `Reversal of ${originalJe.document_number} (bill void)`,
+            status: 'posted',
+            fiscal_year: originalJe.fiscal_year,
+            fiscal_period: originalJe.fiscal_period,
+            reversed_entry_id: originalJe.id,
+            tenant_id: ctx.tenantId,
+            created_by: ctx.userId,
+            posted_at: now,
+            created_at: now,
+            updated_at: now,
+          });
+
+          // Create reversed lines (swap debit/credit)
+          for (const origLine of origJeLines) {
+            await db.insert(journal_entry_lines).values({
+              id: uuidv7(),
+              entry_id: reversalJeId,
+              line_number: origLine.line_number,
+              account_id: origLine.account_id,
+              description: origLine.description,
+              debit_satang: origLine.credit_satang,
+              credit_satang: origLine.debit_satang,
+              created_at: now,
+            });
+          }
+        }
+      }
 
       // Get lines
       const lineRows = await db

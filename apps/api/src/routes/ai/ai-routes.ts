@@ -14,7 +14,7 @@ import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { API_V1_PREFIX } from '@neip/shared';
 import { requireAuth } from '../../hooks/require-auth.js';
 import { requirePermission } from '../../hooks/require-permission.js';
-import { REPORT_GL_READ, FI_BANK_RECONCILE } from '../../lib/permissions.js';
+import { REPORT_GL_READ, FI_BANK_RECONCILE, AI_CATEGORIZE_EXECUTE, AI_PARSE_EXECUTE } from '../../lib/permissions.js';
 import {
   AnomalyDetectionAgent,
   CashFlowForecastAgent,
@@ -303,7 +303,7 @@ export async function aiHandlers(
           },
         },
       },
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, requirePermission(AI_CATEGORIZE_EXECUTE)],
     },
     async (request, reply) => {
       const { tenantId } = request.user;
@@ -473,7 +473,7 @@ export async function aiHandlers(
         security: [{ bearerAuth: [] }],
         consumes: ['multipart/form-data'],
       },
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, requirePermission(AI_PARSE_EXECUTE)],
     },
     async (request, reply) => {
       const file = await request.file();
@@ -482,13 +482,28 @@ export async function aiHandlers(
       }
 
       const buffer = await file.toBuffer();
+
+      // File size validation (max 10MB)
+      if (buffer.length > 10 * 1024 * 1024) {
+        return reply.status(400).send({ error: 'File too large (max 10MB)' });
+      }
+
+      // Mime type whitelist
+      const allowedMimeTypes = ['text/plain', 'text/csv', 'application/pdf', 'image/jpeg', 'image/png'];
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        return reply.status(400).send({ error: `Unsupported file type: ${file.mimetype}` });
+      }
+
+      // Sanitize filename
+      const safeName = file.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
       const content = buffer.toString('utf-8');
 
       const agent = new DocumentParserAgent();
       const result = await agent.execute(
         {
           content,
-          filename: file.filename,
+          filename: safeName,
           mimeType: file.mimetype,
         },
         makeContext(request),

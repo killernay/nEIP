@@ -1,6 +1,7 @@
 import { pgTable, text, bigint, real, timestamp } from 'drizzle-orm/pg-core';
 import { price_lists } from './price-lists.js';
 import { products } from './products.js';
+import { tenants } from './tenants.js';
 
 /**
  * price_list_items — Line items in a price list (product-specific pricing).
@@ -16,6 +17,9 @@ export const price_list_items = pgTable('price_list_items', {
   unit_price_satang: bigint('unit_price_satang', { mode: 'bigint' }).notNull().default(0n),
   min_quantity: real('min_quantity').notNull().default(1),
   discount_percent: real('discount_percent').notNull().default(0),
+  tenant_id: text('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

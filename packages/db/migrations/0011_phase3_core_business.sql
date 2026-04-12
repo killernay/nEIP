@@ -1,6 +1,6 @@
 -- Phase 3: Core Business — Pricing, Payment Terms, Dunning, 3-Way Matching,
 -- Recurring JE, Credit Management
--- Migration 0009
+-- Migration 0011
 
 -- ---------------------------------------------------------------------------
 -- 3.1 Price Lists

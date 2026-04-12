@@ -28,7 +28,7 @@ import {
 } from '@neip/shared';
 import type { ToolResult } from '@neip/shared';
 import type { DbClient } from '@neip/db';
-import { journal_entries, journal_entry_lines, fiscal_periods } from '@neip/db';
+import { journal_entries, journal_entry_lines, fiscal_periods, fiscal_years } from '@neip/db';
 import type { ToolDefinition, ExecutionContext } from '../tool-registry/types.js';
 import { EventStore } from '../events/event-store.js';
 import { DocumentNumberingService } from './document-numbering.js';
@@ -263,21 +263,26 @@ export function createJournalEntryTools(
         );
       }
 
-      // Check if period is open
+      // H-1 FIX: Check if period is open — filter by tenant AND fiscal year
       const periodRows = await db
-        .select()
+        .select({ status: fiscal_periods.status })
         .from(fiscal_periods)
-        .where(eq(fiscal_periods.period_number, entry.fiscal_period));
+        .innerJoin(fiscal_years, eq(fiscal_periods.fiscal_year_id, fiscal_years.id))
+        .where(
+          and(
+            eq(fiscal_years.tenant_id, ctx.tenantId),
+            eq(fiscal_years.year, entry.fiscal_year),
+            eq(fiscal_periods.period_number, entry.fiscal_period),
+          ),
+        )
+        .limit(1);
 
-      // Filter for the correct fiscal year
-      for (const p of periodRows) {
-        if (p.status === 'closed') {
-          return err(
-            new ConflictError({
-              detail: `Cannot post to closed fiscal period ${entry.fiscal_period}.`,
-            }),
-          );
-        }
+      if (periodRows[0]?.status === 'closed') {
+        return err(
+          new ConflictError({
+            detail: `Cannot post to closed fiscal period ${entry.fiscal_period}/${entry.fiscal_year}.`,
+          }),
+        );
       }
 
       const postedAt = new Date();

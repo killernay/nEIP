@@ -15,6 +15,8 @@ export function registerAuthTools(server: McpServer): void {
       password: z.string().describe('Password'),
     },
     async ({ email, password }) => {
+      // WARNING: password is passed in plaintext. Prefer setting NEIP_TOKEN env var
+      // for non-interactive use to avoid credentials appearing in MCP request logs.
       try {
         const data = await apiCall<{ accessToken: string }>('POST', '/auth/login', { email, password });
         setAuthToken(data.accessToken);

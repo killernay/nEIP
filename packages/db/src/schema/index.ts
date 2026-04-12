@@ -242,3 +242,57 @@ export type { SerialNumber, NewSerialNumber } from './serial-numbers.js';
 
 export { bank_matching_rules } from './bank-matching-rules.js';
 export type { BankMatchingRule, NewBankMatchingRule } from './bank-matching-rules.js';
+
+// ---------------------------------------------------------------------------
+// Phase 4 — Operations (PR, RFQ, Stock Count, HR Positions, Attendance, Leave)
+// ---------------------------------------------------------------------------
+
+export { purchase_requisitions } from './purchase-requisitions.js';
+export type { PurchaseRequisition, NewPurchaseRequisition } from './purchase-requisitions.js';
+
+export { pr_lines } from './pr-lines.js';
+export type { PrLine, NewPrLine } from './pr-lines.js';
+
+export { rfqs } from './rfqs.js';
+export type { Rfq, NewRfq } from './rfqs.js';
+
+export { rfq_vendors } from './rfq-vendors.js';
+export type { RfqVendor, NewRfqVendor } from './rfq-vendors.js';
+
+export { stock_counts } from './stock-counts.js';
+export type { StockCount, NewStockCount } from './stock-counts.js';
+
+export { stock_count_lines } from './stock-count-lines.js';
+export type { StockCountLine, NewStockCountLine } from './stock-count-lines.js';
+
+export { positions } from './positions.js';
+export type { Position, NewPosition } from './positions.js';
+
+export { attendance_records } from './attendance-records.js';
+export type { AttendanceRecord, NewAttendanceRecord } from './attendance-records.js';
+
+export { leave_accrual_rules } from './leave-accrual-rules.js';
+export type { LeaveAccrualRule, NewLeaveAccrualRule } from './leave-accrual-rules.js';
+
+export { public_holidays } from './public-holidays.js';
+export type { PublicHoliday, NewPublicHoliday } from './public-holidays.js';
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Customer Price Lists
+// ---------------------------------------------------------------------------
+
+export { customer_price_lists } from './customer-price-lists.js';
+export type { CustomerPriceList, NewCustomerPriceList } from './customer-price-lists.js';
+
+// ---------------------------------------------------------------------------
+// Phase 6 — AI & Analytics
+// ---------------------------------------------------------------------------
+
+export { categorization_rules } from './categorization-rules.js';
+export type { CategorizationRule, NewCategorizationRule } from './categorization-rules.js';
+
+export { saved_reports } from './saved-reports.js';
+export type { SavedReport, NewSavedReport } from './saved-reports.js';
+
+export { dashboard_configs } from './dashboard-configs.js';
+export type { DashboardConfig, NewDashboardConfig } from './dashboard-configs.js';

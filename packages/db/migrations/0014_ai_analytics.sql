@@ -1,41 +1,41 @@
--- Migration 0009: AI & Analytics tables
+-- Migration 0014: AI & Analytics tables
 -- Stories 6.3, 6.6, 6.7
 
 -- 6.3: Categorization rules (learning from corrections)
 CREATE TABLE IF NOT EXISTS categorization_rules (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id     UUID NOT NULL REFERENCES tenants(id),
+  id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  tenant_id     TEXT NOT NULL REFERENCES tenants(id),
   keyword_pattern TEXT NOT NULL,
-  account_id    UUID NOT NULL REFERENCES chart_of_accounts(id),
+  account_id    TEXT NOT NULL REFERENCES chart_of_accounts(id),
   hit_count     INTEGER NOT NULL DEFAULT 0,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_categorization_rules_tenant ON categorization_rules(tenant_id);
-CREATE INDEX idx_categorization_rules_keyword ON categorization_rules(tenant_id, keyword_pattern);
+CREATE INDEX IF NOT EXISTS idx_categorization_rules_tenant ON categorization_rules(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_categorization_rules_keyword ON categorization_rules(tenant_id, keyword_pattern);
 
 -- 6.6: Saved custom reports
 CREATE TABLE IF NOT EXISTS saved_reports (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id     UUID NOT NULL REFERENCES tenants(id),
+  id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  tenant_id     TEXT NOT NULL REFERENCES tenants(id),
   name          TEXT NOT NULL,
   data_source   TEXT NOT NULL CHECK (data_source IN ('gl', 'ar', 'ap', 'hr', 'inventory')),
   dimensions    JSONB NOT NULL DEFAULT '[]',
   measures      JSONB NOT NULL DEFAULT '[]',
   filters       JSONB NOT NULL DEFAULT '[]',
-  created_by    UUID NOT NULL REFERENCES users(id),
+  created_by    TEXT NOT NULL REFERENCES users(id),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_saved_reports_tenant ON saved_reports(tenant_id);
-CREATE INDEX idx_saved_reports_created_by ON saved_reports(tenant_id, created_by);
+CREATE INDEX IF NOT EXISTS idx_saved_reports_tenant ON saved_reports(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_saved_reports_created_by ON saved_reports(tenant_id, created_by);
 
 -- 6.7: Dashboard role-based configurations
 CREATE TABLE IF NOT EXISTS dashboard_configs (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id     UUID NOT NULL REFERENCES tenants(id),
+  id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  tenant_id     TEXT NOT NULL REFERENCES tenants(id),
   role          TEXT NOT NULL,
   widgets       JSONB NOT NULL DEFAULT '[]',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS dashboard_configs (
   UNIQUE(tenant_id, role)
 );
 
-CREATE INDEX idx_dashboard_configs_tenant_role ON dashboard_configs(tenant_id, role);
+CREATE INDEX IF NOT EXISTS idx_dashboard_configs_tenant_role ON dashboard_configs(tenant_id, role);
 
 -- Seed default dashboard configs
 INSERT INTO dashboard_configs (tenant_id, role, widgets)

@@ -1,4 +1,4 @@
--- 0009_enterprise_features.sql
+-- 0013_enterprise_features.sql
 -- Phase 5: Enterprise features
 -- Multi-currency, Multi-company, Approval chains, Vendor returns, Batch/Serial, Bank matching, Cash flow
 

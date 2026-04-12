@@ -16,7 +16,7 @@
  */
 
 import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, like } from 'drizzle-orm';
 import { uuidv7 } from 'uuidv7';
 import {
   ValidationError,
@@ -27,7 +27,7 @@ import {
 } from '@neip/shared';
 import type { ToolResult } from '@neip/shared';
 import type { DbClient } from '@neip/db';
-import { bills, bill_payments, journal_entries, journal_entry_lines, wht_certificates } from '@neip/db';
+import { bills, bill_payments, journal_entries, journal_entry_lines, wht_certificates, chart_of_accounts } from '@neip/db';
 import type { ToolDefinition, ExecutionContext } from '../tool-registry/types.js';
 import { EventStore } from '../events/event-store.js';
 import { DocumentNumberingService } from '../gl/document-numbering.js';
@@ -203,13 +203,35 @@ export function createBillPaymentTools(
         created_at: now,
       });
 
-      // If WHT was deducted, credit WHT Payable account
+      // C-3 FIX: If WHT was deducted, credit WHT Payable account (not AP account)
       if (whtAmount > 0n) {
+        // Look up WHT Payable account (code 2130*)
+        const whtPayableAccounts = await db
+          .select({ id: chart_of_accounts.id })
+          .from(chart_of_accounts)
+          .where(
+            and(
+              eq(chart_of_accounts.tenant_id, ctx.tenantId),
+              like(chart_of_accounts.code, '2130%'),
+              eq(chart_of_accounts.account_type, 'liability'),
+            ),
+          )
+          .limit(1);
+
+        const whtPayableAccountId = whtPayableAccounts[0]?.id;
+        if (!whtPayableAccountId) {
+          return err(
+            new ValidationError({
+              detail: 'Cannot record WHT: WHT Payable account (code 2130*) not found in Chart of Accounts.',
+            }),
+          );
+        }
+
         await db.insert(journal_entry_lines).values({
           id: uuidv7(),
           entry_id: jeId,
           line_number: 3,
-          account_id: params.apAccountId, // will be matched to WHT payable in reconciliation
+          account_id: whtPayableAccountId,
           description: `WHT withheld ${whtRateBp! / 100}% - ${bill.document_number}`,
           debit_satang: 0n,
           credit_satang: whtAmount,

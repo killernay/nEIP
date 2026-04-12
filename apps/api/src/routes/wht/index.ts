@@ -219,9 +219,19 @@ export async function whtRoutes(
         billPaymentId = null,
       } = request.body;
 
-      // Calculate WHT amount: income * rate_bp / 10000
+      // Calculate WHT amount: income * rate_bp / 10000 (round half-up)
       const income = BigInt(incomeAmountSatang);
-      const whtAmount = (income * BigInt(whtRateBasisPoints)) / 10000n;
+      const whtAmount = (income * BigInt(whtRateBasisPoints) + 5000n) / 10000n;
+
+      // H-7: Validate pnd3 vs pnd53 based on payee tax ID
+      // Thai company tax IDs start with '0'; individuals do not
+      const isCompany = payeeTaxId.startsWith('0');
+      if (isCompany && certificateType !== 'pnd53') {
+        throw new ValidationError({ detail: `Payee tax ID ${payeeTaxId} appears to be a company (starts with '0') — certificateType must be 'pnd53', not '${certificateType}'.` });
+      }
+      if (!isCompany && certificateType !== 'pnd3') {
+        throw new ValidationError({ detail: `Payee tax ID ${payeeTaxId} appears to be an individual — certificateType must be 'pnd3', not '${certificateType}'.` });
+      }
 
       const id = crypto.randomUUID();
       const docNumber = await nextDocNumber(fastify.sql, tenantId, 'wht', taxYear);
@@ -591,14 +601,14 @@ export async function whtRoutes(
       `;
       const firm = firmRows[0];
 
-      // Aggregate payroll WHT for the year (personal income tax)
+      // Aggregate payroll WHT for the year (personal income tax) — BigInt
       interface PayrollWhtRow {
         pay_period_start: string;
-        gross_satang: number;
-        personal_income_tax_satang: number;
+        gross_satang: bigint;
+        personal_income_tax_satang: bigint;
       }
       const payrollRows = await fastify.sql<PayrollWhtRow[]>`
-        SELECT pr.pay_period_start, pi.gross_satang, pi.personal_income_tax_satang
+        SELECT pr.pay_period_start, pi.gross_satang::bigint, pi.personal_income_tax_satang::bigint
         FROM payroll_items pi
         JOIN payroll_runs pr ON pr.id = pi.payroll_run_id
         WHERE pi.employee_id = ${employeeId}
@@ -608,8 +618,8 @@ export async function whtRoutes(
         ORDER BY pr.pay_period_start
       `;
 
-      let totalIncome = 0;
-      let totalWht = 0;
+      let totalIncome = 0n;
+      let totalWht = 0n;
       const incomeDetails = payrollRows.map((r) => {
         totalIncome += r.gross_satang;
         totalWht += r.personal_income_tax_satang;

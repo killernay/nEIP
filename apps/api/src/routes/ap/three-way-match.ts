@@ -134,7 +134,7 @@ export async function threeWayMatchRoutes(
       // Update bill match_status
       await fastify.sql`
         UPDATE bills SET match_status = ${overallStatus}, updated_at = NOW()
-        WHERE id = ${id}
+        WHERE id = ${id} AND tenant_id = ${tenantId}
       `;
 
       return reply.send({

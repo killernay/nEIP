@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, date, jsonb, timestamp } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 /**
@@ -12,7 +12,7 @@ export const recurring_je_templates = pgTable('recurring_je_templates', {
   description: text('description').notNull(),
   lines: jsonb('lines').notNull().default('[]'),
   frequency: text('frequency').notNull().default('monthly'),
-  next_run_date: text('next_run_date').notNull(),
+  next_run_date: date('next_run_date').notNull(),
   is_active: boolean('is_active').notNull().default(true),
   last_run_at: timestamp('last_run_at', { withTimezone: true }),
   tenant_id: text('tenant_id')

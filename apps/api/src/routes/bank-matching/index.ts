@@ -233,9 +233,9 @@ export async function bankMatchingRoutes(
           let isMatch = false;
 
           if (rule.match_type === 'reference' && txn.reference) {
-            // Match reference field against pattern
-            const regex = new RegExp(rule.pattern, 'i');
-            isMatch = regex.test(rule.field === 'reference' ? (txn.reference ?? '') : txn.description);
+            // Match reference field against pattern using safe string matching (no regex — prevents ReDoS)
+            const fieldValue = (rule.field === 'reference' ? (txn.reference ?? '') : txn.description).toLowerCase();
+            isMatch = fieldValue.includes(rule.pattern.toLowerCase());
           } else if (rule.match_type === 'exact_amount') {
             // Match exact amount
             isMatch = txnAmount.toString() === rule.pattern;

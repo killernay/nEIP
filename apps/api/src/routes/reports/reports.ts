@@ -1679,39 +1679,42 @@ export async function reportRoutes(
       const year = request.query.year ?? now.getFullYear();
       const month = request.query.month ?? (now.getMonth() + 1);
 
-      // Output VAT: 7% on posted invoice subtotals for the period
-      const outputRows = await fastify.sql<[{ invoice_count: string; total_subtotal_satang: string | null }]>`
+      // H-5: Query actual VAT amounts from JE lines on GL accounts
+      // Output VAT = credit balance on VAT Payable (2110)
+      // Input VAT = debit balance on Input VAT (1170)
+      const outputVatRows = await fastify.sql<[{ vat_amount: string; tx_count: string }]>`
         SELECT
-          COUNT(*)::text as invoice_count,
-          COALESCE(SUM(total_satang), 0)::text as total_subtotal_satang
-        FROM invoices
-        WHERE tenant_id = ${tenantId}
-          AND status IN ('posted', 'sent', 'paid', 'partial')
-          AND EXTRACT(YEAR FROM posted_at) = ${year}
-          AND EXTRACT(MONTH FROM posted_at) = ${month}
+          COALESCE(SUM(jel.credit_satang) - SUM(jel.debit_satang), 0)::text as vat_amount,
+          COUNT(DISTINCT je.id)::text as tx_count
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON je.id = jel.entry_id
+        JOIN chart_of_accounts coa ON coa.id = jel.account_id
+        WHERE je.tenant_id = ${tenantId}
+          AND je.status = 'posted'
+          AND je.fiscal_year = ${year}
+          AND je.fiscal_period = ${month}
+          AND coa.code LIKE '2110%'
       `;
 
-      // Input VAT: 7% on posted bill totals for the period
-      const inputRows = await fastify.sql<[{ bill_count: string; total_subtotal_satang: string | null }]>`
+      const inputVatRows = await fastify.sql<[{ vat_amount: string; tx_count: string }]>`
         SELECT
-          COUNT(*)::text as bill_count,
-          COALESCE(SUM(total_satang), 0)::text as total_subtotal_satang
-        FROM bills
-        WHERE tenant_id = ${tenantId}
-          AND status IN ('posted', 'paid', 'partial')
-          AND EXTRACT(YEAR FROM posted_at) = ${year}
-          AND EXTRACT(MONTH FROM posted_at) = ${month}
+          COALESCE(SUM(jel.debit_satang) - SUM(jel.credit_satang), 0)::text as vat_amount,
+          COUNT(DISTINCT je.id)::text as tx_count
+        FROM journal_entry_lines jel
+        JOIN journal_entries je ON je.id = jel.entry_id
+        JOIN chart_of_accounts coa ON coa.id = jel.account_id
+        WHERE je.tenant_id = ${tenantId}
+          AND je.status = 'posted'
+          AND je.fiscal_year = ${year}
+          AND je.fiscal_period = ${month}
+          AND coa.code LIKE '1170%'
       `;
 
-      const VAT_BP = 700n; // 7% in basis points
+      const outputVatAmount = BigInt(outputVatRows[0].vat_amount);
+      const outputCount = parseInt(outputVatRows[0].tx_count, 10);
 
-      const outputSubtotal = BigInt(outputRows[0].total_subtotal_satang ?? '0');
-      const outputVatAmount = (outputSubtotal * VAT_BP + 5000n) / 10000n; // round half-up
-      const outputCount = parseInt(outputRows[0].invoice_count, 10);
-
-      const inputSubtotal = BigInt(inputRows[0].total_subtotal_satang ?? '0');
-      const inputVatAmount = (inputSubtotal * VAT_BP + 5000n) / 10000n;
-      const inputCount = parseInt(inputRows[0].bill_count, 10);
+      const inputVatAmount = BigInt(inputVatRows[0].vat_amount);
+      const inputCount = parseInt(inputVatRows[0].tx_count, 10);
 
       const netVatAmount = outputVatAmount - inputVatAmount;
       const status = netVatAmount > 0n ? 'payable' : netVatAmount < 0n ? 'refundable' : 'zero';

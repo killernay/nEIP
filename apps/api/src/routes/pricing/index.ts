@@ -112,7 +112,10 @@ export async function pricingRoutes(
       if (!rows[0]) throw new NotFoundError({ detail: `Price list ${id} not found.` });
 
       const items = await fastify.sql<PriceListItemRow[]>`
-        SELECT * FROM price_list_items WHERE price_list_id = ${id} ORDER BY product_id
+        SELECT pli.* FROM price_list_items pli
+        JOIN price_lists pl ON pl.id = pli.price_list_id
+        WHERE pli.price_list_id = ${id} AND pl.tenant_id = ${tenantId}
+        ORDER BY pli.product_id
       `;
       return reply.send({ ...mapPriceList(rows[0]), items: items.map(mapPriceListItem) });
     },
@@ -211,8 +214,12 @@ export async function pricingRoutes(
     },
     async (request, reply) => {
       const { id } = request.params;
+      const { tenantId } = request.user;
       const items = await fastify.sql<PriceListItemRow[]>`
-        SELECT * FROM price_list_items WHERE price_list_id = ${id} ORDER BY product_id
+        SELECT pli.* FROM price_list_items pli
+        JOIN price_lists pl ON pl.id = pli.price_list_id
+        WHERE pli.price_list_id = ${id} AND pl.tenant_id = ${tenantId}
+        ORDER BY pli.product_id
       `;
       return reply.send({ items: items.map(mapPriceListItem) });
     },
@@ -226,8 +233,13 @@ export async function pricingRoutes(
       preHandler: [requireAuth, requirePermission(PRICING_MANAGE)],
     },
     async (request, reply) => {
-      const { itemId } = request.params;
-      await fastify.sql`DELETE FROM price_list_items WHERE id = ${itemId}`;
+      const { id, itemId } = request.params;
+      const { tenantId } = request.user;
+      await fastify.sql`
+        DELETE FROM price_list_items
+        WHERE id = ${itemId}
+          AND price_list_id IN (SELECT pl.id FROM price_lists pl WHERE pl.id = ${id} AND pl.tenant_id = ${tenantId})
+      `;
       return reply.send({ id: itemId, deleted: true });
     },
   );

@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, date, timestamp } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 /**
@@ -8,8 +8,8 @@ export const price_lists = pgTable('price_lists', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   currency: text('currency').notNull().default('THB'),
-  valid_from: text('valid_from'),
-  valid_to: text('valid_to'),
+  valid_from: date('valid_from'),
+  valid_to: date('valid_to'),
   is_active: boolean('is_active').notNull().default(true),
   tenant_id: text('tenant_id')
     .notNull()
