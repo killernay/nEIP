@@ -76,9 +76,9 @@ function Section({
     <section id={id} className="scroll-mt-20">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 rounded-lg bg-gray-100 px-4 py-3 text-left font-semibold text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+        className="flex w-full items-center gap-3 rounded-lg bg-slate-800 px-4 py-3 text-left font-semibold text-white hover:bg-slate-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
       >
-        <Icon className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <Icon className="h-5 w-5 shrink-0 text-blue-300 dark:text-blue-400" />
         <span className="flex-1">{title}</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
@@ -103,14 +103,14 @@ function FlowStep({ step, title, description, hasJe, jeDetail }: {
         <div className="mt-1 h-full w-0.5 bg-gray-200 dark:bg-gray-700" />
       </div>
       <div className="pb-4">
-        <p className="font-medium text-gray-900 dark:text-gray-100">{title}</p>
-        <p className="text-sm text-gray-800 dark:text-gray-300">{description}</p>
+        <p className="font-medium text-black dark:text-white">{title}</p>
+        <p className="text-sm text-gray-950 dark:text-gray-200">{description}</p>
         {hasJe && jeDetail && (
-          <div className="mt-1 rounded bg-gray-100 px-3 py-1.5 font-mono text-xs dark:bg-gray-800">
+          <div className="mt-1 rounded bg-slate-100 border border-slate-300 px-3 py-1.5 font-mono text-xs dark:bg-gray-800">
             {jeDetail}
           </div>
         )}
-        {!hasJe && <span className="mt-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800">No JE</span>}
+        {!hasJe && <span className="mt-1 inline-block rounded bg-slate-100 border border-slate-300 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800">No JE</span>}
       </div>
     </div>
   );
@@ -118,22 +118,22 @@ function FlowStep({ step, title, description, hasJe, jeDetail }: {
 
 function JeBox({ title, lines }: { title: string; lines: { account: string; dr?: string; cr?: string }[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-700">
-      <div className="bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+    <div className="overflow-x-auto rounded-lg border border-gray-400 dark:border-gray-700">
+      <div className="bg-slate-800 px-4 py-2 text-sm font-semibold text-white dark:bg-gray-800 dark:text-gray-300">
         {title}
       </div>
       <table className="min-w-full text-xs">
         <thead>
-          <tr className="border-b border-gray-300 dark:border-gray-700">
-            <th className="px-4 py-1.5 text-left text-gray-600">Account</th>
+          <tr className="border-b border-gray-400 dark:border-gray-700">
+            <th className="px-4 py-1.5 text-left text-gray-700">Account</th>
             <th className="px-4 py-1.5 text-right text-green-700 dark:text-green-400">Dr (เดบิต)</th>
             <th className="px-4 py-1.5 text-right text-red-700 dark:text-red-400">Cr (เครดิต)</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+        <tbody className="divide-y divide-gray-300 dark:divide-gray-800">
           {lines.map((l, i) => (
             <tr key={i}>
-              <td className="px-4 py-1.5 text-gray-700 dark:text-gray-300">{l.account}</td>
+              <td className="px-4 py-1.5 text-gray-900 dark:text-gray-300">{l.account}</td>
               <td className="px-4 py-1.5 text-right font-mono text-green-700 dark:text-green-400">{l.dr || ''}</td>
               <td className="px-4 py-1.5 text-right font-mono text-red-700 dark:text-red-400">{l.cr || ''}</td>
             </tr>
@@ -149,9 +149,9 @@ function FlowArrow({ items }: { items: { label: string; sub: string }[] }) {
     <div className="flex flex-wrap items-center gap-1">
       {items.map((item, i) => (
         <div key={i} className="flex items-center gap-1">
-          <div className="rounded-lg border border-gray-300 px-3 py-2 text-center dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{item.label}</p>
-            <p className="text-[10px] text-gray-600">{item.sub}</p>
+          <div className="rounded-lg border border-gray-400 px-3 py-2 text-center dark:border-gray-700">
+            <p className="text-xs font-semibold text-black dark:text-white">{item.label}</p>
+            <p className="text-[10px] text-gray-700">{item.sub}</p>
           </div>
           {i < items.length - 1 && <ArrowRight className="h-4 w-4 shrink-0 text-blue-500" />}
         </div>
@@ -165,8 +165,8 @@ function ChecklistItem({ text, api }: { text: string; api?: string }) {
     <div className="flex items-start gap-2 py-1">
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
       <div>
-        <p className="text-sm text-gray-700 dark:text-gray-300">{text}</p>
-        {api && <code className="text-xs text-gray-600">{api}</code>}
+        <p className="text-sm text-gray-900 dark:text-gray-300">{text}</p>
+        {api && <code className="text-xs text-gray-700">{api}</code>}
       </div>
     </div>
   );
@@ -179,8 +179,8 @@ export default function TrainingDocsPage() {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar TOC */}
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-gray-300 p-4 lg:block dark:border-gray-700">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-400">
+      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-gray-400 p-4 lg:block dark:border-gray-700">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-400">
           On this page
         </p>
         <nav className="space-y-1">
@@ -188,7 +188,7 @@ export default function TrainingDocsPage() {
             <a
               key={item.id}
               href={`#${item.id}`}
-              className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-800 hover:bg-gray-200 hover:text-black dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             >
               <item.icon className="h-4 w-4" />
               {item.label}
@@ -200,23 +200,23 @@ export default function TrainingDocsPage() {
       {/* Main Content */}
       <main className="flex-1 px-6 py-8 lg:px-12">
         {/* Breadcrumbs */}
-        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
+        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-400">
           <Link href="/docs" className="hover:text-gray-700 dark:hover:text-gray-200">Docs</Link>
           <span>/</span>
-          <span className="text-gray-900 dark:text-gray-100">Training Data Flow Guide</span>
+          <span className="text-black dark:text-white">Training Data Flow Guide</span>
         </nav>
 
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+        <h1 className="text-3xl font-bold text-black dark:text-white">
           คู่มือฝึกอบรมการไหลของข้อมูล
         </h1>
-        <p className="mt-2 text-gray-800 dark:text-gray-300">
+        <p className="mt-2 text-gray-950 dark:text-gray-200">
           Data Flow Training Guide — ครอบคลุม 31 โมดูล, 110 MCP Tools, 89 CLI Commands
         </p>
 
         <div className="mt-8 space-y-6">
           {/* 1. System Overview */}
           <Section id="overview" title="1. System Overview" icon={LayoutGrid} defaultOpen>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               nEIP AI-Native ERP System สำหรับ SME ไทย — 4 main modules feed into the General Ledger.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -226,9 +226,9 @@ export default function TrainingDocsPage() {
                 { name: 'HR Module', desc: 'บุคคล/People: Employee, Position, Attendance, Payroll, Leave', color: 'border-purple-500' },
                 { name: 'FI Module', desc: 'การเงิน/Finance: GL, CoA, JE, Fiscal Year, Trial Balance, P&L', color: 'border-orange-500' },
               ].map((m) => (
-                <div key={m.name} className={`rounded-lg border-l-4 ${m.color} border border-gray-300 p-3 dark:border-gray-700`}>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{m.name}</p>
-                  <p className="mt-1 text-xs text-gray-700 dark:text-gray-400">{m.desc}</p>
+                <div key={m.name} className={`rounded-lg border-l-4 ${m.color} border border-gray-400 p-3 dark:border-gray-700`}>
+                  <p className="text-sm font-semibold text-black dark:text-white">{m.name}</p>
+                  <p className="mt-1 text-xs text-gray-900 dark:text-gray-400">{m.desc}</p>
                 </div>
               ))}
             </div>
@@ -244,8 +244,8 @@ export default function TrainingDocsPage() {
 
           {/* 2. Quote-to-Cash */}
           <Section id="quote-to-cash" title="2. Quote-to-Cash (ขายสินค้า → รับเงิน)" icon={ShoppingCart}>
-            <div className="rounded-lg border border-gray-300 bg-gray-100 p-3 dark:border-gray-700 dark:bg-gray-800">
-              <p className="text-sm text-gray-800 dark:text-gray-300">
+            <div className="rounded-lg border border-gray-400 bg-slate-100 p-3 dark:border-gray-700 dark:bg-gray-800">
+              <p className="text-sm text-gray-950 dark:text-gray-200">
                 <strong>บริษัท ตัวอย่าง จำกัด</strong> ขาย Product A จำนวน 10 ชิ้น ราคาชิ้นละ 1,000 บาท
                 ให้ <strong>บริษัท ลูกค้าดี จำกัด</strong> เครดิต 30 วัน
               </p>
@@ -287,8 +287,8 @@ export default function TrainingDocsPage() {
 
           {/* 3. Procure-to-Pay */}
           <Section id="procure-to-pay" title="3. Procure-to-Pay (ซื้อสินค้า → จ่ายเงิน)" icon={Truck}>
-            <div className="rounded-lg border border-gray-300 bg-gray-100 p-3 dark:border-gray-700 dark:bg-gray-800">
-              <p className="text-sm text-gray-800 dark:text-gray-300">
+            <div className="rounded-lg border border-gray-400 bg-slate-100 p-3 dark:border-gray-700 dark:bg-gray-800">
+              <p className="text-sm text-gray-950 dark:text-gray-200">
                 <strong>บริษัท ตัวอย่าง จำกัด</strong> ซื้อวัตถุดิบ Material B 50 ชิ้น x 500 บาท
                 จาก <strong>บริษัท ซัพพลายเออร์ จำกัด</strong> เครดิต 45 วัน, หัก ณ ที่จ่าย 3%
               </p>
@@ -324,8 +324,8 @@ export default function TrainingDocsPage() {
 
           {/* 4. Hire-to-Retire */}
           <Section id="hire-to-retire" title="4. Hire-to-Retire (จ้างงาน → จ่ายเงินเดือน)" icon={Users}>
-            <div className="rounded-lg border border-gray-300 bg-gray-100 p-3 dark:border-gray-700 dark:bg-gray-800">
-              <p className="text-sm text-gray-800 dark:text-gray-300">
+            <div className="rounded-lg border border-gray-400 bg-slate-100 p-3 dark:border-gray-700 dark:bg-gray-800">
+              <p className="text-sm text-gray-950 dark:text-gray-200">
                 พนักงาน <strong>นายสมชาย ใจดี</strong> — เงินเดือน 30,000 บาท<br />
                 SSC 5% (cap 750 บาท), PF 5% (1,500 บาท), PIT 1,125 บาท
               </p>
@@ -355,12 +355,12 @@ export default function TrainingDocsPage() {
 
           {/* 5. Record-to-Report */}
           <Section id="record-to-report" title="5. Record-to-Report (บันทึก → รายงาน)" icon={FileText}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               ทุก source transaction → Journal Entry → General Ledger → Trial Balance → Financial Statements
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {['Invoice Post', 'Payment', 'Bill Post', 'Bill Pay', 'Payroll', 'Depreciation'].map((s) => (
-                <span key={s} className="rounded-lg border border-gray-300 px-2 py-1 text-xs dark:border-gray-700">{s}</span>
+                <span key={s} className="rounded-lg border border-gray-400 px-2 py-1 text-xs dark:border-gray-700">{s}</span>
               ))}
               <ArrowRight className="h-4 w-4 text-blue-500" />
               <span className="rounded-lg bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">General Ledger</span>
@@ -374,26 +374,26 @@ export default function TrainingDocsPage() {
               </div>
             </div>
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">ตัวอย่างงบกำไรขาดทุน (P&L)</h4>
-            <div className="mt-2 rounded-lg border border-gray-300 bg-gray-100 p-4 font-mono text-xs dark:border-gray-700 dark:bg-gray-800">
+            <h4 className="mt-4 font-semibold text-black dark:text-white">ตัวอย่างงบกำไรขาดทุน (P&L)</h4>
+            <div className="mt-2 rounded-lg border border-gray-400 bg-slate-100 p-4 font-mono text-xs dark:border-gray-700 dark:bg-gray-800">
               <p className="font-bold">บริษัท ตัวอย่าง จำกัด — เดือน ม.ค. 2026</p>
               <div className="mt-2 space-y-1">
                 <p><span className="text-green-700 dark:text-green-400">รายได้ (Revenue)</span></p>
                 <p className="pl-4">4100 รายได้จากการขาย: 10,000.00</p>
                 <p className="mt-2"><span className="text-red-700 dark:text-red-400">ต้นทุนขาย (COGS)</span></p>
                 <p className="pl-4">5100 ต้นทุนสินค้าขาย: (25,000.00)</p>
-                <p className="mt-1 border-t border-gray-300 pt-1 dark:border-gray-600">กำไรขั้นต้น: (15,000.00)</p>
+                <p className="mt-1 border-t border-gray-400 pt-1 dark:border-gray-600">กำไรขั้นต้น: (15,000.00)</p>
                 <p className="mt-2"><span className="text-red-700 dark:text-red-400">ค่าใช้จ่าย (Expenses)</span></p>
                 <p className="pl-4">5200 เงินเดือน: (30,000.00)</p>
-                <p className="mt-1 border-t border-gray-300 pt-1 font-bold dark:border-gray-600">กำไร(ขาดทุน)สุทธิ: (45,000.00)</p>
+                <p className="mt-1 border-t border-gray-400 pt-1 font-bold dark:border-gray-600">กำไร(ขาดทุน)สุทธิ: (45,000.00)</p>
               </div>
             </div>
           </Section>
 
           {/* 6. Inventory */}
           <Section id="inventory" title="6. Inventory Cycle (สินค้าคงคลัง)" icon={Package}>
-            <div className="rounded-lg border border-gray-300 bg-gray-100 p-3 dark:border-gray-700 dark:bg-gray-800">
-              <p className="text-sm text-gray-800 dark:text-gray-300">
+            <div className="rounded-lg border border-gray-400 bg-slate-100 p-3 dark:border-gray-700 dark:bg-gray-800">
+              <p className="text-sm text-gray-950 dark:text-gray-200">
                 คลัง WH-001 — Product A: รับเข้า 100 → ขาย 30 → ยอดบัญชี 70 → นับจริง 68 → Variance -2
               </p>
             </div>
@@ -413,7 +413,7 @@ export default function TrainingDocsPage() {
                 { account: '1300 สินค้าคงคลัง (Inventory)', cr: '1,000' },
               ]}
             />
-            <p className="text-xs text-gray-700 dark:text-gray-400">
+            <p className="text-xs text-gray-900 dark:text-gray-400">
               Variance = |2 ชิ้น| x 500 บาท/ชิ้น = 1,000 บาท
             </p>
           </Section>
@@ -465,20 +465,20 @@ export default function TrainingDocsPage() {
               </div>
             </div>
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">ปฏิทินภาษีรายเดือน</h4>
+            <h4 className="mt-4 font-semibold text-black dark:text-white">ปฏิทินภาษีรายเดือน</h4>
             <div className="mt-2 flex gap-4">
-              <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-700">
+              <div className="flex items-center gap-2 rounded-lg border border-gray-400 px-4 py-2 dark:border-gray-700">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-sm font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">7</span>
                 <div className="text-xs">
-                  <p className="font-bold text-gray-900 dark:text-gray-100">วันที่ 7</p>
-                  <p className="text-gray-600">ภ.ง.ด.1, ภ.ง.ด.3/53</p>
+                  <p className="font-bold text-black dark:text-white">วันที่ 7</p>
+                  <p className="text-gray-700">ภ.ง.ด.1, ภ.ง.ด.3/53</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-700">
+              <div className="flex items-center gap-2 rounded-lg border border-gray-400 px-4 py-2 dark:border-gray-700">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">15</span>
                 <div className="text-xs">
-                  <p className="font-bold text-gray-900 dark:text-gray-100">วันที่ 15</p>
-                  <p className="text-gray-600">ภ.พ.30, สปส.1-10</p>
+                  <p className="font-bold text-black dark:text-white">วันที่ 15</p>
+                  <p className="text-gray-700">ภ.พ.30, สปส.1-10</p>
                 </div>
               </div>
             </div>
@@ -497,13 +497,13 @@ export default function TrainingDocsPage() {
                 { name: 'Report Agent', th: 'ผู้ช่วยรายงาน', desc: 'สร้างรายงาน, KPI' },
                 { name: 'Admin Agent', th: 'ผู้ช่วยแอดมิน', desc: 'ตั้งค่าระบบ, จัดการผู้ใช้' },
               ].map((a) => (
-                <div key={a.name} className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
+                <div key={a.name} className="rounded-lg border border-gray-400 p-3 dark:border-gray-700">
                   <div className="flex items-center gap-1">
                     <Brain className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{a.name}</p>
+                    <p className="text-sm font-semibold text-black dark:text-white">{a.name}</p>
                   </div>
-                  <p className="text-xs text-gray-600">({a.th})</p>
-                  <p className="mt-1 text-xs text-gray-800 dark:text-gray-300">{a.desc}</p>
+                  <p className="text-xs text-gray-700">({a.th})</p>
+                  <p className="mt-1 text-xs text-gray-950 dark:text-gray-200">{a.desc}</p>
                 </div>
               ))}
             </div>
@@ -511,12 +511,12 @@ export default function TrainingDocsPage() {
 
           {/* 9. Approval Workflows */}
           <Section id="approvals" title="9. Approval Workflows" icon={CheckCircle2}>
-            <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-700">
+            <div className="overflow-x-auto rounded-lg border border-gray-400 dark:border-gray-700">
               <table className="min-w-full text-xs">
-                <thead className="bg-gray-100 dark:bg-gray-800">
+                <thead className="bg-slate-100 border-b border-slate-300 dark:bg-gray-800">
                   <tr>
-                    <th className="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Document Type</th>
-                    <th className="px-4 py-2 text-left text-gray-700 dark:text-gray-300">Approval Rule</th>
+                    <th className="px-4 py-2 text-left text-gray-900 dark:text-gray-300">Document Type</th>
+                    <th className="px-4 py-2 text-left text-gray-900 dark:text-gray-300">Approval Rule</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -527,8 +527,8 @@ export default function TrainingDocsPage() {
                     ['Journal Entry', 'Manual JE → Accounting Mgr'],
                   ].map(([doc, rule]) => (
                     <tr key={doc}>
-                      <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">{doc}</td>
-                      <td className="px-4 py-2 text-gray-800 dark:text-gray-300">{rule}</td>
+                      <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-300">{doc}</td>
+                      <td className="px-4 py-2 text-gray-950 dark:text-gray-200">{rule}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -538,17 +538,17 @@ export default function TrainingDocsPage() {
 
           {/* 10. Multi-Company */}
           <Section id="multi-company" title="10. Multi-Company" icon={Building2}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               แต่ละ Tenant มี Chart of Accounts, Fiscal Years, Users & Permissions แยกกัน ข้อมูลทุกตาราง filter by tenant_id
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <div className="rounded-lg border-2 border-blue-300 px-4 py-2 dark:border-blue-700">
                 <p className="text-sm font-bold">Holding Company</p>
-                <p className="text-xs text-gray-600">บริษัท แม่ จำกัด (Parent)</p>
+                <p className="text-xs text-gray-700">บริษัท แม่ จำกัด (Parent)</p>
               </div>
               <ArrowRight className="h-4 w-4 text-gray-400" />
               {['บ.ขาย จก. (Tenant A)', 'บ.ผลิต จก. (Tenant B)', 'บ.บริการ จก. (Tenant C)'].map((c) => (
-                <div key={c} className="rounded-lg border border-gray-300 px-3 py-2 text-xs dark:border-gray-700">
+                <div key={c} className="rounded-lg border border-gray-400 px-3 py-2 text-xs dark:border-gray-700">
                   {c}
                 </div>
               ))}
@@ -557,7 +557,7 @@ export default function TrainingDocsPage() {
 
           {/* 11. Month-End / Year-End */}
           <Section id="month-end" title="11. Month-End / Year-End Checklist" icon={CalendarCheck}>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100">Month-End Close (13 steps)</h4>
+            <h4 className="font-semibold text-black dark:text-white">Month-End Close (13 steps)</h4>
             <div className="mt-2 space-y-0">
               <ChecklistItem text="Post invoices ที่ค้างอยู่ทั้งหมด" api="POST /api/v1/invoices/:id/post" />
               <ChecklistItem text="Post bills ที่ค้างอยู่ทั้งหมด" />
@@ -574,7 +574,7 @@ export default function TrainingDocsPage() {
               <ChecklistItem text="ปิดงวดบัญชี (Close Period)" api="POST /api/v1/fiscal-periods/:id/close" />
             </div>
 
-            <h4 className="mt-6 font-semibold text-gray-900 dark:text-gray-100">Year-End Close</h4>
+            <h4 className="mt-6 font-semibold text-black dark:text-white">Year-End Close</h4>
             <div className="mt-2 space-y-0">
               <ChecklistItem text="ปิดงวดรายเดือนทั้ง 12 เดือนก่อน" />
               <ChecklistItem text="ตรวจสอบ Trial Balance สิ้นปี" />

@@ -292,7 +292,7 @@ function GroupSection({ group, filter }: { group: ApiGroup; filter: string }) {
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-left font-semibold text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+        className="flex w-full items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-left font-semibold text-white hover:bg-slate-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
       >
         <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         <span className="flex-1">{group.name}</span>
@@ -300,29 +300,29 @@ function GroupSection({ group, filter }: { group: ApiGroup; filter: string }) {
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
       {open && (
-        <div className="mt-1 overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-700">
+        <div className="mt-1 overflow-x-auto rounded-lg border border-gray-400 dark:border-gray-700">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-100 dark:bg-gray-800">
+            <thead className="bg-slate-100 border-b border-slate-300 dark:bg-gray-800">
               <tr>
-                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Method</th>
-                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Endpoint</th>
-                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Description</th>
-                <th className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">Permission</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-900 dark:text-gray-300">Method</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-900 dark:text-gray-300">Endpoint</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-900 dark:text-gray-300">Description</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-900 dark:text-gray-300">Permission</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-300 dark:divide-gray-800">
               {filtered.map((ep) => (
-                <tr key={`${ep.method}-${ep.path}`} className="hover:bg-gray-100 dark:hover:bg-gray-800/50">
+                <tr key={`${ep.method}-${ep.path}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                   <td className="px-4 py-2">
                     <MethodBadge method={ep.method} />
                   </td>
                   <td className="px-4 py-2">
-                    <code className="font-mono text-xs text-gray-900 dark:text-gray-100">{ep.path}</code>
+                    <code className="font-mono text-xs text-black dark:text-white">{ep.path}</code>
                   </td>
-                  <td className="px-4 py-2 text-xs text-gray-800 dark:text-gray-300">{ep.description}</td>
+                  <td className="px-4 py-2 text-xs text-gray-950 dark:text-gray-200">{ep.description}</td>
                   <td className="px-4 py-2">
                     {ep.permission ? (
-                      <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                      <code className="rounded bg-slate-100 border border-slate-300 px-1.5 py-0.5 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-400">
                         {ep.permission}
                       </code>
                     ) : (
@@ -350,8 +350,8 @@ export default function ApiDocsPage() {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-gray-300 p-4 lg:block dark:border-gray-700">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-400">
+      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-gray-400 p-4 lg:block dark:border-gray-700">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-400">
           Modules
         </p>
         <nav className="space-y-1">
@@ -359,7 +359,7 @@ export default function ApiDocsPage() {
             <a
               key={g.name}
               href={`#api-${g.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-              className="block rounded px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              className="block rounded px-2 py-1.5 text-sm text-gray-800 hover:bg-gray-200 hover:text-black dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             >
               {g.name}
             </a>
@@ -369,38 +369,38 @@ export default function ApiDocsPage() {
 
       {/* Main */}
       <main className="flex-1 px-6 py-8 lg:px-12">
-        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
+        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-400">
           <Link href="/docs" className="hover:text-gray-700 dark:hover:text-gray-200">Docs</Link>
           <span>/</span>
-          <span className="text-gray-900 dark:text-gray-100">API Reference</span>
+          <span className="text-black dark:text-white">API Reference</span>
         </nav>
 
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">API Reference</h1>
-        <p className="mt-2 text-gray-800 dark:text-gray-300">
-          REST API ฉบับสมบูรณ์ — {totalEndpoints}+ Endpoints | Base URL: <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">/api/v1</code> | Version 0.9.0
+        <h1 className="text-3xl font-bold text-black dark:text-white">API Reference</h1>
+        <p className="mt-2 text-gray-950 dark:text-gray-200">
+          REST API ฉบับสมบูรณ์ — {totalEndpoints}+ Endpoints | Base URL: <code className="rounded bg-slate-100 border border-slate-300 px-1 dark:bg-gray-700">/api/v1</code> | Version 0.9.0
         </p>
 
         {/* API Info */}
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-600">Auth</p>
-            <p className="text-sm text-gray-900 dark:text-gray-100">JWT Bearer Token</p>
-            <p className="text-xs text-gray-400">Access: 1h | Refresh: 30d</p>
+          <div className="rounded-lg border border-gray-400 p-3 dark:border-gray-700">
+            <p className="text-xs font-semibold text-gray-700">Auth</p>
+            <p className="text-sm text-black dark:text-white">JWT Bearer Token</p>
+            <p className="text-xs text-gray-600">Access: 1h | Refresh: 30d</p>
           </div>
-          <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-600">Rate Limit</p>
-            <p className="text-sm text-gray-900 dark:text-gray-100">300 req/min (prod)</p>
-            <p className="text-xs text-gray-400">10,000 req/min (dev)</p>
+          <div className="rounded-lg border border-gray-400 p-3 dark:border-gray-700">
+            <p className="text-xs font-semibold text-gray-700">Rate Limit</p>
+            <p className="text-sm text-black dark:text-white">300 req/min (prod)</p>
+            <p className="text-xs text-gray-600">10,000 req/min (dev)</p>
           </div>
-          <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-600">Monetary Values</p>
-            <p className="text-sm text-gray-900 dark:text-gray-100">Satang (bigint/string)</p>
-            <p className="text-xs text-gray-400">100 satang = 1 THB</p>
+          <div className="rounded-lg border border-gray-400 p-3 dark:border-gray-700">
+            <p className="text-xs font-semibold text-gray-700">Monetary Values</p>
+            <p className="text-sm text-black dark:text-white">Satang (bigint/string)</p>
+            <p className="text-xs text-gray-600">100 satang = 1 THB</p>
           </div>
-          <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-600">Error Format</p>
-            <p className="text-sm text-gray-900 dark:text-gray-100">RFC 7807</p>
-            <p className="text-xs text-gray-400">Problem Details</p>
+          <div className="rounded-lg border border-gray-400 p-3 dark:border-gray-700">
+            <p className="text-xs font-semibold text-gray-700">Error Format</p>
+            <p className="text-sm text-black dark:text-white">RFC 7807</p>
+            <p className="text-xs text-gray-600">Problem Details</p>
           </div>
         </div>
 
@@ -421,7 +421,7 @@ export default function ApiDocsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search endpoints... (e.g. invoice, POST, payroll, gl:journal)"
-            className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="w-full rounded-lg border border-gray-400 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
           />
         </div>
 

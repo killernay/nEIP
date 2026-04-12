@@ -32,7 +32,7 @@ interface DocPageProps {
 function DocSectionBlock({ section }: { section: DocSection }): React.JSX.Element {
   return (
     <section id={section.id} className="scroll-mt-20">
-      <h2 className="mb-4 text-xl font-semibold text-foreground">
+      <h2 className="mb-4 text-xl font-semibold text-black dark:text-white">
         <a
           href={`#${section.id}`}
           className="hover:text-primary transition-colors"
@@ -60,14 +60,14 @@ export function DocPage({
     <div className={cn('mx-auto max-w-4xl px-4 py-6 lg:px-8', className)}>
       {/* Header */}
       <div className="mb-8 border-b border-border pb-6">
-        <h1 className="text-2xl font-bold text-foreground lg:text-3xl">
+        <h1 className="text-2xl font-bold text-black dark:text-white lg:text-3xl">
           {title}
         </h1>
         {titleEn && (
-          <p className="mt-1 text-sm text-muted-foreground">{titleEn}</p>
+          <p className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-200">{titleEn}</p>
         )}
         {description && (
-          <p className="mt-2 text-base text-muted-foreground">{description}</p>
+          <p className="mt-2 text-base text-gray-800 dark:text-gray-300">{description}</p>
         )}
       </div>
 
@@ -77,7 +77,7 @@ export function DocPage({
           aria-label="Table of contents"
           className="mb-8 rounded-lg border border-border bg-card p-4"
         >
-          <p className="mb-2 text-sm font-semibold text-foreground">
+          <p className="mb-2 text-sm font-semibold text-black dark:text-white">
             Table of Contents
           </p>
           <ul className="flex flex-col gap-1">
@@ -85,7 +85,7 @@ export function DocPage({
               <li key={s.id}>
                 <a
                   href={`#${s.id}`}
-                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                  className="text-sm text-gray-800 dark:text-gray-300 transition-colors hover:text-primary"
                 >
                   {s.title}
                 </a>
@@ -117,7 +117,7 @@ export function DocParagraph({
   className?: string;
 }): React.JSX.Element {
   return (
-    <p className={cn('mb-3 leading-7 text-foreground/90', className)}>
+    <p className={cn('mb-3 leading-7 text-gray-950 dark:text-gray-200', className)}>
       {children}
     </p>
   );
@@ -134,7 +134,7 @@ export function DocList({
   return (
     <Tag
       className={cn(
-        'mb-4 flex flex-col gap-1.5 pl-6 text-foreground/90',
+        'mb-4 flex flex-col gap-1.5 pl-6 text-gray-950 dark:text-gray-200',
         ordered ? 'list-decimal' : 'list-disc',
       )}
     >
@@ -195,7 +195,7 @@ export function DocTable({
             {headers.map((h, i) => (
               <th
                 key={i}
-                className="px-4 py-2.5 text-left font-semibold text-foreground"
+                className="px-4 py-2.5 text-left font-semibold text-black dark:text-white"
               >
                 {h}
               </th>
@@ -209,7 +209,7 @@ export function DocTable({
               className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors"
             >
               {row.map((cell, ci) => (
-                <td key={ci} className="px-4 py-2.5 text-foreground/90">
+                <td key={ci} className="px-4 py-2.5 text-gray-950 dark:text-gray-200">
                   {cell}
                 </td>
               ))}
@@ -245,16 +245,16 @@ export function DocCallout({
       )}
     >
       {title && (
-        <p className="mb-1 text-sm font-semibold text-foreground">
+        <p className="mb-1 text-sm font-semibold text-black dark:text-white">
           {title}
         </p>
       )}
       {!title && (
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-300">
           {labels[type]}
         </p>
       )}
-      <div className="text-sm leading-6 text-foreground/90">{children}</div>
+      <div className="text-sm leading-6 text-gray-950 dark:text-gray-200">{children}</div>
     </div>
   );
 }

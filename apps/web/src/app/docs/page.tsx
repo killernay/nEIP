@@ -98,13 +98,13 @@ export default function DocsHubPage(): React.JSX.Element {
     <div className="mx-auto max-w-6xl px-4 py-6 lg:px-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">
+        <h1 className="text-2xl font-bold text-black dark:text-white">
           คู่มือการใช้งาน
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-gray-900 dark:text-gray-200">
           Documentation — nEIP ERP System
         </p>
-        <p className="mt-2 text-base text-muted-foreground">
+        <p className="mt-2 text-base text-gray-800 dark:text-gray-300">
           เอกสารคู่มือทั้งหมดสำหรับระบบ nEIP ERP ครอบคลุมตั้งแต่การเงิน
           ปฏิบัติการ จนถึง API Reference
         </p>
@@ -119,8 +119,8 @@ export default function DocsHubPage(): React.JSX.Element {
               key={card.href}
               href={card.href}
               className={cn(
-                'group flex flex-col rounded-lg border border-border bg-card p-5 transition-all',
-                'hover:border-primary/40 hover:shadow-md',
+                'group flex flex-col rounded-lg border-2 border-gray-300 bg-white p-5 shadow-md transition-all dark:border-gray-600 dark:bg-card',
+                'hover:border-primary/40 hover:shadow-lg',
               )}
             >
               <div className="mb-3 flex items-center gap-3">
@@ -128,19 +128,19 @@ export default function DocsHubPage(): React.JSX.Element {
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="truncate text-base font-semibold text-foreground">
+                  <h2 className="truncate text-lg font-bold text-black dark:text-white">
                     {card.title}
                   </h2>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="truncate text-sm font-medium text-blue-700 dark:text-blue-400">
                     {card.titleEn}
                   </p>
                 </div>
               </div>
-              <p className="mb-4 flex-1 text-sm leading-relaxed text-muted-foreground">
+              <p className="mb-4 flex-1 text-sm leading-relaxed text-gray-800 dark:text-gray-300">
                 {card.description}
               </p>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                   {card.readTime} read
                 </span>
                 <span className="text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">

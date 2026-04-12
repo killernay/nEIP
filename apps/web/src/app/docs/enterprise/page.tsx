@@ -76,9 +76,9 @@ function Section({
     <section id={id} className="scroll-mt-20">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 rounded-lg bg-gray-100 px-4 py-3 text-left font-semibold text-gray-900 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+        className="flex w-full items-center gap-3 rounded-lg bg-slate-800 px-4 py-3 text-left font-semibold text-white hover:bg-slate-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
       >
-        <Icon className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <Icon className="h-5 w-5 shrink-0 text-blue-300 dark:text-blue-400" />
         <span className="flex-1">{title}</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
@@ -107,12 +107,12 @@ function ConfidenceZoneCard({
     <div className={`rounded-lg border-l-4 p-4 ${color}`}>
       <div className="flex items-center gap-2">
         <span className="text-lg font-bold">{zone}</span>
-        <span className="rounded bg-gray-200 px-2 py-0.5 text-xs font-mono dark:bg-gray-700">
+        <span className="rounded bg-slate-100 border border-slate-300 px-2 py-0.5 text-xs font-mono dark:bg-gray-700">
           {range}
         </span>
       </div>
       <p className="mt-1 text-sm font-medium">{meaning}</p>
-      <p className="mt-0.5 text-xs text-gray-800 dark:text-gray-300">{action}</p>
+      <p className="mt-0.5 text-xs text-gray-950 dark:text-gray-200">{action}</p>
     </div>
   );
 }
@@ -130,8 +130,8 @@ function ApprovalStep({ step, role, threshold, last }: { step: number; role: str
         {!last && <div className="h-8 w-0.5 bg-blue-300 dark:bg-blue-700" />}
       </div>
       <div>
-        <p className="font-medium text-gray-900 dark:text-gray-100">{role}</p>
-        <p className="text-xs text-gray-700 dark:text-gray-400">{threshold}</p>
+        <p className="font-medium text-black dark:text-white">{role}</p>
+        <p className="text-xs text-gray-900 dark:text-gray-400">{threshold}</p>
       </div>
     </div>
   );
@@ -142,22 +142,22 @@ function ApprovalStep({ step, role, threshold, last }: { step: number; role: str
 // ---------------------------------------------------------------------------
 function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-700">
+    <div className="overflow-x-auto rounded-lg border border-gray-400 dark:border-gray-700">
       <table className="min-w-full text-sm">
-        <thead className="bg-gray-100 dark:bg-gray-800">
+        <thead className="bg-slate-100 border-b border-slate-300 dark:bg-gray-800">
           <tr>
             {headers.map((h) => (
-              <th key={h} className="px-4 py-2 text-left font-medium text-gray-700 dark:text-gray-300">
+              <th key={h} className="px-4 py-2 text-left font-medium text-gray-900 dark:text-gray-300">
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+        <tbody className="divide-y divide-gray-300 dark:divide-gray-800">
           {rows.map((row, i) => (
-            <tr key={i} className="hover:bg-gray-100 dark:hover:bg-gray-800/50">
+            <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
               {row.map((cell, j) => (
-                <td key={j} className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                <td key={j} className="px-4 py-2 text-gray-900 dark:text-gray-300">
                   {cell}
                 </td>
               ))}
@@ -174,14 +174,14 @@ function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
 // ---------------------------------------------------------------------------
 function AgentCard({ name, nameTh, description, example }: { name: string; nameTh: string; description: string; example: string }) {
   return (
-    <div className="rounded-lg border border-gray-300 p-4 dark:border-gray-700">
+    <div className="rounded-lg border border-gray-400 p-4 dark:border-gray-700">
       <div className="flex items-center gap-2">
         <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100">{name}</h4>
-        <span className="text-xs text-gray-600">({nameTh})</span>
+        <h4 className="font-semibold text-black dark:text-white">{name}</h4>
+        <span className="text-xs text-gray-700">({nameTh})</span>
       </div>
-      <p className="mt-1 text-sm text-gray-800 dark:text-gray-300">{description}</p>
-      <p className="mt-2 rounded bg-gray-100 px-3 py-1.5 font-mono text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+      <p className="mt-1 text-sm text-gray-950 dark:text-gray-200">{description}</p>
+      <p className="mt-2 rounded bg-slate-100 px-3 py-1.5 font-mono text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
         {example}
       </p>
     </div>
@@ -195,8 +195,8 @@ export default function EnterpriseDocsPage() {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar TOC */}
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-gray-300 p-4 lg:block dark:border-gray-700">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-400">
+      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-gray-400 p-4 lg:block dark:border-gray-700">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-400">
           On this page
         </p>
         <nav className="space-y-1">
@@ -204,7 +204,7 @@ export default function EnterpriseDocsPage() {
             <a
               key={item.id}
               href={`#${item.id}`}
-              className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-800 hover:bg-gray-200 hover:text-black dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             >
               <item.icon className="h-4 w-4" />
               {item.label}
@@ -216,30 +216,30 @@ export default function EnterpriseDocsPage() {
       {/* Main Content */}
       <main className="flex-1 px-6 py-8 lg:px-12">
         {/* Breadcrumbs */}
-        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
+        <nav className="mb-6 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-400">
           <Link href="/docs" className="hover:text-gray-700 dark:hover:text-gray-200">Docs</Link>
           <span>/</span>
-          <span className="text-gray-900 dark:text-gray-100">Enterprise & AI Manual</span>
+          <span className="text-black dark:text-white">Enterprise & AI Manual</span>
         </nav>
 
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+        <h1 className="text-3xl font-bold text-black dark:text-white">
           Enterprise, AI & System Modules
         </h1>
-        <p className="mt-2 text-gray-800 dark:text-gray-300">
+        <p className="mt-2 text-gray-950 dark:text-gray-200">
           โมดูล Enterprise, AI และระบบ — Version 0.9.0
         </p>
 
         <div className="mt-8 space-y-6">
           {/* 1. Multi-Currency */}
           <Section id="multi-currency" title="1. Multi-Currency / หลายสกุลเงิน" icon={Globe} defaultOpen>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Manage currency definitions, exchange rates, rate lookups, and month-end FX revaluation with automatic journal entry generation.
             </p>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               โมดูลหลายสกุลเงิน (Phase 5.1) รองรับธุรกิจที่มีธุรกรรมสกุลเงินต่างประเทศ
             </p>
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">Create Currency</h4>
+            <h4 className="mt-4 font-semibold text-black dark:text-white">Create Currency</h4>
             <DataTable
               headers={['Field', 'Type', 'Required', 'Description']}
               rows={[
@@ -250,11 +250,11 @@ export default function EnterpriseDocsPage() {
               ]}
             />
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">FX Revaluation</h4>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <h4 className="mt-4 font-semibold text-black dark:text-white">FX Revaluation</h4>
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Revalues all open foreign currency bills at month-end exchange rate. Creates JE for unrealized FX gain/loss.
             </p>
-            <div className="mt-2 rounded-lg border border-gray-300 bg-gray-100 p-4 font-mono text-xs dark:border-gray-700 dark:bg-gray-800">
+            <div className="mt-2 rounded-lg border border-gray-400 bg-slate-100 p-4 font-mono text-xs dark:border-gray-700 dark:bg-gray-800">
               <p className="text-green-700 dark:text-green-400">FX Gain: Dr AP (2100) / Cr FX Gain (4300)</p>
               <p className="text-red-700 dark:text-red-400">FX Loss: Dr FX Loss (5300) / Cr AP (2100)</p>
             </div>
@@ -268,25 +268,25 @@ export default function EnterpriseDocsPage() {
 
           {/* 2. Multi-Company */}
           <Section id="multi-company" title="2. Multi-Company / หลายบริษัท" icon={Building2}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Support multiple companies and branches under a single tenant with intercompany transaction management and consolidated reporting.
             </p>
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">Intercompany Transaction</h4>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <h4 className="mt-4 font-semibold text-black dark:text-white">Intercompany Transaction</h4>
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Creates a transaction between two companies with automatic mirror journal entries.
             </p>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
-                <p className="text-xs font-semibold text-gray-600">From Company JE</p>
+              <div className="rounded-lg border border-gray-400 p-3 dark:border-gray-700">
+                <p className="text-xs font-semibold text-gray-700">From Company JE</p>
                 <p className="mt-1 font-mono text-xs">
                   <span className="text-green-700 dark:text-green-400">Dr IC Receivable (1300)</span>
                   <br />
                   <span className="text-red-700 dark:text-red-400">Cr Cash/Bank (1000)</span>
                 </p>
               </div>
-              <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
-                <p className="text-xs font-semibold text-gray-600">Mirror JE (To Company)</p>
+              <div className="rounded-lg border border-gray-400 p-3 dark:border-gray-700">
+                <p className="text-xs font-semibold text-gray-700">Mirror JE (To Company)</p>
                 <p className="mt-1 font-mono text-xs">
                   <span className="text-green-700 dark:text-green-400">Dr Cash/Bank (1000)</span>
                   <br />
@@ -295,27 +295,27 @@ export default function EnterpriseDocsPage() {
               </div>
             </div>
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">Consolidated Report</h4>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <h4 className="mt-4 font-semibold text-black dark:text-white">Consolidated Report</h4>
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Generates consolidated financial reports across multiple companies with intercompany elimination.
-              IC elimination identifies entries by <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">description LIKE &apos;IC:%&apos;</code>.
+              IC elimination identifies entries by <code className="rounded bg-slate-100 px-1 dark:bg-gray-700">description LIKE &apos;IC:%&apos;</code>.
             </p>
           </Section>
 
           {/* 3. Approval Workflows */}
           <Section id="approvals" title="3. Approval Workflows / ขั้นตอนอนุมัติ" icon={CheckCircle2}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Configurable multi-step approval workflows with role-based approvers, amount thresholds, and auto-escalation timers.
             </p>
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">Example: PO Approval Chain</h4>
+            <h4 className="mt-4 font-semibold text-black dark:text-white">Example: PO Approval Chain</h4>
             <div className="mt-2">
               <ApprovalStep step={1} role="Manager" threshold="Any amount (≥ ฿0)" />
               <ApprovalStep step={2} role="Director" threshold="> ฿100,000" />
               <ApprovalStep step={3} role="CFO" threshold="> ฿500,000" last />
             </div>
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">Status Flow</h4>
+            <h4 className="mt-4 font-semibold text-black dark:text-white">Status Flow</h4>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <span className="rounded-full bg-yellow-100 px-3 py-1 font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">pending</span>
               <span className="text-gray-400">→</span>
@@ -329,12 +329,12 @@ export default function EnterpriseDocsPage() {
 
           {/* 4. AI Agents */}
           <Section id="ai-agents" title="4. AI Agents / ตัวแทน AI" icon={Brain}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               8 AI agents that augment accounting workflows. Rule-based, deterministic approach with full reasoning transparency.
               Each returns a confidence score and confidence zone.
             </p>
 
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">Confidence Zones</h4>
+            <h4 className="mt-4 font-semibold text-black dark:text-white">Confidence Zones</h4>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <ConfidenceZoneCard
                 zone="AUTO"
@@ -366,7 +366,7 @@ export default function EnterpriseDocsPage() {
               />
             </div>
 
-            <h4 className="mt-6 font-semibold text-gray-900 dark:text-gray-100">8 AI Agents</h4>
+            <h4 className="mt-6 font-semibold text-black dark:text-white">8 AI Agents</h4>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <AgentCard name="Anomaly Detection" nameTh="ตรวจจับความผิดปกติ" description="Scans journal entries for anomalous patterns (duplicate amounts, unusual hours, round numbers)" example="POST /api/v1/ai/anomaly-scan?period=2026-03" />
               <AgentCard name="Cash Flow Forecast" nameTh="พยากรณ์กระแสเงินสด" description="Projects daily cash positions based on AR/AP aging and recurring JEs" example="GET /api/v1/ai/cash-forecast?days=30" />
@@ -381,7 +381,7 @@ export default function EnterpriseDocsPage() {
 
           {/* 5. Reports */}
           <Section id="reports" title="5. Reports / รายงาน" icon={BarChart3}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Standard financial reports and custom report builder. All reports enforce tenant isolation.
             </p>
             <DataTable
@@ -404,10 +404,10 @@ export default function EnterpriseDocsPage() {
 
           {/* 6. Dashboard */}
           <Section id="dashboard" title="6. Dashboard / แดชบอร์ด" icon={LayoutDashboard}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Executive-level financial overview with drill-down capabilities and role-based widget configuration.
             </p>
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">Dashboard Widgets</h4>
+            <h4 className="mt-4 font-semibold text-black dark:text-white">Dashboard Widgets</h4>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 { name: 'Revenue Trend', desc: 'Last 6 months revenue by month' },
@@ -417,23 +417,23 @@ export default function EnterpriseDocsPage() {
                 { name: 'Budget Utilization', desc: 'Budget vs actual with %' },
                 { name: 'Consolidated View', desc: 'Cross-organization metrics' },
               ].map((w) => (
-                <div key={w.name} className="rounded-lg border border-gray-300 p-3 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{w.name}</p>
-                  <p className="text-xs text-gray-700 dark:text-gray-400">{w.desc}</p>
+                <div key={w.name} className="rounded-lg border border-gray-400 p-3 dark:border-gray-700">
+                  <p className="text-sm font-medium text-black dark:text-white">{w.name}</p>
+                  <p className="text-xs text-gray-900 dark:text-gray-400">{w.desc}</p>
                 </div>
               ))}
             </div>
-            <h4 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">Period Options</h4>
+            <h4 className="mt-4 font-semibold text-black dark:text-white">Period Options</h4>
             <div className="mt-2 flex flex-wrap gap-2">
               {['MTD (Month to date)', 'QTD (Quarter to date)', 'YTD (Year to date)', 'Custom range'].map((p) => (
-                <span key={p} className="rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-400">{p}</span>
+                <span key={p} className="rounded-full border border-gray-400 px-3 py-1 text-xs text-gray-700 dark:border-gray-700 dark:text-gray-400">{p}</span>
               ))}
             </div>
           </Section>
 
           {/* 7. Authentication */}
           <Section id="auth" title="7. Authentication / การยืนยันตัวตน" icon={Shield}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               JWT-based authentication with argon2id password hashing, access + refresh token pattern, and brute-force protection.
             </p>
             <DataTable
@@ -451,8 +451,8 @@ export default function EnterpriseDocsPage() {
 
           {/* 8. Roles */}
           <Section id="roles" title="8. Roles & Permissions / บทบาทและสิทธิ์" icon={Users}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
-              Enhanced RBAC with custom permissions. Format: <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">resource:action:scope</code>
+            <p className="text-sm text-gray-950 dark:text-gray-200">
+              Enhanced RBAC with custom permissions. Format: <code className="rounded bg-slate-100 px-1 dark:bg-gray-700">resource:action:scope</code>
             </p>
             <DataTable
               headers={['Role', 'Description', 'Can Delete?']}
@@ -466,7 +466,7 @@ export default function EnterpriseDocsPage() {
 
           {/* 9. PDPA */}
           <Section id="pdpa" title="9. PDPA Data Subject Rights / สิทธิ์เจ้าของข้อมูล PDPA" icon={Lock}>
-            <p className="text-sm text-gray-800 dark:text-gray-300">
+            <p className="text-sm text-gray-950 dark:text-gray-200">
               Thai Personal Data Protection Act (พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล) compliance for data subject rights.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
