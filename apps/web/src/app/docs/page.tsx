@@ -64,7 +64,7 @@ const docCards: DocCard[] = [
     readTime: '15 min',
   },
   {
-    href: '/docs/cli-reference',
+    href: '/docs/cli',
     icon: Terminal,
     title: 'คู่มือ CLI',
     titleEn: 'CLI Reference',
@@ -72,7 +72,7 @@ const docCards: DocCard[] = [
     readTime: '20 min',
   },
   {
-    href: '/docs/mcp-reference',
+    href: '/docs/mcp',
     icon: Cpu,
     title: 'คู่มือ MCP Tools',
     titleEn: 'MCP Reference',
@@ -80,7 +80,7 @@ const docCards: DocCard[] = [
     readTime: '25 min',
   },
   {
-    href: '/docs/api-reference',
+    href: '/docs/api',
     icon: Globe,
     title: 'คู่มือ API',
     titleEn: 'API Reference',

@@ -78,19 +78,19 @@ const navGroups: DocNavGroup[] = [
     label: 'Reference',
     items: [
       {
-        href: '/docs/cli-reference',
+        href: '/docs/cli',
         label: 'CLI Reference',
         labelEn: '89 Commands',
         icon: Terminal,
       },
       {
-        href: '/docs/mcp-reference',
+        href: '/docs/mcp',
         label: 'MCP Reference',
         labelEn: '110 Tools',
         icon: Cpu,
       },
       {
-        href: '/docs/api-reference',
+        href: '/docs/api',
         label: 'API Reference',
         labelEn: 'REST API',
         icon: Globe,
