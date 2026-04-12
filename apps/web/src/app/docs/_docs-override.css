@@ -1,117 +1,106 @@
 /* ==========================================================================
-   nEIP Docs — Force readable text colors
+   nEIP Docs — Force readable text on ALL doc pages
 
-   Problem: Tailwind CSS variables + system dark mode causes light gray text
-   on white background. This CSS forces strong contrast regardless of theme.
+   This CSS is imported ONLY in docs/layout.tsx so it only affects /docs/*
+   Using both .docs-content scoped AND unscoped rules to catch all elements
    ========================================================================== */
 
-.docs-content p,
-.docs-content span,
-.docs-content td,
-.docs-content li,
-.docs-content label,
-.docs-content div,
-.docs-content a {
+/* ---- GLOBAL TEXT (no scope — catches everything under this layout) ---- */
+
+p, span, td, li, label, div, dd, dt {
   color: #111827 !important;
 }
 
-.docs-content h1,
-.docs-content h2,
-.docs-content h3,
-.docs-content h4,
-.docs-content h5 {
+h1, h2, h3, h4, h5, h6 {
   color: #000000 !important;
 }
 
-.docs-content code {
-  color: #1e293b !important;
-  background-color: #e2e8f0 !important;
+a {
+  color: #1d4ed8 !important;
 }
 
-.docs-content th {
+th {
   color: #000000 !important;
   font-weight: 700 !important;
 }
 
-.docs-content pre {
+code {
+  color: #1e293b !important;
+  background-color: #e2e8f0 !important;
+}
+
+pre {
   color: #1e293b !important;
   background-color: #f1f5f9 !important;
 }
 
-/* Sidebar links */
-.docs-content nav a {
+small {
   color: #374151 !important;
 }
-.docs-content nav a:hover {
+
+/* Sidebar nav links */
+nav a {
+  color: #374151 !important;
+}
+nav a:hover {
   color: #000000 !important;
 }
 
-/* Small/muted text — still readable */
-.docs-content small,
-.docs-content .text-xs {
-  color: #374151 !important;
+/* Input fields (search) */
+input {
+  color: #111827 !important;
+}
+input::placeholder {
+  color: #6b7280 !important;
 }
 
-/* ---- Preserve intentionally colored elements ---- */
+/* ---- PRESERVE COLORED ELEMENTS ---- */
 
-/* Green (Dr / debit) */
-.docs-content .text-green-700,
-.docs-content .text-green-600,
-.docs-content .text-green-400 { color: #15803d !important; }
+/* Green (Dr / debit amounts) */
+.text-green-700, .text-green-600, .text-green-400 { color: #15803d !important; }
 
-/* Red (Cr / credit) */
-.docs-content .text-red-700,
-.docs-content .text-red-600,
-.docs-content .text-red-400 { color: #b91c1c !important; }
+/* Red (Cr / credit amounts) */
+.text-red-700, .text-red-600, .text-red-400 { color: #b91c1c !important; }
 
 /* Blue (links, subtitles) */
-.docs-content .text-blue-700 { color: #1d4ed8 !important; }
-.docs-content .text-blue-600 { color: #2563eb !important; }
-.docs-content .text-blue-900 { color: #1e3a5f !important; }
-.docs-content .text-blue-800 { color: #1e40af !important; }
-.docs-content .text-blue-400 { color: #1d4ed8 !important; }
+.text-blue-700 { color: #1d4ed8 !important; }
+.text-blue-600 { color: #2563eb !important; }
+.text-blue-900 { color: #1e3a5f !important; }
+.text-blue-800 { color: #1e40af !important; }
+.text-blue-400 { color: #1d4ed8 !important; }
 
 /* Orange (PUT method badge) */
-.docs-content .text-orange-700,
-.docs-content .text-orange-600 { color: #c2410c !important; }
+.text-orange-700, .text-orange-600 { color: #c2410c !important; }
 
-/* White text in dark backgrounds — MUST stay white */
-.docs-content .bg-slate-800,
-.docs-content .bg-slate-800 *,
-.docs-content .bg-slate-900,
-.docs-content .bg-slate-900 *,
-.docs-content .bg-gray-800,
-.docs-content .bg-gray-800 *,
-.docs-content .bg-gray-900,
-.docs-content .bg-gray-900 * {
+/* ---- WHITE TEXT IN DARK BACKGROUNDS ---- */
+
+.bg-slate-800, .bg-slate-800 *,
+.bg-slate-900, .bg-slate-900 *,
+.bg-gray-800, .bg-gray-800 *,
+.bg-gray-900, .bg-gray-900 * {
   color: #ffffff !important;
 }
 
-/* Badge/pill text on colored backgrounds */
-.docs-content .bg-green-600,
-.docs-content .bg-green-600 *,
-.docs-content .bg-green-100 { color: #15803d !important; }
-.docs-content .bg-green-600,
-.docs-content .bg-green-600 * { color: #ffffff !important; }
+/* Badge text on colored backgrounds */
+.bg-green-600, .bg-green-600 * { color: #ffffff !important; }
+.bg-red-600, .bg-red-600 * { color: #ffffff !important; }
+.bg-blue-600, .bg-blue-600 * { color: #ffffff !important; }
+.bg-gray-400, .bg-gray-400 * { color: #ffffff !important; }
 
-.docs-content .bg-red-100 { color: #b91c1c !important; }
-.docs-content .bg-blue-100 { color: #1e40af !important; }
-.docs-content .bg-orange-100 { color: #c2410c !important; }
+/* Colored badge text */
+.bg-green-100, .bg-green-100 * { color: #15803d !important; }
+.bg-red-100, .bg-red-100 * { color: #b91c1c !important; }
+.bg-blue-100, .bg-blue-100 * { color: #1e40af !important; }
+.bg-orange-100, .bg-orange-100 * { color: #c2410c !important; }
 
-.docs-content .bg-gray-400,
-.docs-content .bg-gray-400 * { color: #ffffff !important; }
+/* Primary icon */
+.text-primary { color: #2563eb !important; }
 
-/* Primary colored icon area */
-.docs-content .text-primary {
-  color: #2563eb !important;
-}
-
-/* Card borders more visible */
-.docs-content .border-2 {
-  border-color: #9ca3af !important;
-}
+/* Card borders */
+.border-2 { border-color: #9ca3af !important; }
 
 /* Table row hover */
-.docs-content tr:hover td {
-  background-color: #f3f4f6 !important;
-}
+tr:hover td { background-color: #f3f4f6 !important; }
+
+/* Stripe table rows */
+tbody tr:nth-child(even) td { background-color: #f9fafb !important; }
