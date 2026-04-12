@@ -322,13 +322,13 @@ describe('Tax Integration (Story 11.2)', () => {
         {
           lineRef: 'Line 1 — consulting service',
           amountSatang: 10000000n, // ฿100,000.00
-          vatApplicable: true,
+          vatApplicable: 'standard',
           whtIncomeType: 'services',
         },
         {
           lineRef: 'Line 2 — office rent',
           amountSatang: 3000000n, // ฿30,000.00
-          vatApplicable: true,
+          vatApplicable: 'standard',
           whtIncomeType: 'rent',
         },
       ];
@@ -358,7 +358,7 @@ describe('Tax Integration (Story 11.2)', () => {
         {
           lineRef: 'Product sale',
           amountSatang: 5000000n, // ฿50,000.00
-          vatApplicable: true,
+          vatApplicable: 'standard',
           whtIncomeType: null,
         },
       ];
@@ -387,7 +387,7 @@ describe('Tax Integration (Story 11.2)', () => {
         {
           lineRef: 'Exempt service with WHT',
           amountSatang: 1000000n, // ฿10,000.00
-          vatApplicable: false,
+          vatApplicable: 'exempt',
           whtIncomeType: 'professional',
         },
       ];

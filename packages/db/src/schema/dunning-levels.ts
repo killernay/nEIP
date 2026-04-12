@@ -1,4 +1,4 @@
-import { pgTable, text, integer, bigint, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, bigint, timestamp, unique } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 /**
@@ -14,7 +14,9 @@ export const dunning_levels = pgTable('dunning_levels', {
     .notNull()
     .references(() => tenants.id, { onDelete: 'cascade' }),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  uniqueLevelTenant: unique().on(table.level, table.tenant_id),
+}));
 
 export type DunningLevel = typeof dunning_levels.$inferSelect;
 export type NewDunningLevel = typeof dunning_levels.$inferInsert;

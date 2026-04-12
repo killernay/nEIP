@@ -10,6 +10,7 @@
 // Types
 export type {
   TaxType,
+  VatApplicability,
   WhtIncomeType,
   TaxResult,
   TaxRate,

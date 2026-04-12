@@ -110,10 +110,19 @@ export async function paymentTermRoutes(
     },
     async (request, reply) => {
       const { tenantId } = request.user;
+      const limit = Math.min(Math.max(parseInt(request.query['limit'] ?? '50', 10), 1), 100);
+      const offset = Math.max(parseInt(request.query['offset'] ?? '0', 10), 0);
+
+      const countRows = await fastify.sql<[{ count: string }]>`
+        SELECT COUNT(*)::text as count FROM payment_terms WHERE tenant_id = ${tenantId} AND is_active = TRUE
+      `;
+      const total = parseInt(countRows[0]?.count ?? '0', 10);
+
       const rows = await fastify.sql<PaymentTermRow[]>`
         SELECT * FROM payment_terms WHERE tenant_id = ${tenantId} AND is_active = TRUE ORDER BY code
+        LIMIT ${limit} OFFSET ${offset}
       `;
-      return reply.send({ items: rows.map(mapTerm) });
+      return reply.send({ items: rows.map(mapTerm), total, limit, offset, hasMore: offset + limit < total });
     },
   );
 

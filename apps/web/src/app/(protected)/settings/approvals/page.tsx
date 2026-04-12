@@ -47,6 +47,7 @@ export default function ApprovalsPage(): React.JSX.Element {
   });
 
   const handleDelete = useCallback(async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this approval workflow? This action cannot be undone.')) return;
     try {
       await api.delete(`/settings/approval-workflows/${id}`);
       showToast.success('Workflow deleted');

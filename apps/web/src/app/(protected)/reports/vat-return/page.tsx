@@ -70,13 +70,33 @@ export default function VatReturnPage(): React.JSX.Element {
     }
   }, [month, year]);
 
-  const handleExport = useCallback(async () => {
+  const handleExport = useCallback(() => {
+    if (!report) return;
     try {
+      const rows = [
+        ['Field', 'Amount (Satang)', 'Amount (THB)'],
+        ['Sales Base', report.salesBase.amountSatang, (Number(report.salesBase.amountSatang) / 100).toFixed(2)],
+        ['Output Tax', report.outputTax.amountSatang, (Number(report.outputTax.amountSatang) / 100).toFixed(2)],
+        ['Purchase Base', report.purchaseBase.amountSatang, (Number(report.purchaseBase.amountSatang) / 100).toFixed(2)],
+        ['Input Tax', report.inputTax.amountSatang, (Number(report.inputTax.amountSatang) / 100).toFixed(2)],
+        ['Net VAT Payable', report.netVat.amountSatang, (Number(report.netVat.amountSatang) / 100).toFixed(2)],
+        ['Filing Deadline', report.filingDeadline, ''],
+        ['Period', `${report.month}/${report.year}`, ''],
+        ['Status', report.status, ''],
+      ];
+      const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vat-return-${report.year}-${String(report.month).padStart(2, '0')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
       showToast.success('VAT return exported (ภ.พ.30 format)');
     } catch {
       showToast.error('Failed to export');
     }
-  }, []);
+  }, [report]);
 
   function moneyAmount(m: MoneyVO): bigint {
     return BigInt(m.amountSatang);

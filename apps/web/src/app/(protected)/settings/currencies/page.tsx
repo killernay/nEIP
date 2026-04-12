@@ -91,7 +91,7 @@ export default function CurrenciesPage(): React.JSX.Element {
       {activeTab === 'currencies' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button variant="primary"><Plus className="h-4 w-4" />Add Currency</Button>
+            <Button variant="primary" onClick={() => showToast.info('Add Currency — coming soon')}><Plus className="h-4 w-4" />Add Currency</Button>
           </div>
           {loadingCurrencies ? (
             <SkeletonRow count={5} />

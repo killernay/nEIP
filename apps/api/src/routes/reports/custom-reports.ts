@@ -227,9 +227,11 @@ export async function customReportRoutes(
   );
 
   // POST /api/v1/reports/custom/:id/run — execute report
+  // Rate limit: expensive query operation
   fastify.post<{ Params: RunReportParams }>(
     `${API_V1_PREFIX}/reports/custom/:id/run`,
     {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
       schema: {
         description: 'Execute a saved custom report',
         tags: ['reports'],
@@ -307,7 +309,7 @@ export async function customReportRoutes(
         WHERE ${source.alias}.tenant_id = $1
         ${groupByParts.length > 0 ? `GROUP BY ${groupByExpr}` : ''}
         ORDER BY 1
-        LIMIT 10000
+        LIMIT 5000
       `;
 
       const rows = await fastify.sql.unsafe(queryText, [tenantId]);

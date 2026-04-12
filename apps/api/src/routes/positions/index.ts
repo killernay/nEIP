@@ -109,15 +109,22 @@ export async function positionRoutes(
     async (request, reply) => {
       const { tenantId } = request.user;
       const departmentId = request.query['departmentId'];
+      const limit = Math.min(Math.max(parseInt(request.query['limit'] ?? '50', 10), 1), 100);
+      const offset = Math.max(parseInt(request.query['offset'] ?? '0', 10), 0);
 
+      let total: number;
       let rows: PositionRow[];
       if (departmentId) {
-        rows = await fastify.sql<PositionRow[]>`SELECT * FROM positions WHERE tenant_id = ${tenantId} AND department_id = ${departmentId} ORDER BY code`;
+        const countRows = await fastify.sql<[{ count: string }]>`SELECT COUNT(*)::text as count FROM positions WHERE tenant_id = ${tenantId} AND department_id = ${departmentId}`;
+        total = parseInt(countRows[0]?.count ?? '0', 10);
+        rows = await fastify.sql<PositionRow[]>`SELECT * FROM positions WHERE tenant_id = ${tenantId} AND department_id = ${departmentId} ORDER BY code LIMIT ${limit} OFFSET ${offset}`;
       } else {
-        rows = await fastify.sql<PositionRow[]>`SELECT * FROM positions WHERE tenant_id = ${tenantId} ORDER BY code`;
+        const countRows = await fastify.sql<[{ count: string }]>`SELECT COUNT(*)::text as count FROM positions WHERE tenant_id = ${tenantId}`;
+        total = parseInt(countRows[0]?.count ?? '0', 10);
+        rows = await fastify.sql<PositionRow[]>`SELECT * FROM positions WHERE tenant_id = ${tenantId} ORDER BY code LIMIT ${limit} OFFSET ${offset}`;
       }
 
-      return reply.status(200).send({ items: rows.map(mapPosition), total: rows.length });
+      return reply.status(200).send({ items: rows.map(mapPosition), total, limit, offset, hasMore: offset + limit < total });
     },
   );
 

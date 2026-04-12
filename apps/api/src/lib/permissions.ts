@@ -119,6 +119,7 @@ export const HITL_REJECT = 'hitl:reject' as const;
 // Reporting
 // ---------------------------------------------------------------------------
 
+export const DASHBOARD_CONFIG_READ = 'dashboard:config:read' as const;
 export const REPORT_GL_READ = 'report:gl:read' as const;
 export const REPORT_AR_READ = 'report:ar:read' as const;
 export const REPORT_AP_READ = 'report:ap:read' as const;
@@ -432,6 +433,7 @@ export type Permission =
   | typeof HITL_QUEUE_READ
   | typeof HITL_APPROVE
   | typeof HITL_REJECT
+  | typeof DASHBOARD_CONFIG_READ
   | typeof REPORT_GL_READ
   | typeof REPORT_AR_READ
   | typeof REPORT_AP_READ
@@ -631,6 +633,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   HITL_QUEUE_READ,
   HITL_APPROVE,
   HITL_REJECT,
+  DASHBOARD_CONFIG_READ,
   REPORT_GL_READ,
   REPORT_AR_READ,
   REPORT_AP_READ,
@@ -818,7 +821,8 @@ export const ACCOUNTANT_PERMISSIONS: readonly Permission[] = [
   AP_PO_SEND,
   AP_PO_RECEIVE,
   AP_PO_CONVERT,
-  // Reports
+  // Dashboard & Reports
+  DASHBOARD_CONFIG_READ,
   REPORT_GL_READ,
   REPORT_AR_READ,
   REPORT_AP_READ,

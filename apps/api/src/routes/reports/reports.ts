@@ -1665,6 +1665,8 @@ export async function reportRoutes(
               inputVat: moneySchema,
               inputVatTransactionCount: { type: 'integer' },
               netVat: moneySchema,
+              vatPayableSatang: { type: 'string', description: 'VAT payable when output > input, otherwise "0"' },
+              vatRefundableSatang: { type: 'string', description: 'VAT refundable when input > output, otherwise "0"' },
               status: { type: 'string', enum: ['payable', 'refundable', 'zero'] },
               currency: { type: 'string' },
             },
@@ -1719,6 +1721,10 @@ export async function reportRoutes(
       const netVatAmount = outputVatAmount - inputVatAmount;
       const status = netVatAmount > 0n ? 'payable' : netVatAmount < 0n ? 'refundable' : 'zero';
 
+      // M-8 FIX: Explicit vatPayable / vatRefundable fields instead of stripping sign
+      const vatPayableSatang = netVatAmount > 0n ? netVatAmount.toString() : '0';
+      const vatRefundableSatang = netVatAmount < 0n ? (-netVatAmount).toString() : '0';
+
       return reply.status(200).send({
         reportName: 'ภ.พ.30 VAT Return',
         generatedAt: new Date().toISOString(),
@@ -1729,6 +1735,8 @@ export async function reportRoutes(
         inputVat: money(inputVatAmount),
         inputVatTransactionCount: inputCount,
         netVat: money(netVatAmount < 0n ? (-netVatAmount).toString() : netVatAmount.toString()),
+        vatPayableSatang,
+        vatRefundableSatang,
         status,
         currency: 'THB',
       });

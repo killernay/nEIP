@@ -43,7 +43,7 @@ const invoiceLineSchema = {
   additionalProperties: false,
   properties: {
     description: { type: 'string', minLength: 1, maxLength: 500 },
-    quantity: { type: 'number', minimum: 0.01 },
+    quantity: { type: 'integer', minimum: 1, description: 'Quantity as integer (whole units)' },
     unitPriceSatang: { type: 'string', description: 'Unit price in satang' },
     accountId: { type: 'string', description: 'Revenue account ID' },
   },
@@ -226,7 +226,8 @@ export async function invoiceRoutes(
       // Calculate total.
       let totalSatang = 0n;
       const processedLines = lines.map((line, index) => {
-        const lineTotal = BigInt(line.unitPriceSatang) * BigInt(Math.round(line.quantity * 100)) / 100n;
+        // M-1 FIX: quantity is integer — no float precision loss
+        const lineTotal = BigInt(line.unitPriceSatang) * BigInt(line.quantity);
         totalSatang += lineTotal;
         return {
           id: crypto.randomUUID(),

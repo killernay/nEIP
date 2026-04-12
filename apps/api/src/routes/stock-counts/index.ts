@@ -261,9 +261,13 @@ export async function stockCountRoutes(
             const fiscalYear = now.getFullYear();
             const fiscalPeriod = now.getMonth() + 1;
 
-            let totalVarianceSatang = 0;
+            let totalVarianceSatang = 0n;
             for (const vl of varianceLines) {
-              totalVarianceSatang += Math.abs(vl.variance!) * 100;
+              const productCost = await sql<[{ cost_price_satang: string }?]>`
+                SELECT cost_price_satang::text FROM products WHERE id = ${vl.product_id} LIMIT 1
+              `;
+              const unitCost = BigInt(productCost[0]?.cost_price_satang ?? '0');
+              totalVarianceSatang += BigInt(Math.abs(vl.variance!)) * unitCost;
             }
 
             await sql`
@@ -275,14 +279,14 @@ export async function stockCountRoutes(
             const netVariance = varianceLines.reduce((sum, l) => sum + (l.variance ?? 0), 0);
             if (netVariance > 0) {
               await sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-                VALUES (${crypto.randomUUID()}, ${jeId}, 1, ${invAcctRows[0].id}, 'Inventory adjustment (gain)', ${totalVarianceSatang}, 0)`;
+                VALUES (${crypto.randomUUID()}, ${jeId}, 1, ${invAcctRows[0].id}, 'Inventory adjustment (gain)', ${totalVarianceSatang.toString()}::bigint, 0)`;
               await sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-                VALUES (${crypto.randomUUID()}, ${jeId}, 2, ${varAcctRows[0].id}, 'Inventory variance', 0, ${totalVarianceSatang})`;
+                VALUES (${crypto.randomUUID()}, ${jeId}, 2, ${varAcctRows[0].id}, 'Inventory variance', 0, ${totalVarianceSatang.toString()}::bigint)`;
             } else {
               await sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-                VALUES (${crypto.randomUUID()}, ${jeId}, 1, ${varAcctRows[0].id}, 'Inventory variance (loss)', ${totalVarianceSatang}, 0)`;
+                VALUES (${crypto.randomUUID()}, ${jeId}, 1, ${varAcctRows[0].id}, 'Inventory variance (loss)', ${totalVarianceSatang.toString()}::bigint, 0)`;
               await sql`INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-                VALUES (${crypto.randomUUID()}, ${jeId}, 2, ${invAcctRows[0].id}, 'Inventory adjustment', 0, ${totalVarianceSatang})`;
+                VALUES (${crypto.randomUUID()}, ${jeId}, 2, ${invAcctRows[0].id}, 'Inventory adjustment', 0, ${totalVarianceSatang.toString()}::bigint)`;
             }
 
             request.log.info({ stockCountId: id, jeId, tenantId }, 'Stock count variance JE created');

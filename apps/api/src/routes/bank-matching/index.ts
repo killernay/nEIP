@@ -186,9 +186,11 @@ export async function bankMatchingRoutes(
   );
 
   // POST /bank/:accountId/auto-reconcile — apply rules to unreconciled transactions
+  // Rate limit: expensive batch operation
   fastify.post<{ Params: { accountId: string } }>(
     `${API_V1_PREFIX}/bank/:accountId/auto-reconcile`,
     {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
       schema: {
         description: 'Auto-reconcile unreconciled bank transactions using matching rules',
         tags: ['bank'],
@@ -214,11 +216,12 @@ export async function bankMatchingRoutes(
         ORDER BY priority ASC
       `;
 
-      // Load unreconciled transactions
+      // Load unreconciled transactions (capped at 200 per batch)
       const txns = await fastify.sql<BankTxnRow[]>`
         SELECT * FROM bank_transactions
         WHERE bank_account_id = ${accountId} AND reconciled = false
         ORDER BY transaction_date
+        LIMIT 200
       `;
 
       let matchedCount = 0;

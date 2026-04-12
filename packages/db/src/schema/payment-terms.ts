@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, real, boolean, timestamp, unique } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 /**
@@ -17,7 +17,9 @@ export const payment_terms = pgTable('payment_terms', {
     .references(() => tenants.id, { onDelete: 'cascade' }),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  uniqueCodeTenant: unique().on(table.code, table.tenant_id),
+}));
 
 export type PaymentTerm = typeof payment_terms.$inferSelect;
 export type NewPaymentTerm = typeof payment_terms.$inferInsert;

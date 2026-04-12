@@ -141,7 +141,7 @@ export async function approvalRoutes(
   );
 
   // GET /approval-workflows
-  fastify.get(
+  fastify.get<{ Querystring: Record<string, string> }>(
     `${API_V1_PREFIX}/approval-workflows`,
     {
       schema: { description: 'List approval workflows', tags: ['approvals'], security: [{ bearerAuth: [] }] },
@@ -149,10 +149,19 @@ export async function approvalRoutes(
     },
     async (request, reply) => {
       const { tenantId } = request.user;
+      const limit = Math.min(Math.max(parseInt(request.query['limit'] ?? '50', 10), 1), 100);
+      const offset = Math.max(parseInt(request.query['offset'] ?? '0', 10), 0);
+
+      const countRows = await fastify.sql<[{ count: string }]>`
+        SELECT COUNT(*)::text as count FROM approval_workflows WHERE tenant_id = ${tenantId}
+      `;
+      const total = parseInt(countRows[0]?.count ?? '0', 10);
+
       const rows = await fastify.sql<WorkflowRow[]>`
         SELECT * FROM approval_workflows WHERE tenant_id = ${tenantId} ORDER BY document_type
+        LIMIT ${limit} OFFSET ${offset}
       `;
-      return reply.send({ items: rows.map((r) => ({ id: r.id, documentType: r.document_type, name: r.name, isActive: r.is_active, createdAt: toISO(r.created_at) })), total: rows.length });
+      return reply.send({ items: rows.map((r) => ({ id: r.id, documentType: r.document_type, name: r.name, isActive: r.is_active, createdAt: toISO(r.created_at) })), total, limit, offset, hasMore: offset + limit < total });
     },
   );
 
@@ -239,10 +248,19 @@ export async function approvalRoutes(
       const { tenantId } = request.user;
       const status = request.query.status ?? 'pending';
 
+      const limit = Math.min(Math.max(parseInt((request.query as Record<string, string>)['limit'] ?? '50', 10), 1), 100);
+      const offset = Math.max(parseInt((request.query as Record<string, string>)['offset'] ?? '0', 10), 0);
+
+      const countRows = await fastify.sql<[{ count: string }]>`
+        SELECT COUNT(*)::text as count FROM approval_requests WHERE tenant_id = ${tenantId} AND status = ${status}
+      `;
+      const total = parseInt(countRows[0]?.count ?? '0', 10);
+
       const rows = await fastify.sql<RequestRow[]>`
         SELECT * FROM approval_requests
         WHERE tenant_id = ${tenantId} AND status = ${status}
         ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
       `;
 
       return reply.send({
@@ -256,7 +274,7 @@ export async function approvalRoutes(
           submittedBy: r.submitted_by,
           createdAt: toISO(r.created_at),
         })),
-        total: rows.length,
+        total, limit, offset, hasMore: offset + limit < total,
       });
     },
   );

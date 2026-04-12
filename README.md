@@ -1,7 +1,8 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/status-alpha-orange" alt="Status: Alpha" />
+  <img src="https://img.shields.io/badge/status-beta-brightgreen" alt="Status: Beta" />
   <img src="https://img.shields.io/badge/modules-31-blue" alt="31 Modules" />
-  <img src="https://img.shields.io/badge/API-186_endpoints-green" alt="186 API Endpoints" />
+  <img src="https://img.shields.io/badge/API-300+_endpoints-green" alt="300+ API Endpoints" />
+  <img src="https://img.shields.io/badge/MCP-110_tools-purple" alt="110 MCP Tools" />
   <img src="https://img.shields.io/badge/license-MIT-yellow" alt="MIT License" />
 </p>
 
@@ -38,16 +39,22 @@
 
 ## แนวคิดของ nEIP
 
-ให้มองอย่างนี้ — **3 ช่องทาง สำหรับ 3 กลุ่มคน**:
+ให้มองอย่างนี้ — **4 ช่องทาง สำหรับ 4 กลุ่มคน**:
 
 ### 1. 🖥️ Web UI — สำหรับคนทำงานเดิม
-บัญชี, การเงิน, admin — **ใช้หน้าจอเหมือน ERP ปกติ** กดๆ คลิกๆ ได้เลย ไม่ต้องเรียนรู้อะไรใหม่ ปล่อยเขาทำงานไป
+บัญชี, การเงิน, admin — **ใช้หน้าจอเหมือน ERP ปกติ** กดๆ คลิกๆ ได้เลย ไม่ต้องเรียนรู้อะไรใหม่ ปล่อยเขาทำงานไป — **113+ หน้าจอ**
 
 ### 2. 🔌 REST API — สำหรับ Dev / IT
-เชื่อมต่อระบบอื่น อ่านข้อมูลใน ERP ได้ทันที auto-migrate ข้อมูลเข้าได้ ไม่ต้องจ้าง consultant อีกต่อไป — **186 endpoints พร้อม Swagger docs**
+เชื่อมต่อระบบอื่น อ่านข้อมูลใน ERP ได้ทันที auto-migrate ข้อมูลเข้าได้ ไม่ต้องจ้าง consultant อีกต่อไป — **300+ endpoints พร้อม Swagger docs**
 
-### 3. ⌨️ CLI — สำหรับ AI Agent
-ทำมาเพื่อรองรับ **agent-based AI worker** เช่น:
+### 3. 🤖 MCP Server — สำหรับ AI Agent
+**110 MCP tools** ให้ AI เข้าถึงข้อมูล ERP ได้ทุกมิติ:
+- สร้าง invoice, payment, journal entry ผ่าน AI
+- ดูรายงาน งบทดลอง กำไรขาดทุน ได้ทันที
+- AI วิเคราะห์ anomaly, forecast cash flow, auto-reconcile bank ได้เลย
+
+### 4. ⌨️ CLI — สำหรับ Power User & AI Agent
+**89 commands** ครอบคลุมทุก module — ทำมาเพื่อรองรับ **agent-based AI worker** เช่น:
 - **Claude Code** — สั่งงาน ERP ผ่าน terminal ได้เลย
 - **OpenClaw (น้องกุ้ง)** — ต่อไปจะสร้าง invoice ก็สั่งผ่านน้องกุ้งได้
 
@@ -62,50 +69,69 @@ neip reports trial-balance
 neip dashboard
 ```
 
-> **เรื่อง MCP** — กำลังศึกษาอยู่ว่าจะเพิ่มดีไหม เพราะ MCP serialize ข้อมูลทุก request ทำให้เปลือง token โดยเฉพาะข้อมูล ERP ที่ใหญ่ ตอนนี้ CLI approach ประหยัดกว่า แต่เพิ่ม MCP ได้ไม่ยากเพราะมี API ครบอยู่แล้ว
-
 ---
 
 ## สถานะปัจจุบัน
 
-> ⚠️ **Alpha — ยังไม่เสร็จ** แต่ทดสอบผ่านบางส่วนแล้ว
+> 🟢 **v0.9.0 Beta** — ฟีเจอร์ครบ ทดสอบผ่าน 417 unit tests + 21 E2E specs
 
 ### 31 Modules (ลอกโครงสร้างจาก ERP เจ้าใหญ่มาเลย บอกตรงๆ)
 
-| กลุ่ม | Module | ภาษาไทย | API | Web | CLI |
-|-------|--------|---------|:---:|:---:|:---:|
-| **การเงิน** | FI-GL | บัญชีแยกประเภท | ✓ | ✓ | ✓ |
-| | FI-AR | ลูกหนี้การค้า | ✓ | ✓ | ✓ |
-| | FI-AP | เจ้าหนี้การค้า | ✓ | ✓ | ✓ |
-| | FI-AA | สินทรัพย์ถาวร | ✓ | ✓ | ✓ |
-| | FI-BL | กระทบยอดธนาคาร | ✓ | ✓ | ✓ |
-| | FI-TV | ใบหัก ณ ที่จ่าย (ภ.ง.ด.3/53) | ✓ | ✓ | ✓ |
-| | FI-TX | ภาษี VAT 7% / WHT | ✓ | ✓ | ✓ |
-| **ควบคุม** | CO | ศูนย์ต้นทุน / ศูนย์กำไร / งบประมาณ | ✓ | ✓ | ✓ |
-| **ขาย** | SD-QT | ใบเสนอราคา | ✓ | ✓ | ✓ |
-| | SD-SO | ใบสั่งขาย | ✓ | ✓ | ✓ |
-| | SD-DO | ใบส่งของ | ✓ | ✓ | ✓ |
-| | SD-INV | ใบแจ้งหนี้ / ใบกำกับภาษี | ✓ | ✓ | ✓ |
-| | SD-RC | ใบเสร็จรับเงิน | ✓ | ✓ | ✓ |
-| | SD-CN | ใบลดหนี้ | ✓ | ✓ | ✓ |
-| | SD-PAY | รับชำระเงิน | ✓ | ✓ | ✓ |
-| **จัดซื้อ** | MM-PO | ใบสั่งซื้อ | ✓ | ✓ | ✓ |
-| **คลัง** | MM-IM | คลังสินค้า / สต็อก | ✓ | ✓ | ✓ |
-| | MM-PR | สินค้า / SKU | ✓ | ✓ | ✓ |
-| **บุคคล** | HR | พนักงาน / แผนก / เงินเดือน / ลา | ✓ | ✓ | ✓ |
-| **CRM** | CRM | ทะเบียนลูกค้า + ผู้ขาย | ✓ | ✓ | ✓ |
-| **รายงาน** | RPT | งบทดลอง, กำไรขาดทุน, งบดุล, P&L | ✓ | ✓ | ✓ |
-| **แดชบอร์ด** | DASH | ภาพรวมธุรกิจ | ✓ | ✓ | ✓ |
-| **ตรวจสอบ** | AUDIT | บันทึกทุกการเปลี่ยนแปลง | ✓ | ✓ | ✓ |
+| กลุ่ม | Module | ภาษาไทย | API | Web | CLI | MCP |
+|-------|--------|---------|:---:|:---:|:---:|:---:|
+| **การเงิน** | FI-GL | บัญชีแยกประเภท / Recurring JE | ✓ | ✓ | ✓ | ✓ |
+| | FI-AR | ลูกหนี้ / Credit Management / Dunning | ✓ | ✓ | ✓ | ✓ |
+| | FI-AP | เจ้าหนี้ / Payment Terms / 3-Way Matching | ✓ | ✓ | ✓ | ✓ |
+| | FI-AA | สินทรัพย์ถาวร | ✓ | ✓ | ✓ | ✓ |
+| | FI-BL | กระทบยอดธนาคาร / Bank Auto-Matching | ✓ | ✓ | ✓ | ✓ |
+| | FI-TV | ใบหัก ณ ที่จ่าย (ภ.ง.ด.3/53) | ✓ | ✓ | ✓ | ✓ |
+| | FI-TX | ภาษี VAT 7% / WHT / Multi-Currency | ✓ | ✓ | ✓ | ✓ |
+| | FI-CF | Cash Flow Statement | ✓ | ✓ | ✓ | ✓ |
+| **ควบคุม** | CO | ศูนย์ต้นทุน / ศูนย์กำไร / งบประมาณ | ✓ | ✓ | ✓ | ✓ |
+| | CO-MC | Multi-Company / Intercompany | ✓ | ✓ | ✓ | ✓ |
+| **ขาย** | SD-QT | ใบเสนอราคา | ✓ | ✓ | ✓ | ✓ |
+| | SD-SO | ใบสั่งขาย | ✓ | ✓ | ✓ | ✓ |
+| | SD-DO | ใบส่งของ | ✓ | ✓ | ✓ | ✓ |
+| | SD-INV | ใบแจ้งหนี้ / ใบกำกับภาษี | ✓ | ✓ | ✓ | ✓ |
+| | SD-RC | ใบเสร็จรับเงิน | ✓ | ✓ | ✓ | ✓ |
+| | SD-CN | ใบลดหนี้ | ✓ | ✓ | ✓ | ✓ |
+| | SD-PAY | รับชำระเงิน | ✓ | ✓ | ✓ | ✓ |
+| | SD-PX | Pricing Engine | ✓ | ✓ | ✓ | ✓ |
+| **จัดซื้อ** | MM-PO | ใบสั่งซื้อ | ✓ | ✓ | ✓ | ✓ |
+| | MM-PR | Purchase Requisitions / RFQ | ✓ | ✓ | ✓ | ✓ |
+| | MM-VR | Vendor Returns | ✓ | ✓ | ✓ | ✓ |
+| **คลัง** | MM-IM | คลังสินค้า / Batch & Serial Tracking | ✓ | ✓ | ✓ | ✓ |
+| | MM-SC | Stock Count / Cycle Count | ✓ | ✓ | ✓ | ✓ |
+| | MM-PD | สินค้า / SKU | ✓ | ✓ | ✓ | ✓ |
+| **บุคคล** | HR | พนักงาน / แผนก / เงินเดือน / ลา | ✓ | ✓ | ✓ | ✓ |
+| | HR-POS | Positions / Attendance | ✓ | ✓ | ✓ | ✓ |
+| **CRM** | CRM | ทะเบียนลูกค้า + ผู้ขาย | ✓ | ✓ | ✓ | ✓ |
+| **รายงาน** | RPT | งบทดลอง, กำไรขาดทุน, งบดุล, Cash Flow, Custom Report Builder | ✓ | ✓ | ✓ | ✓ |
+| **แดชบอร์ด** | DASH | ภาพรวมธุรกิจ | ✓ | ✓ | ✓ | ✓ |
+| **ตรวจสอบ** | AUDIT | บันทึกทุกการเปลี่ยนแปลง / Approval Chains | ✓ | ✓ | ✓ | ✓ |
+| **AI** | AI | 8 AI Agents (ดูรายละเอียดด้านล่าง) | ✓ | ✓ | ✓ | ✓ |
+
+### 8 AI Agents
+
+| Agent | ทำอะไร |
+|-------|--------|
+| **Anomaly Detection** | ตรวจจับรายการผิดปกติอัตโนมัติ |
+| **Cash Flow Forecast** | พยากรณ์กระแสเงินสดล่วงหน้า |
+| **Smart Categorization** | จัดหมวดรายการอัตโนมัติ |
+| **Bank Auto-Reconciliation** | กระทบยอดธนาคารอัตโนมัติ |
+| **NLP Document Parsing** | อ่านเอกสารด้วย AI (invoice, receipt) |
+| **Predictive Analytics** | วิเคราะห์แนวโน้มและ demand planning |
+| **Fraud Detection** | ตรวจจับธุรกรรมต้องสงสัย |
+| **Smart Approval** | แนะนำ approval routing ตาม pattern |
 
 ### วงจรเอกสาร
 
 ```
 ขาย:    ใบเสนอราคา → ใบสั่งขาย → ใบส่งของ → ใบแจ้งหนี้ → รับเงิน → ใบเสร็จ
-ซื้อ:    ใบสั่งซื้อ → บิล → จ่ายเงิน → ใบหัก ณ ที่จ่าย
+ซื้อ:    PR → RFQ → ใบสั่งซื้อ → 3-Way Matching → บิล → จ่ายเงิน → ใบหัก ณ ที่จ่าย
 บัญชี:   บันทึกรายวัน → ผ่านรายการ → งบทดลอง → งบการเงิน → ปิดงวด
-HR:     รับพนักงาน → เงินเดือน → ประกันสังคม → ลา → ลาออก
-คลัง:    สร้างสินค้า → รับเข้า → ขาย → ส่งของ → ตรวจนับ
+HR:     รับพนักงาน → ตำแหน่ง → เงินเดือน → ประกันสังคม → ลา → ลาออก
+คลัง:    สร้างสินค้า → Batch/Serial → รับเข้า → ขาย → ส่งของ → Stock Count
 ```
 
 ---
@@ -128,7 +154,15 @@ PGPASSWORD=neip psql -h localhost -p 5433 -U neip -d neip \
   -f packages/db/migrations/0004_sales_purchase_documents.sql \
   -f packages/db/migrations/0005_financial_modules.sql \
   -f packages/db/migrations/0006_inventory_hr_crm.sql \
-  -f packages/db/migrations/0007_compliance_fixes.sql
+  -f packages/db/migrations/0007_compliance_fixes.sql \
+  -f packages/db/migrations/0008_ar_payment_journal_entry.sql \
+  -f packages/db/migrations/0009_document_flow.sql \
+  -f packages/db/migrations/0010_year_end_closing.sql \
+  -f packages/db/migrations/0011_phase3_core_business.sql \
+  -f packages/db/migrations/0012_phase4_operations.sql \
+  -f packages/db/migrations/0013_enterprise_features.sql \
+  -f packages/db/migrations/0014_ai_analytics.sql \
+  -f packages/db/migrations/0015_fix_audit_findings.sql
 
 # 4. Setup environment
 cp .env.example .env
@@ -145,6 +179,7 @@ pnpm --filter web dev -- -p 3100
 | Web UI | http://localhost:3100 |
 | API Docs (Swagger) | http://localhost:5400/api/docs |
 | CLI Help | `neip --help` |
+| MCP Server | `neip mcp start` |
 
 ---
 
@@ -152,23 +187,25 @@ pnpm --filter web dev -- -p 3100
 
 ```
 ┌─ ใครใช้อะไร ──────────────────────────────┐
-│ 🖥️ Web UI      → บัญชี, การเงิน, admin    │
-│ 🔌 REST API    → Dev, IT, integration     │
-│ ⌨️ CLI         → AI agent, power user     │
+│ 🖥️ Web UI (113+ pages) → บัญชี, การเงิน   │
+│ 🔌 REST API (300+ endpoints) → Dev, IT    │
+│ 🤖 MCP Server (110 tools) → AI Agent     │
+│ ⌨️ CLI (89 commands) → Power User         │
 ├─ API Gateway ─────────────────────────────┤
-│ Fastify 5.8 · 186 endpoints · JWT        │
-│ RBAC 140 permissions · Audit auto-log    │
+│ Fastify 5.8 · 300+ endpoints · JWT       │
+│ RBAC 140+ permissions · Audit auto-log   │
 ├─ Shared Logic ────────────────────────────┤
 │ @neip/shared · @neip/core · @neip/db    │
-│ @neip/ai · @neip/tax                    │
+│ @neip/ai · @neip/tax · @neip/mcp        │
 ├─ Business Modules (31 modules) ──────────┤
 │ Finance · Sales · Purchase · Inventory   │
 │ HR · Controlling · CRM · Reports         │
-├─ AI Layer ────────────────────────────────┤
-│ BaseAgent · HITL · Confidence Zones      │
+├─ AI Layer (8 agents) ────────────────────┤
+│ Anomaly · Forecast · Categorization      │
+│ Auto-Reconcile · NLP Parse · Predict     │
 ├─ Infrastructure ──────────────────────────┤
-│ PostgreSQL 17 · 58 tables · RLS         │
-│ pg-boss · Docker · Pino                 │
+│ PostgreSQL 17 · 100+ tables · RLS        │
+│ pg-boss · Docker · Pino                  │
 └───────────────────────────────────────────┘
 ```
 
@@ -178,8 +215,11 @@ pnpm --filter web dev -- -p 3100
 |--------|-----------|
 | VAT | 7% round-half-up ตามกรมสรรพากร |
 | WHT | 8 ประเภทรายได้ พร้อมออก ภ.ง.ด.3/53 |
-| ประกันสังคม | 5% สูงสุด 750 บาท |
-| PDPA | ปิดบัง PII, anonymize, audit trail |
+| ภ.พ.30 | แบบยื่นภาษีมูลค่าเพิ่มรายเดือน |
+| 50 ทวิ | หนังสือรับรองการหักภาษี ณ ที่จ่าย |
+| e-Tax Invoice | รองรับ e-Tax Invoice ตามมาตรฐานกรมสรรพากร |
+| ประกันสังคม | 5% สูงสุด 750 บาท + SSC filing |
+| PDPA | ปิดบัง PII, anonymize, consent management, audit trail |
 | ผังบัญชี | มาตรฐาน TFAC สภาวิชาชีพบัญชี |
 | ปี พ.ศ. | รองรับพุทธศักราชในรายงาน |
 | เก็บข้อมูล | 7 ปีตามประมวลรัษฎากร ม.87/3 |
@@ -191,20 +231,22 @@ pnpm --filter web dev -- -p 3100
 | Monorepo | Turborepo + pnpm |
 | API | Fastify 5.8, TypeScript strict |
 | Web | Next.js 15, React 19, Tailwind 4 |
-| CLI | Commander.js |
-| DB | PostgreSQL 17, Drizzle ORM, RLS |
-| AI | BaseAgent, HITL, Confidence Zones |
-| Auth | argon2id, JWT |
+| CLI | Commander.js (89 commands) |
+| MCP | 110 tools, JSON-RPC |
+| DB | PostgreSQL 17, Drizzle ORM, RLS, 100+ tables |
+| AI | 8 Agents, BaseAgent, HITL, Confidence Zones |
+| Auth | argon2id, JWT, RBAC |
 | Queue | pg-boss v12 |
+| Tests | 417 unit tests (Vitest) + 21 E2E specs (Playwright) |
 
 ## แผนต่อไป
 
 - [ ] แก้ Web UI ให้ใช้งานได้ครบทุกหน้า
-- [ ] เพิ่ม E2E tests (Playwright)
-- [ ] พิจารณา MCP Server
-- [ ] เพิ่ม AI agents เฉพาะทาง (cashflow forecast, demand planning)
+- [ ] เพิ่ม E2E tests ให้ครบ flow
 - [ ] Mobile app (React Native)
+- [ ] เพิ่ม AI agents เฉพาะทาง (demand planning, inventory optimization)
 - [ ] Open source core modules
+- [ ] Production deployment guide
 
 ## License
 

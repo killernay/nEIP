@@ -95,7 +95,7 @@ export async function companyRoutes(
   );
 
   // GET /companies
-  fastify.get(
+  fastify.get<{ Querystring: Record<string, string> }>(
     `${API_V1_PREFIX}/companies`,
     {
       schema: { description: 'List companies', tags: ['companies'], security: [{ bearerAuth: [] }] },
@@ -103,10 +103,19 @@ export async function companyRoutes(
     },
     async (request, reply) => {
       const { tenantId } = request.user;
+      const limit = Math.min(Math.max(parseInt(request.query['limit'] ?? '50', 10), 1), 100);
+      const offset = Math.max(parseInt(request.query['offset'] ?? '0', 10), 0);
+
+      const countRows = await fastify.sql<[{ count: string }]>`
+        SELECT COUNT(*)::text as count FROM companies WHERE tenant_id = ${tenantId}
+      `;
+      const total = parseInt(countRows[0]?.count ?? '0', 10);
+
       const rows = await fastify.sql<CompanyRow[]>`
         SELECT * FROM companies WHERE tenant_id = ${tenantId} ORDER BY code
+        LIMIT ${limit} OFFSET ${offset}
       `;
-      return reply.send({ items: rows.map(mapCompany), total: rows.length });
+      return reply.send({ items: rows.map(mapCompany), total, limit, offset, hasMore: offset + limit < total });
     },
   );
 

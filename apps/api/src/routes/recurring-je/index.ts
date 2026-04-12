@@ -105,7 +105,7 @@ export async function recurringJeRoutes(
   );
 
   // GET /recurring-je
-  fastify.get(
+  fastify.get<{ Querystring: Record<string, string> }>(
     `${API_V1_PREFIX}/recurring-je`,
     {
       schema: { description: 'List recurring JE templates', tags: ['gl'], security: [{ bearerAuth: [] }] },
@@ -113,10 +113,19 @@ export async function recurringJeRoutes(
     },
     async (request, reply) => {
       const { tenantId } = request.user;
+      const limit = Math.min(Math.max(parseInt(request.query['limit'] ?? '50', 10), 1), 100);
+      const offset = Math.max(parseInt(request.query['offset'] ?? '0', 10), 0);
+
+      const countRows = await fastify.sql<[{ count: string }]>`
+        SELECT COUNT(*)::text as count FROM recurring_je_templates WHERE tenant_id = ${tenantId}
+      `;
+      const total = parseInt(countRows[0]?.count ?? '0', 10);
+
       const rows = await fastify.sql<TemplateRow[]>`
         SELECT * FROM recurring_je_templates WHERE tenant_id = ${tenantId} ORDER BY next_run_date
+        LIMIT ${limit} OFFSET ${offset}
       `;
-      return reply.send({ items: rows.map(mapTemplate) });
+      return reply.send({ items: rows.map(mapTemplate), total, limit, offset, hasMore: offset + limit < total });
     },
   );
 
@@ -198,9 +207,11 @@ export async function recurringJeRoutes(
   );
 
   // POST /recurring-je/run — execute all pending templates
+  // Rate limit: expensive batch operation
   fastify.post(
     `${API_V1_PREFIX}/recurring-je/run`,
     {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
       schema: { description: 'Execute pending recurring JE templates', tags: ['gl'], security: [{ bearerAuth: [] }] },
       preHandler: [requireAuth, requirePermission(GL_JOURNAL_CREATE)],
     },
@@ -208,11 +219,12 @@ export async function recurringJeRoutes(
       const { tenantId, sub: userId } = request.user;
       const today = new Date().toISOString().slice(0, 10);
 
-      // Get all active templates whose next_run_date <= today
+      // Get all active templates whose next_run_date <= today (capped at 50 per batch)
       const templates = await fastify.sql<TemplateRow[]>`
         SELECT * FROM recurring_je_templates
         WHERE tenant_id = ${tenantId} AND is_active = TRUE AND next_run_date <= ${today}
         ORDER BY next_run_date
+        LIMIT 50
       `;
 
       const created: Array<{ templateId: string; journalEntryId: string }> = [];

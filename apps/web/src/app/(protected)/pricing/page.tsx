@@ -135,7 +135,7 @@ export default function PricingPage(): React.JSX.Element {
                   <td className="px-4 py-3 font-medium">{pl.name}</td>
                   <td className="px-4 py-3 font-mono text-xs">{pl.currency}</td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
-                    {new Date(pl.effectiveFrom).toLocaleDateString('th-TH')}
+                    {pl.effectiveFrom ? new Date(pl.effectiveFrom).toLocaleDateString('th-TH') : '-'}
                   </td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                     {pl.effectiveTo ? new Date(pl.effectiveTo).toLocaleDateString('th-TH') : '—'}

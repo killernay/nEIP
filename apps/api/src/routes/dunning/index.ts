@@ -99,9 +99,11 @@ export async function dunningRoutes(
   );
 
   // POST /dunning/run — find overdue invoices, assign dunning level, create history
+  // Rate limit: expensive batch operation
   fastify.post(
     `${API_V1_PREFIX}/dunning/run`,
     {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
       schema: { description: 'Run dunning process — find overdue invoices and assign levels', tags: ['dunning'], security: [{ bearerAuth: [] }] },
       preHandler: [requireAuth, requirePermission(DUNNING_MANAGE)],
     },
@@ -125,6 +127,7 @@ export async function dunningRoutes(
           AND status IN ('posted', 'sent', 'partial', 'overdue')
           AND due_date < ${today}
         ORDER BY due_date ASC
+        LIMIT 100
       `;
 
       let processed = 0;

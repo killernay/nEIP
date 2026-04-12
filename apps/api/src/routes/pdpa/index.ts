@@ -235,9 +235,26 @@ export async function pdpaRoutes(
           'bank_account_number', 'date_of_birth', 'title_th', 'nickname', 'notes',
         );
 
+        // M-10 FIX: Also anonymize WHT certificates referencing this employee's tax ID
+        const empTaxInfo = await fastify.sql<[{ tax_id: string | null }?]>`
+          SELECT tax_id FROM employees WHERE id = ${subjectId} AND tenant_id = ${tenantId} LIMIT 1
+        `;
+        const empTaxId = empTaxInfo[0]?.tax_id;
+        if (empTaxId) {
+          await fastify.sql`
+            UPDATE wht_certificates SET
+              payee_name    = '[REDACTED]',
+              payee_tax_id  = '0000000000000',
+              payee_address = '[REDACTED]',
+              updated_at    = NOW()
+            WHERE payee_tax_id = ${empTaxId} AND tenant_id = ${tenantId}
+          `;
+          anonymizedFields.push('wht_certificates.payee_name', 'wht_certificates.payee_tax_id', 'wht_certificates.payee_address');
+        }
+
       } else if (subjectType === 'contact') {
-        const existing = await fastify.sql<[{ id: string }?]>`
-          SELECT id FROM contacts WHERE id = ${subjectId} AND tenant_id = ${tenantId} LIMIT 1
+        const existing = await fastify.sql<[{ id: string; tax_id: string | null }?]>`
+          SELECT id, tax_id FROM contacts WHERE id = ${subjectId} AND tenant_id = ${tenantId} LIMIT 1
         `;
         if (!existing[0]) throw new NotFoundError({ detail: `Contact ${subjectId} not found.` });
 
@@ -260,6 +277,19 @@ export async function pdpaRoutes(
           'company_name', 'contact_person', 'email', 'phone',
           'tax_id', 'address_line1', 'address_line2', 'city', 'province', 'postal_code',
         );
+
+        // M-10 FIX: Also anonymize WHT certificates referencing this contact's tax ID
+        if (existing[0].tax_id) {
+          await fastify.sql`
+            UPDATE wht_certificates SET
+              payee_name    = '[REDACTED]',
+              payee_tax_id  = '0000000000000',
+              payee_address = '[REDACTED]',
+              updated_at    = NOW()
+            WHERE payee_tax_id = ${existing[0].tax_id} AND tenant_id = ${tenantId}
+          `;
+          anonymizedFields.push('wht_certificates.payee_name', 'wht_certificates.payee_tax_id', 'wht_certificates.payee_address');
+        }
       }
 
       // Record the request

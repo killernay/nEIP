@@ -203,7 +203,7 @@ export async function fiscalRoutes(
       }
 
       // Auto-generate 12 monthly periods.
-      const start = new Date(startDate);
+      const start = new Date(startDate + 'T00:00:00Z');
       const createdPeriods: Array<{
         id: string;
         periodNumber: number;
@@ -214,8 +214,8 @@ export async function fiscalRoutes(
 
       for (let i = 0; i < 12; i++) {
         const periodId = crypto.randomUUID();
-        const periodStart = new Date(start.getFullYear(), start.getMonth() + i, 1);
-        const periodEnd = new Date(start.getFullYear(), start.getMonth() + i + 1, 0);
+        const periodStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, 1));
+        const periodEnd = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i + 1, 0));
 
         await fastify.sql`
           INSERT INTO fiscal_periods (id, fiscal_year_id, period_number, start_date, end_date, status)

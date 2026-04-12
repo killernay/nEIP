@@ -11,6 +11,15 @@
 export type TaxType = 'vat' | 'wht';
 
 /**
+ * VAT applicability classification for tax line items.
+ * - 'standard': subject to standard VAT rate
+ * - 'exempt': VAT-exempt goods/services (ยกเว้นภาษีมูลค่าเพิ่ม)
+ * - 'zero_rated': 0% VAT (e.g. exports)
+ * - 'out_of_scope': outside VAT system
+ */
+export type VatApplicability = 'standard' | 'exempt' | 'zero_rated' | 'out_of_scope';
+
+/**
  * WHT income type categories as defined by the Thai Revenue Department.
  * Each maps to a specific withholding rate.
  */

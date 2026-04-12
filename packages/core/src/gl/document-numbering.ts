@@ -137,6 +137,11 @@ export class DocumentNumberingService {
  * This is suitable for route handlers that use `fastify.sql` instead of Drizzle.
  *
  * Uses advisory locks to ensure gap-free numbering within a connection.
+ *
+ * M-3 NOTE: This function uses pg_advisory_xact_lock which is transaction-scoped.
+ * For gap-free guarantees, callers should invoke this within a BEGIN/COMMIT
+ * transaction block. Without a transaction, the lock is released immediately
+ * and concurrent callers may produce gaps on rollback.
  */
 export async function nextDocNumber(
   sql: { unsafe: (q: string, params?: any[]) => Promise<any[]> },
@@ -194,6 +199,11 @@ export function formatDocumentNumber(
 /**
  * Compute a stable bigint advisory lock key from the composite key.
  * Uses a simple hash to map (tenantId, docType, fiscalYear) → bigint.
+ *
+ * M-2 ADVISORY: This hash function may produce collisions across different
+ * (tenant, docType, year) triples. At SME scale (<100 tenants, <12 doc types)
+ * the collision probability is negligible. For enterprise scale, consider
+ * using a 64-bit hash (e.g. xxhash) or composite pg_advisory_xact_lock(int, int).
  */
 function computeAdvisoryLockKey(
   tenantId: string,

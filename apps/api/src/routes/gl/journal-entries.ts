@@ -219,6 +219,23 @@ export async function journalEntryRoutes(
         });
       }
 
+      // Validate all referenced account IDs exist in chart_of_accounts
+      const accountIds = [...new Set(lines.map((l) => l.accountId))];
+      const accountRows = await fastify.sql<Array<{ id: string }>>`
+        SELECT id FROM chart_of_accounts
+        WHERE id IN ${fastify.sql(accountIds)}
+          AND tenant_id = ${tenantId}
+          AND is_active = true
+      `;
+      const foundIds = new Set(accountRows.map((r) => r.id));
+      const missingIds = accountIds.filter((id) => !foundIds.has(id));
+      if (missingIds.length > 0) {
+        throw new ValidationError({
+          detail: `Account(s) not found in Chart of Accounts: ${missingIds.join(', ')}`,
+          errors: missingIds.map((id) => ({ field: 'lines.accountId', message: `Account ${id} not found.` })),
+        });
+      }
+
       // Check fiscal period is open
       const periodCheck = await fastify.sql<[{ status: string }?]>`
         SELECT fp.status FROM fiscal_periods fp

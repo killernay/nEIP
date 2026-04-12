@@ -12,7 +12,7 @@ import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { API_V1_PREFIX } from '@neip/shared';
 import { requireAuth } from '../../hooks/require-auth.js';
 import { requirePermission } from '../../hooks/require-permission.js';
-import { REPORT_GL_READ } from '../../lib/permissions.js';
+import { REPORT_GL_READ, DASHBOARD_CONFIG_READ } from '../../lib/permissions.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -212,7 +212,7 @@ export async function dashboardDrilldownRoutes(
           },
         },
       },
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, requirePermission(DASHBOARD_CONFIG_READ)],
     },
     async (request, reply) => {
       const { tenantId } = request.user;

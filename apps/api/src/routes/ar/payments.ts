@@ -170,9 +170,15 @@ async function updateInvoiceAfterPayment(
   const inv = invRows[0];
   if (!inv) return;
 
-  const totalSatang = BigInt(inv.total_satang);
+  // M-4 FIX: Compare against grandTotal (subtotal + VAT), not just subtotal
+  const subTotalSatang = BigInt(inv.total_satang);
+  const vatScaled = subTotalSatang * 700n;
+  const vatQuotient = vatScaled / 10000n;
+  const vatRemainder = vatScaled % 10000n;
+  const vatAmount = vatRemainder * 2n >= 10000n ? vatQuotient + 1n : vatQuotient;
+  const grandTotalSatang = subTotalSatang + vatAmount;
   let newStatus: string;
-  if (paidSatang >= totalSatang) {
+  if (paidSatang >= grandTotalSatang) {
     newStatus = 'paid';
   } else if (paidSatang > 0n) {
     newStatus = 'partial';
@@ -551,10 +557,7 @@ export async function paymentRoutes(
       await fastify.sql`
         UPDATE ar_payments SET status = 'voided', updated_at = NOW()
         WHERE id = ${id} AND tenant_id = ${tenantId}
-      `.catch(() => fastify.sql`
-        UPDATE ar_payments SET status = 'voided'
-        WHERE id = ${id} AND tenant_id = ${tenantId}
-      `);
+      `;
 
       // Update each linked invoice
       for (const link of links) {

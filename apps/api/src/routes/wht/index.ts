@@ -39,9 +39,9 @@ const createWhtSchema = {
   properties: {
     certificateType: { type: 'string', enum: ['pnd3', 'pnd53'] },
     payerName: { type: 'string', minLength: 1, maxLength: 255 },
-    payerTaxId: { type: 'string', minLength: 13, maxLength: 13 },
+    payerTaxId: { type: 'string', pattern: '^[0-9]{13}$' },
     payeeName: { type: 'string', minLength: 1, maxLength: 255 },
-    payeeTaxId: { type: 'string', minLength: 13, maxLength: 13 },
+    payeeTaxId: { type: 'string', pattern: '^[0-9]{13}$' },
     payeeAddress: { type: 'string', minLength: 1, maxLength: 1000 },
     incomeType: { type: 'string', minLength: 1, maxLength: 10 },
     incomeDescription: { type: 'string', minLength: 1, maxLength: 500 },
@@ -536,6 +536,9 @@ export async function whtRoutes(
 
   // -------------------------------------------------------------------------
   // POST /api/v1/wht/annual-certificate — 50 ทวิ Annual Tax Certificate
+  // M-13 TODO: Currently only aggregates employee payroll WHT. Future enhancement
+  // should also aggregate vendor WHT certificates (pnd3/pnd53) for a given payee
+  // tax ID, so that 50 ทวิ covers both employment income and vendor payments.
   // -------------------------------------------------------------------------
   fastify.post<{ Body: { employeeId: string; taxYear: number } }>(
     `${API_V1_PREFIX}/wht/annual-certificate`,

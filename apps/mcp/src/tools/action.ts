@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { apiCall } from '../api.js';
+import { wrapTool } from './wrap-tool.js';
 
 export function registerActionTools(server: McpServer): void {
   // ---------------------------------------------------------------------------
@@ -10,17 +11,8 @@ export function registerActionTools(server: McpServer): void {
   server.tool(
     'post_invoice',
     'Post ใบแจ้งหนี้ (draft → posted) — Post an invoice, creating journal entries',
-    {
-      invoiceId: z.string().describe('Invoice ID to post'),
-    },
-    async ({ invoiceId }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', `/invoices/${invoiceId}/post`);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    { invoiceId: z.string().describe('Invoice ID to post') },
+    wrapTool(({ invoiceId }) => apiCall('POST', `/invoices/${invoiceId}/post`)),
   );
 
   // ---------------------------------------------------------------------------
@@ -30,17 +22,8 @@ export function registerActionTools(server: McpServer): void {
   server.tool(
     'void_invoice',
     'ยกเลิกใบแจ้งหนี้ — Void an invoice, preventing further payment',
-    {
-      invoiceId: z.string().describe('Invoice ID to void'),
-    },
-    async ({ invoiceId }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', `/invoices/${invoiceId}/void`);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    { invoiceId: z.string().describe('Invoice ID to void') },
+    wrapTool(({ invoiceId }) => apiCall('POST', `/invoices/${invoiceId}/void`)),
   );
 
   // ---------------------------------------------------------------------------
@@ -50,17 +33,8 @@ export function registerActionTools(server: McpServer): void {
   server.tool(
     'post_bill',
     'Post บิล (draft → posted) — Post a bill, creating journal entries',
-    {
-      billId: z.string().describe('Bill ID to post'),
-    },
-    async ({ billId }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', `/bills/${billId}/post`);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    { billId: z.string().describe('Bill ID to post') },
+    wrapTool(({ billId }) => apiCall('POST', `/bills/${billId}/post`)),
   );
 
   // ---------------------------------------------------------------------------
@@ -70,17 +44,8 @@ export function registerActionTools(server: McpServer): void {
   server.tool(
     'close_fiscal_period',
     'ปิดงวดบัญชี — Close a fiscal period to prevent further postings',
-    {
-      periodId: z.string().describe('Fiscal period ID to close'),
-    },
-    async ({ periodId }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', `/fiscal-periods/${periodId}/close`);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    { periodId: z.string().describe('Fiscal period ID to close') },
+    wrapTool(({ periodId }) => apiCall('POST', `/fiscal-periods/${periodId}/close`)),
   );
 
   // ---------------------------------------------------------------------------
@@ -94,16 +59,9 @@ export function registerActionTools(server: McpServer): void {
       fiscalYear: z.number().describe('Fiscal year (e.g. 2026)'),
       fiscalPeriod: z.number().describe('Fiscal period number (1-12)'),
     },
-    async ({ fiscalYear, fiscalPeriod }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', '/month-end/close', {
-          fiscalYear, fiscalPeriod,
-        });
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    wrapTool(({ fiscalYear, fiscalPeriod }) =>
+      apiCall('POST', '/month-end/close', { fiscalYear, fiscalPeriod }),
+    ),
   );
 
   // ---------------------------------------------------------------------------
@@ -113,17 +71,8 @@ export function registerActionTools(server: McpServer): void {
   server.tool(
     'close_fiscal_year',
     'ปิดปีบัญชี — Close a fiscal year (year-end close)',
-    {
-      fiscalYearId: z.string().describe('Fiscal year ID to close'),
-    },
-    async ({ fiscalYearId }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', `/fiscal-years/${fiscalYearId}/close`);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    { fiscalYearId: z.string().describe('Fiscal year ID to close') },
+    wrapTool(({ fiscalYearId }) => apiCall('POST', `/fiscal-years/${fiscalYearId}/close`)),
   );
 
   // ---------------------------------------------------------------------------
@@ -133,17 +82,8 @@ export function registerActionTools(server: McpServer): void {
   server.tool(
     'reopen_fiscal_year',
     'เปิดปีบัญชีอีกครั้ง — Reopen a closed fiscal year',
-    {
-      fiscalYearId: z.string().describe('Fiscal year ID to reopen'),
-    },
-    async ({ fiscalYearId }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', `/fiscal-years/${fiscalYearId}/reopen`);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    { fiscalYearId: z.string().describe('Fiscal year ID to reopen') },
+    wrapTool(({ fiscalYearId }) => apiCall('POST', `/fiscal-years/${fiscalYearId}/reopen`)),
   );
 
   // ---------------------------------------------------------------------------
@@ -157,16 +97,9 @@ export function registerActionTools(server: McpServer): void {
       asOfDate: z.string().optional().describe('As-of date (YYYY-MM-DD), defaults to today'),
       customerId: z.string().optional().describe('Run for specific customer only'),
     },
-    async ({ asOfDate, customerId }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', '/dunning/run', {
-          asOfDate, customerId,
-        });
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    wrapTool(({ asOfDate, customerId }) =>
+      apiCall('POST', '/dunning/run', { asOfDate, customerId }),
+    ),
   );
 
   // ---------------------------------------------------------------------------
@@ -180,16 +113,9 @@ export function registerActionTools(server: McpServer): void {
       templateId: z.string().optional().describe('Specific template ID (omit to run all due)'),
       postingDate: z.string().optional().describe('Posting date (YYYY-MM-DD), defaults to today'),
     },
-    async ({ templateId, postingDate }) => {
-      try {
-        const data = await apiCall<Record<string, unknown>>('POST', '/recurring-journal-entries/run', {
-          templateId, postingDate,
-        });
-        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-      } catch (e) {
-        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
-      }
-    },
+    wrapTool(({ templateId, postingDate }) =>
+      apiCall('POST', '/recurring-journal-entries/run', { templateId, postingDate }),
+    ),
   );
 
   // ---------------------------------------------------------------------------

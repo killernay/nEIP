@@ -76,9 +76,11 @@ export async function aiHandlers(
   // -------------------------------------------------------------------------
   // POST /api/v1/ai/anomaly-scan?period=YYYY-MM
   // -------------------------------------------------------------------------
+  // Rate limit: expensive AI operation
   fastify.post<{ Querystring: AnomalyScanQuery }>(
     `${API_V1_PREFIX}/ai/anomaly-scan`,
     {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
       schema: {
         description: 'Run anomaly detection on journal entries for a period',
         tags: ['ai'],
@@ -464,9 +466,11 @@ export async function aiHandlers(
   // -------------------------------------------------------------------------
   // POST /api/v1/ai/parse-document
   // -------------------------------------------------------------------------
+  // Rate limit: expensive AI operation
   fastify.post(
     `${API_V1_PREFIX}/ai/parse-document`,
     {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
       schema: {
         description: 'Parse a document (invoice/receipt) using NLP',
         tags: ['ai'],

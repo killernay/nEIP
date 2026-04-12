@@ -10,6 +10,7 @@
 import type {
   TaxLineBreakdown,
   TransactionTaxBreakdown,
+  VatApplicability,
   WhtIncomeType,
 } from './types.js';
 import { calculateVATDirect } from './vat.js';
@@ -38,8 +39,8 @@ export interface TaxLineInput {
   readonly lineRef: string;
   /** Amount in satang (before tax). */
   readonly amountSatang: bigint;
-  /** Whether VAT applies to this line. */
-  readonly vatApplicable: boolean;
+  /** VAT applicability: 'standard' = taxable, others = exempt from VAT. */
+  readonly vatApplicable: VatApplicability;
   /** WHT income type, or null if WHT does not apply. */
   readonly whtIncomeType: WhtIncomeType | null;
 }
@@ -79,8 +80,8 @@ export async function calculateTransactionTax(
     let whtResult = null;
     let lineNet = line.amountSatang;
 
-    // VAT calculation
-    if (line.vatApplicable) {
+    // VAT calculation — only 'standard' classification is taxable
+    if (line.vatApplicable === 'standard') {
       const { rateBasisPoints, effectiveFrom } = await rateService.getVatRate(
         tenantId,
         transactionDate,

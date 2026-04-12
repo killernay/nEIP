@@ -29,14 +29,16 @@ interface CashFlowData {
 export default function CashFlowReportPage(): React.JSX.Element {
   const [data, setData] = useState<CashFlowData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = useCallback(async (fiscalYear: string, period: string) => {
     setLoading(true);
+    setError(null);
     try {
       const result = await api.get<CashFlowData>('/reports/cash-flow', { fiscalYear, period });
       setData(result);
-    } catch {
-      // Handled by api-client
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate cash flow report. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -49,7 +51,11 @@ export default function CashFlowReportPage(): React.JSX.Element {
       loading={loading}
       onGenerate={handleGenerate}
     >
-      {data ? (
+      {error ? (
+        <div className="mx-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+          {error}
+        </div>
+      ) : data ? (
         <div className="space-y-6">
           {/* Summary */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

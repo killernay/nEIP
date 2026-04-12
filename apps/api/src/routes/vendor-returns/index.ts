@@ -70,7 +70,7 @@ export async function vendorReturnRoutes(
           properties: {
             vendorId: { type: 'string' },
             poId: { type: 'string' },
-            reason: { type: 'string' },
+            reason: { type: 'string', maxLength: 2000 },
             lines: {
               type: 'array',
               minItems: 1,
@@ -122,7 +122,7 @@ export async function vendorReturnRoutes(
   );
 
   // GET /vendor-returns
-  fastify.get(
+  fastify.get<{ Querystring: Record<string, string> }>(
     `${API_V1_PREFIX}/vendor-returns`,
     {
       schema: { description: 'List vendor returns', tags: ['vendor-returns'], security: [{ bearerAuth: [] }] },
@@ -130,10 +130,19 @@ export async function vendorReturnRoutes(
     },
     async (request, reply) => {
       const { tenantId } = request.user;
+      const limit = Math.min(Math.max(parseInt(request.query['limit'] ?? '50', 10), 1), 100);
+      const offset = Math.max(parseInt(request.query['offset'] ?? '0', 10), 0);
+
+      const countRows = await fastify.sql<[{ count: string }]>`
+        SELECT COUNT(*)::text as count FROM vendor_returns WHERE tenant_id = ${tenantId}
+      `;
+      const total = parseInt(countRows[0]?.count ?? '0', 10);
+
       const rows = await fastify.sql<VendorReturnRow[]>`
         SELECT * FROM vendor_returns WHERE tenant_id = ${tenantId} ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
       `;
-      return reply.send({ items: rows.map(mapReturn), total: rows.length });
+      return reply.send({ items: rows.map(mapReturn), total, limit, offset, hasMore: offset + limit < total });
     },
   );
 
