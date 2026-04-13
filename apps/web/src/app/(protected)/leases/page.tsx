@@ -120,8 +120,8 @@ export default function LeasesPage(): React.JSX.Element {
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{l.assetDescription}</td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(l.startDate).toLocaleDateString('th-TH')}</td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(l.endDate).toLocaleDateString('th-TH')}</td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={l.monthlyPaymentSatang} /></td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={l.rouAssetSatang} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(l.monthlyPaymentSatang)} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(l.rouAssetSatang)} /></td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${l.status === 'active' ? 'bg-green-100 text-green-800' : l.status === 'expired' ? 'bg-gray-100 text-gray-600' : 'bg-red-100 text-red-800'}`}>
                       {l.status}

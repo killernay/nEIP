@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Eye, Plus, PhoneCall } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { useApi } from '@/lib/hooks';
 import { api } from '@/lib/api-client';
@@ -46,7 +45,6 @@ const STATUS_OPTIONS = [
 // ---------------------------------------------------------------------------
 
 export default function CollectionsPage(): React.JSX.Element {
-  const router = useRouter();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [promiseId, setPromiseId] = useState<string | null>(null);
@@ -119,7 +117,7 @@ export default function CollectionsPage(): React.JSX.Element {
                       {c.overdueDays}d
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={c.amountDueSatang} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(c.amountDueSatang)} /></td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{c.promiseDate ?? '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${c.status === 'open' ? 'bg-yellow-100 text-yellow-800' : c.status === 'promised' ? 'bg-blue-100 text-blue-800' : c.status === 'collected' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>

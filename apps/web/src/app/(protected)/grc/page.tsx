@@ -1,9 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Eye, Plus, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Eye, Plus, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { useApi } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
@@ -49,7 +48,6 @@ const STATUS_OPTIONS = [
 // ---------------------------------------------------------------------------
 
 export default function GRCPage(): React.JSX.Element {
-  const router = useRouter();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
 

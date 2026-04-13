@@ -5,7 +5,6 @@ import { Boxes, AlertTriangle } from 'lucide-react';
 
 import { useApi } from '@/lib/hooks';
 import { api } from '@/lib/api-client';
-import { Button } from '@/components/ui/button';
 import { SkeletonRow } from '@/components/ui/skeleton';
 import { showToast } from '@/components/ui/toast';
 

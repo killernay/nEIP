@@ -95,8 +95,8 @@ export default function RevenuePage(): React.JSX.Element {
                 <tr key={c.id} className="border-b border-[var(--color-border)] transition-colors hover:bg-[var(--color-accent)]/30">
                   <td className="px-4 py-3 font-medium font-mono text-xs">{c.contractNumber}</td>
                   <td className="px-4 py-3">{c.customerName}</td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={c.totalPriceSatang} /></td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={c.recognizedSatang} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(c.totalPriceSatang)} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(c.recognizedSatang)} /></td>
                   <td className="px-4 py-3 text-right font-mono">{c.obligationCount}</td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(c.startDate).toLocaleDateString('th-TH')}</td>
                   <td className="px-4 py-3">

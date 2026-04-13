@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Eye, Plus, Play, FileCheck } from 'lucide-react';
+import { Eye, Plus, Play } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -114,7 +114,7 @@ export default function BatchPaymentsPage(): React.JSX.Element {
                 <tr key={b.id} className="border-b border-[var(--color-border)] transition-colors hover:bg-[var(--color-accent)]/30">
                   <td className="px-4 py-3 font-medium font-mono text-xs">{b.batchNumber}</td>
                   <td className="px-4 py-3 text-right font-mono">{b.paymentCount}</td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={b.totalSatang} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(b.totalSatang)} /></td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{b.paymentMethod}</td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(b.createdAt).toLocaleDateString('th-TH')}</td>
                   <td className="px-4 py-3">

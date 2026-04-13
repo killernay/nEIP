@@ -110,7 +110,7 @@ export default function ServicesPage(): React.JSX.Element {
                   <td className="px-4 py-3">{e.vendorName}</td>
                   <td className="px-4 py-3 font-mono text-xs text-[var(--color-muted-foreground)]">{e.purchaseOrderNumber}</td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)] max-w-[200px] truncate">{e.description}</td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={e.totalSatang} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(e.totalSatang)} /></td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(e.entryDate).toLocaleDateString('th-TH')}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${e.status === 'approved' ? 'bg-green-100 text-green-800' : e.status === 'submitted' ? 'bg-blue-100 text-blue-800' : e.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600'}`}>

@@ -104,8 +104,8 @@ export default function DeclarationsPage(): React.JSX.Element {
                   </td>
                   <td className="px-4 py-3">{d.partnerName}</td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{d.country}</td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={d.totalValueSatang} /></td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={d.dutyAmountSatang} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(d.totalValueSatang)} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(d.dutyAmountSatang)} /></td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(d.declarationDate).toLocaleDateString('th-TH')}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${d.status === 'cleared' ? 'bg-green-100 text-green-800' : d.status === 'held' ? 'bg-red-100 text-red-800' : d.status === 'submitted' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>

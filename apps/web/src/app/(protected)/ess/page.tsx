@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, FileText, Calendar, Clock } from 'lucide-react';
+import { User, FileText, Calendar } from 'lucide-react';
 
 import { useApi } from '@/lib/hooks';
 import { SkeletonRow } from '@/components/ui/skeleton';
@@ -115,8 +115,8 @@ export default function ESSPage(): React.JSX.Element {
                   {payslips.map((p) => (
                     <tr key={p.id} className="border-b border-[var(--color-border)] transition-colors hover:bg-[var(--color-accent)]/30">
                       <td className="px-4 py-3 font-medium">{p.period}</td>
-                      <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={p.grossSatang} /></td>
-                      <td className="px-4 py-3 text-right font-medium"><MoneyDisplay amountSatang={p.netSatang} /></td>
+                      <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(p.grossSatang)} /></td>
+                      <td className="px-4 py-3 text-right font-medium"><MoneyDisplay amount={BigInt(p.netSatang)} /></td>
                       <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(p.paidDate).toLocaleDateString('th-TH')}</td>
                     </tr>
                   ))}

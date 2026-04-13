@@ -114,7 +114,7 @@ export default function OnboardingPage(): React.JSX.Element {
           })}
         </div>
         <p className="text-center text-sm font-medium text-[var(--color-foreground)]">
-          Step {step + 1}: {STEPS[step].label}
+          Step {step + 1}: {STEPS[step]?.label ?? ''}
         </p>
 
         {/* Step Content */}

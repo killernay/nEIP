@@ -104,8 +104,8 @@ export default function DownPaymentsPage(): React.JSX.Element {
                 <tr key={dp.id} className="border-b border-[var(--color-border)] transition-colors hover:bg-[var(--color-accent)]/30">
                   <td className="px-4 py-3 font-medium font-mono text-xs">{dp.requestNumber}</td>
                   <td className="px-4 py-3">{dp.partnerName}</td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={dp.amountSatang} /></td>
-                  <td className="px-4 py-3 text-right"><MoneyDisplay amountSatang={dp.appliedSatang} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(dp.amountSatang)} /></td>
+                  <td className="px-4 py-3 text-right"><MoneyDisplay amount={BigInt(dp.appliedSatang)} /></td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(dp.createdAt).toLocaleDateString('th-TH')}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${dp.status === 'open' ? 'bg-yellow-100 text-yellow-800' : dp.status === 'partial' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>

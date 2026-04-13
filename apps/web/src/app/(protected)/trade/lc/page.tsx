@@ -107,7 +107,7 @@ export default function LettersOfCreditPage(): React.JSX.Element {
                   <td className="px-4 py-3">{lc.issuingBank}</td>
                   <td className="px-4 py-3">{lc.beneficiary}</td>
                   <td className="px-4 py-3 text-right">
-                    <MoneyDisplay amountSatang={lc.amountSatang} />
+                    <MoneyDisplay amount={BigInt(lc.amountSatang)} />
                     <span className="ml-1 text-xs text-[var(--color-muted-foreground)]">{lc.currency}</span>
                   </td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{new Date(lc.issueDate).toLocaleDateString('th-TH')}</td>
