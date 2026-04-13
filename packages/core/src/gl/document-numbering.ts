@@ -35,7 +35,9 @@ export type DocType =
   | 'wht'
   | 'bill_payment'
   | 'maintenance_order'
-  | 'service_entry_sheet';
+  | 'service_entry_sheet'
+  | 'lease'
+  | 'revenue_contract';
 
 /** Default prefix mapping per document type. */
 const DOC_TYPE_PREFIXES: Record<DocType, string> = {
@@ -53,6 +55,8 @@ const DOC_TYPE_PREFIXES: Record<DocType, string> = {
   bill_payment: 'BP',
   maintenance_order: 'MO',
   service_entry_sheet: 'SES',
+  lease: 'LSE',
+  revenue_contract: 'RC',
 };
 
 // ---------------------------------------------------------------------------

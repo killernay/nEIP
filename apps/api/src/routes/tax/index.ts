@@ -12,10 +12,12 @@
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { taxRateRoutes } from './tax-rates.js';
+import { deferredTaxRoutes } from './deferred-tax.js';
 
 export async function taxRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ): Promise<void> {
   await fastify.register(taxRateRoutes);
+  await fastify.register(deferredTaxRoutes);
 }

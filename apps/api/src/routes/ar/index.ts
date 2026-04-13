@@ -48,6 +48,7 @@ import { creditNoteRoutes } from '../credit-notes/index.js';
 import { collectionRoutes } from './collections.js';
 import { arDownPaymentRoutes } from './down-payments.js';
 import { proformaRoutes } from './proforma.js';
+import { eTaxRoutes } from './e-tax.js';
 
 export async function arRoutes(
   fastify: FastifyInstance,
@@ -62,4 +63,5 @@ export async function arRoutes(
   await fastify.register(collectionRoutes);
   await fastify.register(arDownPaymentRoutes);
   await fastify.register(proformaRoutes);
+  await fastify.register(eTaxRoutes);
 }

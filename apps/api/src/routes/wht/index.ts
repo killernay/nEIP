@@ -20,6 +20,7 @@ import {
   FI_WHT_ISSUE,
   FI_WHT_VOID,
   FI_WHT_FILE,
+  FI_WHT_EFILE,
 } from '../../lib/permissions.js';
 import { nextDocNumber } from '@neip/core';
 
@@ -685,6 +686,95 @@ export async function whtRoutes(
         WHERE id = ${id} RETURNING *
       `;
       return reply.status(200).send(mapWht(rows[0]));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/wht/e-filing-data — e-WHT data for Revenue Department filing
+  // -------------------------------------------------------------------------
+  fastify.get<{ Querystring: { year: number; month: number; type: string } }>(
+    `${API_V1_PREFIX}/wht/e-filing-data`,
+    {
+      schema: {
+        description: 'Generate structured e-WHT filing data for Revenue Department e-Filing (ภ.ง.ด.3/53)',
+        tags: ['wht', 'thai-compliance'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          required: ['year', 'month', 'type'],
+          properties: {
+            year: { type: 'integer', minimum: 2000 },
+            month: { type: 'integer', minimum: 1, maximum: 12 },
+            type: { type: 'string', enum: ['pnd3', 'pnd53'] },
+          },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(FI_WHT_EFILE)],
+    },
+    async (request, reply) => {
+      const { tenantId } = request.user;
+      const { year, month, type: certType } = request.query;
+
+      // Fetch all non-voided certs for the period
+      const certs = await fastify.sql<WhtRow[]>`
+        SELECT * FROM wht_certificates
+        WHERE tenant_id = ${tenantId}
+          AND certificate_type = ${certType}
+          AND tax_year = ${year}
+          AND tax_month = ${month}
+          AND status != 'voided'
+        ORDER BY document_number ASC
+      `;
+
+      // Fetch payer (tenant) info
+      interface TenantInfo { company_name: string | null; tax_id: string | null; branch_number: string | null; address: string | null; }
+      const tenantRows = await fastify.sql<[TenantInfo?]>`
+        SELECT company_name, tax_id, branch_number, address FROM tenants WHERE id = ${tenantId} LIMIT 1
+      `;
+      const tenant = tenantRows[0];
+
+      // Build e-filing structure
+      let totalIncome = 0n;
+      let totalWht = 0n;
+
+      const records = certs.map((cert, idx) => {
+        totalIncome += cert.income_amount_satang;
+        totalWht += cert.wht_amount_satang;
+
+        return {
+          sequenceNo: idx + 1,
+          documentNumber: cert.document_number,
+          payeeTaxId: cert.payee_tax_id,
+          payeeBranch: '00000', // default head office
+          payeeName: cert.payee_name,
+          payeeAddress: cert.payee_address,
+          paymentDate: cert.payment_date,
+          incomeType: cert.income_type,
+          incomeDescription: cert.income_description,
+          incomeAmountSatang: cert.income_amount_satang.toString(),
+          whtRatePercent: (cert.wht_rate_basis_points / 100).toFixed(2),
+          whtAmountSatang: cert.wht_amount_satang.toString(),
+          condition: 1, // 1 = หักภาษี ณ ที่จ่าย (withholding at source)
+        };
+      });
+
+      return reply.status(200).send({
+        formType: certType === 'pnd3' ? 'ภ.ง.ด.3' : 'ภ.ง.ด.53',
+        filingPeriod: { year, month },
+        payer: {
+          companyName: tenant?.company_name ?? null,
+          taxId: tenant?.tax_id ?? null,
+          branchNumber: tenant?.branch_number ?? '00000',
+          address: tenant?.address ?? null,
+        },
+        records,
+        summary: {
+          totalRecords: records.length,
+          totalIncomeSatang: totalIncome.toString(),
+          totalWhtSatang: totalWht.toString(),
+        },
+        generatedAt: new Date().toISOString(),
+      });
     },
   );
 }

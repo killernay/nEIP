@@ -357,3 +357,131 @@ export type { ModuleRegistry, NewModuleRegistry } from './module-registry.js';
 
 export { tenant_modules } from './tenant-modules.js';
 export type { TenantModule, NewTenantModule } from './tenant-modules.js';
+
+// ---------------------------------------------------------------------------
+// SAP-gap Phase 2 — Finance + Controlling HIGH gaps
+// ---------------------------------------------------------------------------
+
+export { vendor_evaluations } from './vendor-evaluations.js';
+export type { VendorEvaluation, NewVendorEvaluation } from './vendor-evaluations.js';
+
+export { ar_disputes } from './ar-disputes.js';
+export type { ArDispute, NewArDispute } from './ar-disputes.js';
+
+export { standard_costs } from './standard-costs.js';
+export type { StandardCost, NewStandardCost } from './standard-costs.js';
+
+export { material_ledger_entries } from './material-ledger-entries.js';
+export type { MaterialLedgerEntry, NewMaterialLedgerEntry } from './material-ledger-entries.js';
+
+export { wip_valuations } from './wip-valuations.js';
+export type { WipValuation, NewWipValuation } from './wip-valuations.js';
+
+export { cost_allocation_rules } from './cost-allocation-rules.js';
+export type { CostAllocationRule, NewCostAllocationRule } from './cost-allocation-rules.js';
+
+export { internal_orders } from './internal-orders.js';
+export type { InternalOrder, NewInternalOrder } from './internal-orders.js';
+
+export { transfer_pricing_rules } from './transfer-pricing-rules.js';
+export type { TransferPricingRule, NewTransferPricingRule } from './transfer-pricing-rules.js';
+
+export { closing_tasks } from './closing-tasks.js';
+export type { ClosingTask, NewClosingTask } from './closing-tasks.js';
+
+// ---------------------------------------------------------------------------
+// MM Gaps — Purchasing Contracts, Scheduling Agreements, STO, Source List, Consignment
+// ---------------------------------------------------------------------------
+
+export { purchasing_contracts } from './purchasing-contracts.js';
+export type { PurchasingContract, NewPurchasingContract } from './purchasing-contracts.js';
+
+export { purchasing_contract_lines } from './purchasing-contract-lines.js';
+export type { PurchasingContractLine, NewPurchasingContractLine } from './purchasing-contract-lines.js';
+
+export { scheduling_agreements } from './scheduling-agreements.js';
+export type { SchedulingAgreement, NewSchedulingAgreement } from './scheduling-agreements.js';
+
+export { stock_transport_orders } from './stock-transport-orders.js';
+export type { StockTransportOrder, NewStockTransportOrder } from './stock-transport-orders.js';
+
+export { source_list } from './source-list.js';
+export type { SourceListEntry, NewSourceListEntry } from './source-list.js';
+
+export { consignment_stock } from './consignment-stock.js';
+export type { ConsignmentStock, NewConsignmentStock } from './consignment-stock.js';
+
+// ---------------------------------------------------------------------------
+// PP Gaps — Kanban, Process Orders, Production Outputs, ECM, Demand Mgmt
+// ---------------------------------------------------------------------------
+
+export { kanban_cards } from './kanban-cards.js';
+export type { KanbanCard, NewKanbanCard } from './kanban-cards.js';
+
+export { process_orders } from './process-orders.js';
+export type { ProcessOrder, NewProcessOrder } from './process-orders.js';
+
+export { production_outputs } from './production-outputs.js';
+export type { ProductionOutput, NewProductionOutput } from './production-outputs.js';
+
+export { engineering_changes } from './engineering-changes.js';
+export type { EngineeringChange, NewEngineeringChange } from './engineering-changes.js';
+
+export { planned_independent_requirements } from './planned-independent-requirements.js';
+export type { PlannedIndependentRequirement, NewPlannedIndependentRequirement } from './planned-independent-requirements.js';
+
+// ---------------------------------------------------------------------------
+// Sales & Distribution — SAP Gap (SD HIGH)
+// ---------------------------------------------------------------------------
+
+export { rebate_agreements } from './rebate-agreements.js';
+export type { RebateAgreement, NewRebateAgreement } from './rebate-agreements.js';
+
+export { rebate_settlements } from './rebate-settlements.js';
+export type { RebateSettlement, NewRebateSettlement } from './rebate-settlements.js';
+
+export { free_goods_rules } from './free-goods-rules.js';
+export type { FreeGoodsRule, NewFreeGoodsRule } from './free-goods-rules.js';
+
+export { billing_plans } from './billing-plans.js';
+export type { BillingPlan, NewBillingPlan } from './billing-plans.js';
+
+export { billing_plan_lines } from './billing-plan-lines.js';
+export type { BillingPlanLine, NewBillingPlanLine } from './billing-plan-lines.js';
+
+export { billing_subscriptions } from './billing-subscriptions.js';
+export type { BillingSubscription, NewBillingSubscription } from './billing-subscriptions.js';
+
+export { contact_partners } from './contact-partners.js';
+export type { ContactPartner, NewContactPartner } from './contact-partners.js';
+
+export { output_rules } from './output-rules.js';
+export type { OutputRule, NewOutputRule } from './output-rules.js';
+
+export { ic_invoices } from './ic-invoices.js';
+export type { IcInvoice, NewIcInvoice } from './ic-invoices.js';
+
+// ---------------------------------------------------------------------------
+// CRITICAL Compliance — IFRS 16, Parallel Accounting, IFRS 15, Deferred Tax
+// ---------------------------------------------------------------------------
+
+export { lease_contracts } from './lease-contracts.js';
+export type { LeaseContract, NewLeaseContract } from './lease-contracts.js';
+
+export { lease_schedules } from './lease-schedules.js';
+export type { LeaseSchedule, NewLeaseSchedule } from './lease-schedules.js';
+
+export { accounting_standards } from './accounting-standards.js';
+export type { AccountingStandard, NewAccountingStandard } from './accounting-standards.js';
+
+export { parallel_ledger_entries } from './parallel-ledger-entries.js';
+export type { ParallelLedgerEntry, NewParallelLedgerEntry } from './parallel-ledger-entries.js';
+
+export { revenue_contracts } from './revenue-contracts.js';
+export type { RevenueContract, NewRevenueContract } from './revenue-contracts.js';
+
+export { performance_obligations } from './performance-obligations.js';
+export type { PerformanceObligation, NewPerformanceObligation } from './performance-obligations.js';
+
+export { deferred_tax_items } from './deferred-tax-items.js';
+export type { DeferredTaxItem, NewDeferredTaxItem } from './deferred-tax-items.js';

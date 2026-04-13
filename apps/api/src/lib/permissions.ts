@@ -379,6 +379,44 @@ export const PP_PRODUCTION_READ    = 'pp:production:read'    as const;
 export const PP_PRODUCTION_UPDATE  = 'pp:production:update'  as const;
 export const PP_MRP_RUN            = 'pp:mrp:run'            as const;
 
+// PP Gap — CRP, Kanban, Process Orders, Co-Products, ECM, Demand Mgmt
+export const PP_CAPACITY_READ      = 'pp:capacity:read'       as const;
+export const PP_KANBAN_CREATE      = 'pp:kanban:create'       as const;
+export const PP_KANBAN_READ        = 'pp:kanban:read'         as const;
+export const PP_KANBAN_UPDATE      = 'pp:kanban:update'       as const;
+export const PP_KANBAN_TRIGGER     = 'pp:kanban:trigger'      as const;
+export const PP_PROC_ORDER_CREATE  = 'pp:process-order:create' as const;
+export const PP_PROC_ORDER_READ    = 'pp:process-order:read'   as const;
+export const PP_PROC_ORDER_UPDATE  = 'pp:process-order:update' as const;
+export const PP_OUTPUT_CREATE      = 'pp:output:create'        as const;
+export const PP_OUTPUT_READ        = 'pp:output:read'          as const;
+export const PP_OUTPUT_UPDATE      = 'pp:output:update'        as const;
+export const PP_ECM_CREATE         = 'pp:ecm:create'           as const;
+export const PP_ECM_READ           = 'pp:ecm:read'             as const;
+export const PP_ECM_APPROVE        = 'pp:ecm:approve'          as const;
+export const PP_ECM_IMPLEMENT      = 'pp:ecm:implement'        as const;
+export const PP_DEMAND_CREATE      = 'pp:demand:create'        as const;
+export const PP_DEMAND_READ        = 'pp:demand:read'          as const;
+export const PP_DEMAND_UPDATE      = 'pp:demand:update'        as const;
+
+// MM Purchasing Gaps — Contracts, Scheduling Agreements, STO, Source List, Consignment
+export const MM_CONTRACT_CREATE    = 'mm:contract:create'      as const;
+export const MM_CONTRACT_READ      = 'mm:contract:read'        as const;
+export const MM_CONTRACT_UPDATE    = 'mm:contract:update'      as const;
+export const MM_CONTRACT_RELEASE   = 'mm:contract:release'     as const;
+export const MM_SCHED_CREATE       = 'mm:sched-agreement:create' as const;
+export const MM_SCHED_READ         = 'mm:sched-agreement:read'   as const;
+export const MM_SCHED_UPDATE       = 'mm:sched-agreement:update' as const;
+export const MM_STO_CREATE         = 'mm:sto:create'           as const;
+export const MM_STO_READ           = 'mm:sto:read'             as const;
+export const MM_STO_UPDATE         = 'mm:sto:update'           as const;
+export const MM_SRC_LIST_CREATE    = 'mm:source-list:create'   as const;
+export const MM_SRC_LIST_READ      = 'mm:source-list:read'     as const;
+export const MM_SRC_LIST_UPDATE    = 'mm:source-list:update'   as const;
+export const MM_CONSIGN_CREATE     = 'mm:consignment:create'   as const;
+export const MM_CONSIGN_READ       = 'mm:consignment:read'     as const;
+export const MM_CONSIGN_UPDATE     = 'mm:consignment:update'   as const;
+
 // ---------------------------------------------------------------------------
 // Project System (PS)
 // ---------------------------------------------------------------------------
@@ -489,6 +527,184 @@ export const AR_DOWN_PAYMENT_MANAGE = 'ar:down-payment:manage' as const;
 // Down Payments (AP)
 export const AP_DOWN_PAYMENT_CREATE = 'ap:down-payment:create' as const;
 export const AP_DOWN_PAYMENT_MANAGE = 'ap:down-payment:manage' as const;
+
+// ---------------------------------------------------------------------------
+// SAP-gap Phase 2 — Finance HIGH gaps
+// ---------------------------------------------------------------------------
+
+export const FI_ASSET_CAPITALIZE          = 'fi:asset:capitalize'          as const;
+export const FI_BANK_IMPORT_MT940         = 'fi:bank:import-mt940'         as const;
+export const AP_VENDOR_EVALUATE           = 'ap:vendor:evaluate'           as const;
+export const AR_INTEREST_RUN              = 'ar:interest:run'              as const;
+export const AR_DISPUTE_CREATE            = 'ar:dispute:create'            as const;
+export const AR_DISPUTE_READ              = 'ar:dispute:read'              as const;
+export const AR_DISPUTE_RESOLVE           = 'ar:dispute:resolve'           as const;
+export const AR_PAYMENT_ADVICE_PROCESS    = 'ar:payment-advice:process'    as const;
+export const FI_CLOSING_MANAGE            = 'fi:closing:manage'            as const;
+export const FI_CLOSING_READ              = 'fi:closing:read'              as const;
+export const REPORT_CONTRIBUTION_MARGIN_READ = 'report:contribution-margin:read' as const;
+
+// ---------------------------------------------------------------------------
+// SAP-gap Phase 2 — Controlling HIGH gaps
+// ---------------------------------------------------------------------------
+
+export const CO_STANDARD_COST_CALCULATE   = 'co:standard-cost:calculate'   as const;
+export const CO_STANDARD_COST_READ        = 'co:standard-cost:read'        as const;
+export const CO_ACTUAL_COST_RUN           = 'co:actual-cost:run'           as const;
+export const CO_ACTUAL_COST_READ          = 'co:actual-cost:read'          as const;
+export const CO_WIP_CALCULATE             = 'co:wip:calculate'             as const;
+export const CO_WIP_READ                  = 'co:wip:read'                  as const;
+export const CO_ALLOCATION_MANAGE         = 'co:allocation:manage'         as const;
+export const CO_ALLOCATION_RUN            = 'co:allocation:run'            as const;
+export const CO_INTERNAL_ORDER_CREATE     = 'co:internal-order:create'     as const;
+export const CO_INTERNAL_ORDER_READ       = 'co:internal-order:read'       as const;
+export const CO_INTERNAL_ORDER_UPDATE     = 'co:internal-order:update'     as const;
+export const CO_INTERNAL_ORDER_SETTLE     = 'co:internal-order:settle'     as const;
+export const CO_TRANSFER_PRICING_MANAGE   = 'co:transfer-pricing:manage'   as const;
+export const CO_TRANSFER_PRICING_READ     = 'co:transfer-pricing:read'     as const;
+
+// ---------------------------------------------------------------------------
+// CRITICAL Compliance — IFRS 16, Parallel Accounting, e-Tax, IFRS 15, Deferred Tax
+// ---------------------------------------------------------------------------
+
+// IFRS 16 Lease Accounting
+export const FI_LEASE_CREATE = 'fi:lease:create' as const;
+export const FI_LEASE_READ   = 'fi:lease:read'   as const;
+export const FI_LEASE_UPDATE = 'fi:lease:update'  as const;
+
+// Parallel Accounting
+export const GL_PARALLEL_CREATE = 'gl:parallel:create' as const;
+export const GL_PARALLEL_READ   = 'gl:parallel:read'   as const;
+
+// e-Tax Invoice XML
+export const AR_ETAX_GENERATE = 'ar:etax:generate' as const;
+
+// Revenue Recognition (IFRS 15)
+export const REV_CONTRACT_CREATE = 'rev:contract:create' as const;
+export const REV_CONTRACT_READ   = 'rev:contract:read'   as const;
+export const REV_CONTRACT_UPDATE = 'rev:contract:update'  as const;
+export const REV_RECOGNIZE       = 'rev:recognize'        as const;
+
+// e-WHT Filing
+export const FI_WHT_EFILE = 'fi:wht:efile' as const;
+
+// Deferred Tax
+export const TAX_DEFERRED_CREATE = 'tax:deferred:create' as const;
+export const TAX_DEFERRED_READ   = 'tax:deferred:read'   as const;
+export const TAX_DEFERRED_UPDATE = 'tax:deferred:update'  as const;
+
+// Bank Payment File Generation
+export const AP_BANK_FILE_GENERATE = 'ap:bank-file:generate' as const;
+
+// ---------------------------------------------------------------------------
+// ESS (Employee Self-Service)
+// ---------------------------------------------------------------------------
+
+export const ESS_PROFILE_READ    = 'ess:profile:read'    as const;
+export const ESS_PROFILE_UPDATE  = 'ess:profile:update'  as const;
+export const ESS_PAYSLIP_READ    = 'ess:payslip:read'    as const;
+export const ESS_LEAVE_READ      = 'ess:leave:read'      as const;
+export const ESS_LEAVE_REQUEST   = 'ess:leave:request'   as const;
+export const ESS_ATTENDANCE_READ = 'ess:attendance:read'  as const;
+
+// ---------------------------------------------------------------------------
+// MSS (Manager Self-Service)
+// ---------------------------------------------------------------------------
+
+export const MSS_TEAM_READ       = 'mss:team:read'       as const;
+export const MSS_APPROVAL_MANAGE = 'mss:approval:manage' as const;
+
+// ---------------------------------------------------------------------------
+// Travel & Expense Management
+// ---------------------------------------------------------------------------
+
+export const HR_TRAVEL_CREATE  = 'hr:travel:create'  as const;
+export const HR_TRAVEL_READ    = 'hr:travel:read'    as const;
+export const HR_TRAVEL_APPROVE = 'hr:travel:approve' as const;
+export const HR_EXPENSE_CREATE = 'hr:expense:create' as const;
+export const HR_EXPENSE_READ   = 'hr:expense:read'   as const;
+export const HR_EXPENSE_APPROVE = 'hr:expense:approve' as const;
+
+// ---------------------------------------------------------------------------
+// Recruitment / ATS
+// ---------------------------------------------------------------------------
+
+export const HR_RECRUITMENT_CREATE = 'hr:recruitment:create' as const;
+export const HR_RECRUITMENT_READ   = 'hr:recruitment:read'   as const;
+export const HR_RECRUITMENT_UPDATE = 'hr:recruitment:update' as const;
+export const HR_RECRUITMENT_MANAGE = 'hr:recruitment:manage' as const;
+
+// ---------------------------------------------------------------------------
+// Performance & Goals
+// ---------------------------------------------------------------------------
+
+export const HR_PERFORMANCE_CREATE = 'hr:performance:create' as const;
+export const HR_PERFORMANCE_READ   = 'hr:performance:read'   as const;
+export const HR_PERFORMANCE_UPDATE = 'hr:performance:update' as const;
+
+// ---------------------------------------------------------------------------
+// Compensation Management
+// ---------------------------------------------------------------------------
+
+export const HR_COMPENSATION_CREATE  = 'hr:compensation:create'  as const;
+export const HR_COMPENSATION_READ    = 'hr:compensation:read'    as const;
+export const HR_COMPENSATION_APPROVE = 'hr:compensation:approve' as const;
+
+// ---------------------------------------------------------------------------
+// Benefits Administration
+// ---------------------------------------------------------------------------
+
+export const HR_BENEFIT_CREATE = 'hr:benefit:create' as const;
+export const HR_BENEFIT_READ   = 'hr:benefit:read'   as const;
+export const HR_BENEFIT_UPDATE = 'hr:benefit:update' as const;
+
+// ---------------------------------------------------------------------------
+// Shift Scheduling
+// ---------------------------------------------------------------------------
+
+export const HR_SHIFT_CREATE = 'hr:shift:create' as const;
+export const HR_SHIFT_READ   = 'hr:shift:read'   as const;
+export const HR_SHIFT_UPDATE = 'hr:shift:update' as const;
+export const HR_SHIFT_ASSIGN = 'hr:shift:assign' as const;
+
+// ---------------------------------------------------------------------------
+// GRC / SoD
+// ---------------------------------------------------------------------------
+
+export const GRC_SOD_CREATE = 'grc:sod:create' as const;
+export const GRC_SOD_READ   = 'grc:sod:read'   as const;
+export const GRC_SOD_CHECK  = 'grc:sod:check'  as const;
+export const REPORT_SOD_READ = 'report:sod:read' as const;
+
+// ---------------------------------------------------------------------------
+// Document Management System (DMS)
+// ---------------------------------------------------------------------------
+
+export const DMS_DOCUMENT_CREATE = 'dms:document:create' as const;
+export const DMS_DOCUMENT_READ   = 'dms:document:read'   as const;
+export const DMS_DOCUMENT_DELETE = 'dms:document:delete' as const;
+
+// ---------------------------------------------------------------------------
+// EDI (Electronic Data Interchange)
+// ---------------------------------------------------------------------------
+
+export const EDI_MESSAGE_CREATE = 'edi:message:create' as const;
+export const EDI_MESSAGE_READ   = 'edi:message:read'   as const;
+
+// ---------------------------------------------------------------------------
+// Data Archiving / Retention
+// ---------------------------------------------------------------------------
+
+export const SYS_ARCHIVE_MANAGE = 'sys:archive:manage' as const;
+export const SYS_ARCHIVE_RUN    = 'sys:archive:run'    as const;
+
+// ---------------------------------------------------------------------------
+// Master Data Governance (MDG)
+// ---------------------------------------------------------------------------
+
+export const MDG_REQUEST_CREATE  = 'mdg:request:create'  as const;
+export const MDG_REQUEST_READ    = 'mdg:request:read'    as const;
+export const MDG_REQUEST_APPROVE = 'mdg:request:approve' as const;
 
 // ---------------------------------------------------------------------------
 // Union type — exhaustive set of all permission strings
@@ -701,6 +917,42 @@ export type Permission =
   | typeof PP_PRODUCTION_READ
   | typeof PP_PRODUCTION_UPDATE
   | typeof PP_MRP_RUN
+  // PP Gap
+  | typeof PP_CAPACITY_READ
+  | typeof PP_KANBAN_CREATE
+  | typeof PP_KANBAN_READ
+  | typeof PP_KANBAN_UPDATE
+  | typeof PP_KANBAN_TRIGGER
+  | typeof PP_PROC_ORDER_CREATE
+  | typeof PP_PROC_ORDER_READ
+  | typeof PP_PROC_ORDER_UPDATE
+  | typeof PP_OUTPUT_CREATE
+  | typeof PP_OUTPUT_READ
+  | typeof PP_OUTPUT_UPDATE
+  | typeof PP_ECM_CREATE
+  | typeof PP_ECM_READ
+  | typeof PP_ECM_APPROVE
+  | typeof PP_ECM_IMPLEMENT
+  | typeof PP_DEMAND_CREATE
+  | typeof PP_DEMAND_READ
+  | typeof PP_DEMAND_UPDATE
+  // MM Purchasing Gaps
+  | typeof MM_CONTRACT_CREATE
+  | typeof MM_CONTRACT_READ
+  | typeof MM_CONTRACT_UPDATE
+  | typeof MM_CONTRACT_RELEASE
+  | typeof MM_SCHED_CREATE
+  | typeof MM_SCHED_READ
+  | typeof MM_SCHED_UPDATE
+  | typeof MM_STO_CREATE
+  | typeof MM_STO_READ
+  | typeof MM_STO_UPDATE
+  | typeof MM_SRC_LIST_CREATE
+  | typeof MM_SRC_LIST_READ
+  | typeof MM_SRC_LIST_UPDATE
+  | typeof MM_CONSIGN_CREATE
+  | typeof MM_CONSIGN_READ
+  | typeof MM_CONSIGN_UPDATE
   // Foreign Trade
   | typeof FT_DECLARATION_CREATE
   | typeof FT_DECLARATION_READ
@@ -768,7 +1020,107 @@ export type Permission =
   | typeof AR_DOWN_PAYMENT_CREATE
   | typeof AR_DOWN_PAYMENT_MANAGE
   | typeof AP_DOWN_PAYMENT_CREATE
-  | typeof AP_DOWN_PAYMENT_MANAGE;
+  | typeof AP_DOWN_PAYMENT_MANAGE
+  // SAP-gap Phase 2 — FI
+  | typeof FI_ASSET_CAPITALIZE
+  | typeof FI_BANK_IMPORT_MT940
+  | typeof AP_VENDOR_EVALUATE
+  | typeof AR_INTEREST_RUN
+  | typeof AR_DISPUTE_CREATE
+  | typeof AR_DISPUTE_READ
+  | typeof AR_DISPUTE_RESOLVE
+  | typeof AR_PAYMENT_ADVICE_PROCESS
+  | typeof FI_CLOSING_MANAGE
+  | typeof FI_CLOSING_READ
+  | typeof REPORT_CONTRIBUTION_MARGIN_READ
+  // SAP-gap Phase 2 — CO
+  | typeof CO_STANDARD_COST_CALCULATE
+  | typeof CO_STANDARD_COST_READ
+  | typeof CO_ACTUAL_COST_RUN
+  | typeof CO_ACTUAL_COST_READ
+  | typeof CO_WIP_CALCULATE
+  | typeof CO_WIP_READ
+  | typeof CO_ALLOCATION_MANAGE
+  | typeof CO_ALLOCATION_RUN
+  | typeof CO_INTERNAL_ORDER_CREATE
+  | typeof CO_INTERNAL_ORDER_READ
+  | typeof CO_INTERNAL_ORDER_UPDATE
+  | typeof CO_INTERNAL_ORDER_SETTLE
+  | typeof CO_TRANSFER_PRICING_MANAGE
+  | typeof CO_TRANSFER_PRICING_READ
+  // CRITICAL Compliance
+  | typeof FI_LEASE_CREATE
+  | typeof FI_LEASE_READ
+  | typeof FI_LEASE_UPDATE
+  | typeof GL_PARALLEL_CREATE
+  | typeof GL_PARALLEL_READ
+  | typeof AR_ETAX_GENERATE
+  | typeof REV_CONTRACT_CREATE
+  | typeof REV_CONTRACT_READ
+  | typeof REV_CONTRACT_UPDATE
+  | typeof REV_RECOGNIZE
+  | typeof FI_WHT_EFILE
+  | typeof TAX_DEFERRED_CREATE
+  | typeof TAX_DEFERRED_READ
+  | typeof TAX_DEFERRED_UPDATE
+  | typeof AP_BANK_FILE_GENERATE
+  // ESS / MSS
+  | typeof ESS_PROFILE_READ
+  | typeof ESS_PROFILE_UPDATE
+  | typeof ESS_PAYSLIP_READ
+  | typeof ESS_LEAVE_READ
+  | typeof ESS_LEAVE_REQUEST
+  | typeof ESS_ATTENDANCE_READ
+  | typeof MSS_TEAM_READ
+  | typeof MSS_APPROVAL_MANAGE
+  // Travel & Expense
+  | typeof HR_TRAVEL_CREATE
+  | typeof HR_TRAVEL_READ
+  | typeof HR_TRAVEL_APPROVE
+  | typeof HR_EXPENSE_CREATE
+  | typeof HR_EXPENSE_READ
+  | typeof HR_EXPENSE_APPROVE
+  // Recruitment
+  | typeof HR_RECRUITMENT_CREATE
+  | typeof HR_RECRUITMENT_READ
+  | typeof HR_RECRUITMENT_UPDATE
+  | typeof HR_RECRUITMENT_MANAGE
+  // Performance
+  | typeof HR_PERFORMANCE_CREATE
+  | typeof HR_PERFORMANCE_READ
+  | typeof HR_PERFORMANCE_UPDATE
+  // Compensation
+  | typeof HR_COMPENSATION_CREATE
+  | typeof HR_COMPENSATION_READ
+  | typeof HR_COMPENSATION_APPROVE
+  // Benefits
+  | typeof HR_BENEFIT_CREATE
+  | typeof HR_BENEFIT_READ
+  | typeof HR_BENEFIT_UPDATE
+  // Shifts
+  | typeof HR_SHIFT_CREATE
+  | typeof HR_SHIFT_READ
+  | typeof HR_SHIFT_UPDATE
+  | typeof HR_SHIFT_ASSIGN
+  // GRC / SoD
+  | typeof GRC_SOD_CREATE
+  | typeof GRC_SOD_READ
+  | typeof GRC_SOD_CHECK
+  | typeof REPORT_SOD_READ
+  // DMS
+  | typeof DMS_DOCUMENT_CREATE
+  | typeof DMS_DOCUMENT_READ
+  | typeof DMS_DOCUMENT_DELETE
+  // EDI
+  | typeof EDI_MESSAGE_CREATE
+  | typeof EDI_MESSAGE_READ
+  // Archive
+  | typeof SYS_ARCHIVE_MANAGE
+  | typeof SYS_ARCHIVE_RUN
+  // MDG
+  | typeof MDG_REQUEST_CREATE
+  | typeof MDG_REQUEST_READ
+  | typeof MDG_REQUEST_APPROVE;
 
 // ---------------------------------------------------------------------------
 // Permission sets — grouped by default role
@@ -980,6 +1332,19 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   PP_PRODUCTION_READ,
   PP_PRODUCTION_UPDATE,
   PP_MRP_RUN,
+  // PP Gap
+  PP_CAPACITY_READ,
+  PP_KANBAN_CREATE, PP_KANBAN_READ, PP_KANBAN_UPDATE, PP_KANBAN_TRIGGER,
+  PP_PROC_ORDER_CREATE, PP_PROC_ORDER_READ, PP_PROC_ORDER_UPDATE,
+  PP_OUTPUT_CREATE, PP_OUTPUT_READ, PP_OUTPUT_UPDATE,
+  PP_ECM_CREATE, PP_ECM_READ, PP_ECM_APPROVE, PP_ECM_IMPLEMENT,
+  PP_DEMAND_CREATE, PP_DEMAND_READ, PP_DEMAND_UPDATE,
+  // MM Purchasing Gaps
+  MM_CONTRACT_CREATE, MM_CONTRACT_READ, MM_CONTRACT_UPDATE, MM_CONTRACT_RELEASE,
+  MM_SCHED_CREATE, MM_SCHED_READ, MM_SCHED_UPDATE,
+  MM_STO_CREATE, MM_STO_READ, MM_STO_UPDATE,
+  MM_SRC_LIST_CREATE, MM_SRC_LIST_READ, MM_SRC_LIST_UPDATE,
+  MM_CONSIGN_CREATE, MM_CONSIGN_READ, MM_CONSIGN_UPDATE,
   // Foreign Trade
   FT_DECLARATION_CREATE,
   FT_DECLARATION_READ,
@@ -1048,6 +1413,106 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   AR_DOWN_PAYMENT_MANAGE,
   AP_DOWN_PAYMENT_CREATE,
   AP_DOWN_PAYMENT_MANAGE,
+  // SAP-gap Phase 2 — FI
+  FI_ASSET_CAPITALIZE,
+  FI_BANK_IMPORT_MT940,
+  AP_VENDOR_EVALUATE,
+  AR_INTEREST_RUN,
+  AR_DISPUTE_CREATE,
+  AR_DISPUTE_READ,
+  AR_DISPUTE_RESOLVE,
+  AR_PAYMENT_ADVICE_PROCESS,
+  FI_CLOSING_MANAGE,
+  FI_CLOSING_READ,
+  REPORT_CONTRIBUTION_MARGIN_READ,
+  // SAP-gap Phase 2 — CO
+  CO_STANDARD_COST_CALCULATE,
+  CO_STANDARD_COST_READ,
+  CO_ACTUAL_COST_RUN,
+  CO_ACTUAL_COST_READ,
+  CO_WIP_CALCULATE,
+  CO_WIP_READ,
+  CO_ALLOCATION_MANAGE,
+  CO_ALLOCATION_RUN,
+  CO_INTERNAL_ORDER_CREATE,
+  CO_INTERNAL_ORDER_READ,
+  CO_INTERNAL_ORDER_UPDATE,
+  CO_INTERNAL_ORDER_SETTLE,
+  CO_TRANSFER_PRICING_MANAGE,
+  CO_TRANSFER_PRICING_READ,
+  // CRITICAL Compliance
+  FI_LEASE_CREATE,
+  FI_LEASE_READ,
+  FI_LEASE_UPDATE,
+  GL_PARALLEL_CREATE,
+  GL_PARALLEL_READ,
+  AR_ETAX_GENERATE,
+  REV_CONTRACT_CREATE,
+  REV_CONTRACT_READ,
+  REV_CONTRACT_UPDATE,
+  REV_RECOGNIZE,
+  FI_WHT_EFILE,
+  TAX_DEFERRED_CREATE,
+  TAX_DEFERRED_READ,
+  TAX_DEFERRED_UPDATE,
+  AP_BANK_FILE_GENERATE,
+  // ESS / MSS
+  ESS_PROFILE_READ,
+  ESS_PROFILE_UPDATE,
+  ESS_PAYSLIP_READ,
+  ESS_LEAVE_READ,
+  ESS_LEAVE_REQUEST,
+  ESS_ATTENDANCE_READ,
+  MSS_TEAM_READ,
+  MSS_APPROVAL_MANAGE,
+  // Travel & Expense
+  HR_TRAVEL_CREATE,
+  HR_TRAVEL_READ,
+  HR_TRAVEL_APPROVE,
+  HR_EXPENSE_CREATE,
+  HR_EXPENSE_READ,
+  HR_EXPENSE_APPROVE,
+  // Recruitment
+  HR_RECRUITMENT_CREATE,
+  HR_RECRUITMENT_READ,
+  HR_RECRUITMENT_UPDATE,
+  HR_RECRUITMENT_MANAGE,
+  // Performance
+  HR_PERFORMANCE_CREATE,
+  HR_PERFORMANCE_READ,
+  HR_PERFORMANCE_UPDATE,
+  // Compensation
+  HR_COMPENSATION_CREATE,
+  HR_COMPENSATION_READ,
+  HR_COMPENSATION_APPROVE,
+  // Benefits
+  HR_BENEFIT_CREATE,
+  HR_BENEFIT_READ,
+  HR_BENEFIT_UPDATE,
+  // Shifts
+  HR_SHIFT_CREATE,
+  HR_SHIFT_READ,
+  HR_SHIFT_UPDATE,
+  HR_SHIFT_ASSIGN,
+  // GRC / SoD
+  GRC_SOD_CREATE,
+  GRC_SOD_READ,
+  GRC_SOD_CHECK,
+  REPORT_SOD_READ,
+  // DMS
+  DMS_DOCUMENT_CREATE,
+  DMS_DOCUMENT_READ,
+  DMS_DOCUMENT_DELETE,
+  // EDI
+  EDI_MESSAGE_CREATE,
+  EDI_MESSAGE_READ,
+  // Archive
+  SYS_ARCHIVE_MANAGE,
+  SYS_ARCHIVE_RUN,
+  // MDG
+  MDG_REQUEST_CREATE,
+  MDG_REQUEST_READ,
+  MDG_REQUEST_APPROVE,
 ] as const;
 
 /**
@@ -1223,6 +1688,17 @@ export const ACCOUNTANT_PERMISSIONS: readonly Permission[] = [
   PP_PRODUCTION_READ,
   PP_PRODUCTION_UPDATE,
   PP_MRP_RUN,
+  PP_CAPACITY_READ,
+  PP_KANBAN_READ,
+  PP_PROC_ORDER_READ,
+  PP_OUTPUT_READ,
+  PP_ECM_READ,
+  PP_DEMAND_READ,
+  MM_CONTRACT_READ,
+  MM_SCHED_READ,
+  MM_STO_READ,
+  MM_SRC_LIST_READ,
+  MM_CONSIGN_READ,
   // Foreign Trade
   FT_DECLARATION_CREATE,
   FT_DECLARATION_READ,
@@ -1279,6 +1755,64 @@ export const ACCOUNTANT_PERMISSIONS: readonly Permission[] = [
   AR_DOWN_PAYMENT_MANAGE,
   AP_DOWN_PAYMENT_CREATE,
   AP_DOWN_PAYMENT_MANAGE,
+  // SAP-gap Phase 2 — FI
+  FI_ASSET_CAPITALIZE,
+  FI_BANK_IMPORT_MT940,
+  AP_VENDOR_EVALUATE,
+  AR_INTEREST_RUN,
+  AR_DISPUTE_CREATE,
+  AR_DISPUTE_READ,
+  AR_DISPUTE_RESOLVE,
+  AR_PAYMENT_ADVICE_PROCESS,
+  FI_CLOSING_MANAGE,
+  FI_CLOSING_READ,
+  REPORT_CONTRIBUTION_MARGIN_READ,
+  // SAP-gap Phase 2 — CO
+  CO_STANDARD_COST_CALCULATE,
+  CO_STANDARD_COST_READ,
+  CO_ACTUAL_COST_RUN,
+  CO_ACTUAL_COST_READ,
+  CO_WIP_CALCULATE,
+  CO_WIP_READ,
+  CO_ALLOCATION_MANAGE,
+  CO_ALLOCATION_RUN,
+  CO_INTERNAL_ORDER_CREATE,
+  CO_INTERNAL_ORDER_READ,
+  CO_INTERNAL_ORDER_UPDATE,
+  CO_INTERNAL_ORDER_SETTLE,
+  CO_TRANSFER_PRICING_READ,
+  // CRITICAL Compliance
+  FI_LEASE_CREATE,
+  FI_LEASE_READ,
+  FI_LEASE_UPDATE,
+  GL_PARALLEL_CREATE,
+  GL_PARALLEL_READ,
+  AR_ETAX_GENERATE,
+  REV_CONTRACT_CREATE,
+  REV_CONTRACT_READ,
+  REV_CONTRACT_UPDATE,
+  REV_RECOGNIZE,
+  FI_WHT_EFILE,
+  TAX_DEFERRED_CREATE,
+  TAX_DEFERRED_READ,
+  TAX_DEFERRED_UPDATE,
+  AP_BANK_FILE_GENERATE,
+  // HR Self-Service & Operations
+  HR_TRAVEL_CREATE,
+  HR_TRAVEL_READ,
+  HR_EXPENSE_CREATE,
+  HR_EXPENSE_READ,
+  HR_RECRUITMENT_READ,
+  HR_PERFORMANCE_READ,
+  HR_COMPENSATION_READ,
+  HR_BENEFIT_READ,
+  HR_SHIFT_READ,
+  GRC_SOD_READ,
+  DMS_DOCUMENT_CREATE,
+  DMS_DOCUMENT_READ,
+  EDI_MESSAGE_READ,
+  MDG_REQUEST_CREATE,
+  MDG_REQUEST_READ,
 ] as const;
 
 /**

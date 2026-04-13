@@ -114,6 +114,26 @@ import { roleConfigRoutes } from './routes/role-config/index.js';
 import { maintenanceRoutes } from './routes/maintenance/index.js';
 import { serviceRoutes } from './routes/services/index.js';
 import { atpRoutes } from './routes/inventory/atp.js';
+// SAP-gap Phase 3 — MM + PP HIGH gaps
+import { purchasingGapRoutes } from './routes/purchasing/index.js';
+import { ppGapRoutes } from './routes/manufacturing/pp-gaps.js';
+// SAP-gap Phase 2 — FI + CO HIGH gaps
+import { fiGapRoutes } from './routes/fi-gaps/index.js';
+import { controllingRoutes } from './routes/controlling/index.js';
+// CRITICAL Compliance — IFRS 16 Leases, IFRS 15 Revenue Recognition
+import { leaseRoutes } from './routes/leases/index.js';
+import { revenueRoutes } from './routes/revenue/index.js';
+// SAP-gap Phase 4 — HR + System gaps
+import { essRoutes } from './routes/ess/index.js';
+import { mssRoutes } from './routes/mss/index.js';
+import { travelExpenseRoutes } from './routes/travel-expense/index.js';
+import { recruitmentRoutes } from './routes/recruitment/index.js';
+import { performanceRoutes } from './routes/performance/index.js';
+import { shiftRoutes } from './routes/shifts/index.js';
+import { grcRoutes } from './routes/grc/index.js';
+import { dmsRoutes } from './routes/dms/index.js';
+import { ediRoutes } from './routes/edi/index.js';
+import { archiveMdgRoutes } from './routes/archive/index.js';
 
 // ---------------------------------------------------------------------------
 // Fastify type augmentation — extend FastifyInstance with db + sql clients
@@ -421,6 +441,15 @@ export async function createApp(config: AppConfig): Promise<App> {
         { name: 'quality', description: 'Quality Management (QM) — Inspections, Compliance Certificates, BOI Promotions' },
         { name: 'modules', description: 'Module Toggle System — activate/deactivate ERP modules per tenant' },
         { name: 'enterprise', description: 'Enterprise Structure — Branches, Sales Channels, Org Tree' },
+        { name: 'controlling', description: 'Controlling (CO) — Standard Costing, Material Ledger, WIP, Cost Allocation, Internal Orders, Transfer Pricing' },
+        { name: 'leases', description: 'IFRS 16 Lease Accounting — ROU assets, lease liabilities, amortization' },
+        { name: 'revenue', description: 'IFRS 15 Revenue Recognition — contracts, performance obligations, allocation' },
+        { name: 'thai-compliance', description: 'Thai compliance — e-Tax Invoice, PromptPay, BAHTNET, e-WHT, bank payment files' },
+        { name: 'ess', description: 'Employee Self-Service — profile, payslips, leave, attendance' },
+        { name: 'mss', description: 'Manager Self-Service — team management, approvals' },
+        { name: 'grc', description: 'GRC / SoD — Segregation of Duties rules and checks' },
+        { name: 'dms', description: 'Document Management — file attachments for entities' },
+        { name: 'edi', description: 'EDI — Electronic Data Interchange messages' },
       ],
     },
   });
@@ -573,6 +602,30 @@ export async function createApp(config: AppConfig): Promise<App> {
   await app.register(maintenanceRoutes);
   await app.register(serviceRoutes);
   await app.register(atpRoutes);
+
+  // SAP-gap Phase 3 — MM + PP HIGH gaps
+  await app.register(purchasingGapRoutes);
+  await app.register(ppGapRoutes);
+
+  // SAP-gap Phase 2 — FI + CO HIGH gaps
+  await app.register(fiGapRoutes);
+  await app.register(controllingRoutes);
+
+  // CRITICAL Compliance — IFRS 16, IFRS 15
+  await app.register(leaseRoutes);
+  await app.register(revenueRoutes);
+
+  // SAP-gap Phase 4 — HR + System gaps
+  await app.register(essRoutes);
+  await app.register(mssRoutes);
+  await app.register(travelExpenseRoutes);
+  await app.register(recruitmentRoutes);
+  await app.register(performanceRoutes);
+  await app.register(shiftRoutes);
+  await app.register(grcRoutes);
+  await app.register(dmsRoutes);
+  await app.register(ediRoutes);
+  await app.register(archiveMdgRoutes);
 
   // ---------------------------------------------------------------------------
   // 13. 404 fallback — serve Next.js index.html for unrecognised non-API paths

@@ -23,6 +23,7 @@ import { journalEntryRoutes } from './journal-entries.js';
 import { accountRoutes } from './accounts.js';
 import { fiscalRoutes } from './fiscal.js';
 import { budgetRoutes } from './budgets.js';
+import { parallelAccountingRoutes } from './parallel-accounting.js';
 
 export async function glRoutes(
   fastify: FastifyInstance,
@@ -32,4 +33,5 @@ export async function glRoutes(
   await fastify.register(accountRoutes);
   await fastify.register(fiscalRoutes);
   await fastify.register(budgetRoutes);
+  await fastify.register(parallelAccountingRoutes);
 }

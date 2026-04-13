@@ -16,6 +16,7 @@ import {
   AP_BATCH_PAYMENT_CREATE,
   AP_BATCH_PAYMENT_READ,
   AP_BATCH_PAYMENT_EXECUTE,
+  AP_BANK_FILE_GENERATE,
 } from '../../lib/permissions.js';
 import { nextDocNumber } from '@neip/core';
 
@@ -442,6 +443,183 @@ export async function batchPaymentRoutes(
         offset,
         hasMore: offset + limit < total,
       };
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Shared helper: load batch run + vendor data
+  // -------------------------------------------------------------------------
+  async function loadRunWithVendors(fastify: FastifyInstance, runId: string, tenantId: string) {
+    const rows = await fastify.sql<[RunRow?]>`
+      SELECT * FROM batch_payment_runs WHERE id = ${runId} AND tenant_id = ${tenantId} LIMIT 1
+    `;
+    if (!rows[0]) throw new NotFoundError({ detail: `Batch payment run ${runId} not found.` });
+    if (rows[0].status !== 'executed') {
+      throw new ValidationError({ detail: 'Run must be executed before generating payment files.' });
+    }
+
+    const run = rows[0];
+    const proposalData = run.proposal_data as Array<{
+      vendorId: string;
+      bills: Array<{ billId: string; outstandingSatang: string }>;
+      totalSatang: string;
+    }>;
+
+    // Enrich with vendor info (tax ID, name, bank account)
+    interface VendorInfo { id: string; name: string; tax_id: string | null; bank_account: string | null; }
+    const vendorIds = proposalData.map(v => v.vendorId);
+    const vendors = vendorIds.length > 0
+      ? await fastify.sql<VendorInfo[]>`SELECT id, name, tax_id, bank_account FROM vendors WHERE id = ANY(${vendorIds})`
+      : [];
+    const vendorMap = new Map(vendors.map(v => [v.id, v]));
+
+    return { run, proposalData, vendorMap };
+  }
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ap/batch-payment/:id/promptpay-file
+  // PromptPay B2B format (pipe-delimited)
+  // -------------------------------------------------------------------------
+  fastify.get<{ Params: { id: string } }>(
+    `${API_V1_PREFIX}/ap/batch-payment/:id/promptpay-file`,
+    {
+      schema: {
+        description: 'Generate PromptPay B2B payment file (pipe-delimited)',
+        tags: ['ap', 'thai-compliance'],
+        security: [{ bearerAuth: [] }],
+        params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+      },
+      preHandler: [requireAuth, requirePermission(AP_BANK_FILE_GENERATE)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { tenantId } = request.user;
+      const { run, proposalData, vendorMap } = await loadRunWithVendors(fastify, id, tenantId);
+
+      // PromptPay B2B format: pipe-delimited lines
+      // Format: RecipientTaxID|Amount(satang)|Reference|RecipientName
+      const lines = proposalData.map((v, idx) => {
+        const vendor = vendorMap.get(v.vendorId);
+        const taxId = vendor?.tax_id ?? '0000000000000';
+        const name = vendor?.name ?? v.vendorId;
+        const ref = `BP-${run.id.slice(0, 8)}-${String(idx + 1).padStart(3, '0')}`;
+        return `${taxId}|${v.totalSatang}|${ref}|${name}`;
+      });
+
+      const header = `H|PROMPTPAY_B2B|${run.run_date}|${proposalData.length}|${run.total_amount_satang}`;
+      const content = [header, ...lines].join('\n');
+
+      void reply
+        .header('Content-Type', 'text/plain; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="promptpay-${run.id.slice(0, 8)}.txt"`);
+      return content;
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ap/batch-payment/:id/bahtnet-file
+  // BOT BAHTNET format for large-value transfers
+  // -------------------------------------------------------------------------
+  fastify.get<{ Params: { id: string } }>(
+    `${API_V1_PREFIX}/ap/batch-payment/:id/bahtnet-file`,
+    {
+      schema: {
+        description: 'Generate BAHTNET payment file (BOT large-value transfer format)',
+        tags: ['ap', 'thai-compliance'],
+        security: [{ bearerAuth: [] }],
+        params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+      },
+      preHandler: [requireAuth, requirePermission(AP_BANK_FILE_GENERATE)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { tenantId } = request.user;
+      const { run, proposalData, vendorMap } = await loadRunWithVendors(fastify, id, tenantId);
+
+      // BAHTNET format: fixed-width fields
+      // Header: BAHTNET|Date|TotalRecords|TotalAmount
+      // Detail: SeqNo|SenderRef|ReceiverBankAccount|Amount|ReceiverName|ReceiverTaxID
+      const header = `BAHTNET|${run.run_date.replace(/-/g, '')}|${String(proposalData.length).padStart(6, '0')}|${run.total_amount_satang.toString().padStart(15, '0')}`;
+      const details = proposalData.map((v, idx) => {
+        const vendor = vendorMap.get(v.vendorId);
+        const seqNo = String(idx + 1).padStart(6, '0');
+        const senderRef = `BP${run.id.slice(0, 8)}`.toUpperCase();
+        const bankAccount = vendor?.bank_account ?? '0000000000';
+        const amount = v.totalSatang.padStart(15, '0');
+        const name = (vendor?.name ?? v.vendorId).padEnd(70, ' ').slice(0, 70);
+        const taxId = (vendor?.tax_id ?? '0000000000000').padEnd(13, '0');
+        return `${seqNo}|${senderRef}|${bankAccount}|${amount}|${name}|${taxId}`;
+      });
+
+      const content = [header, ...details].join('\n');
+
+      void reply
+        .header('Content-Type', 'text/plain; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="bahtnet-${run.id.slice(0, 8)}.txt"`);
+      return content;
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GET /api/v1/ap/batch-payment/:id/bank-file?bank=scb|kbank|bbl
+  // Thai bank-specific payment file formats
+  // -------------------------------------------------------------------------
+  fastify.get<{ Params: { id: string }; Querystring: { bank: string } }>(
+    `${API_V1_PREFIX}/ap/batch-payment/:id/bank-file`,
+    {
+      schema: {
+        description: 'Generate Thai bank-specific payment file (SCB, KBank, BBL)',
+        tags: ['ap', 'thai-compliance'],
+        security: [{ bearerAuth: [] }],
+        params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+        querystring: {
+          type: 'object',
+          required: ['bank'],
+          properties: { bank: { type: 'string', enum: ['scb', 'kbank', 'bbl'] } },
+        },
+      },
+      preHandler: [requireAuth, requirePermission(AP_BANK_FILE_GENERATE)],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { bank } = request.query;
+      const { tenantId } = request.user;
+      const { run, proposalData, vendorMap } = await loadRunWithVendors(fastify, id, tenantId);
+
+      const dateCompact = run.run_date.replace(/-/g, '');
+      let content: string;
+
+      if (bank === 'scb') {
+        // SCB Direct Debit format (comma-separated)
+        const header = `HD,SCB,${dateCompact},${proposalData.length}`;
+        const details = proposalData.map((v, idx) => {
+          const vendor = vendorMap.get(v.vendorId);
+          return `DT,${String(idx + 1).padStart(6, '0')},${vendor?.bank_account ?? ''},${v.totalSatang},${vendor?.name ?? v.vendorId},${vendor?.tax_id ?? ''}`;
+        });
+        const trailer = `TR,${run.total_amount_satang}`;
+        content = [header, ...details, trailer].join('\n');
+      } else if (bank === 'kbank') {
+        // KBank Corporate Payment format (pipe-delimited)
+        const header = `KBANK|PAYMENT|${dateCompact}|${proposalData.length}|${run.total_amount_satang}`;
+        const details = proposalData.map((v, idx) => {
+          const vendor = vendorMap.get(v.vendorId);
+          return `${String(idx + 1)}|${vendor?.bank_account ?? ''}|${v.totalSatang}|${vendor?.name ?? v.vendorId}|${vendor?.tax_id ?? ''}|THB`;
+        });
+        content = [header, ...details].join('\n');
+      } else {
+        // BBL Smart Payments format (fixed-width inspired, pipe-delimited)
+        const header = `BBL|BULK|${dateCompact}|${String(proposalData.length).padStart(5, '0')}|${run.total_amount_satang.toString().padStart(15, '0')}`;
+        const details = proposalData.map((v, idx) => {
+          const vendor = vendorMap.get(v.vendorId);
+          return `${String(idx + 1).padStart(5, '0')}|${vendor?.bank_account ?? '0'.repeat(10)}|${v.totalSatang.padStart(15, '0')}|${(vendor?.name ?? v.vendorId).slice(0, 50)}|${vendor?.tax_id ?? ''}`;
+        });
+        content = [header, ...details].join('\n');
+      }
+
+      void reply
+        .header('Content-Type', 'text/plain; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="${bank}-payment-${run.id.slice(0, 8)}.txt"`);
+      return content;
     },
   );
 }
