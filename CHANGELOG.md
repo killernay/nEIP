@@ -1,5 +1,129 @@
 # Changelog
 
+## [1.0.0-beta] - 2026-04-13
+
+### Added — SAP Full Parity (91 features)
+
+#### Foundation System
+- Module Toggle System: 23 modules with dependency graph, per-tenant activation/deactivation
+- Onboarding Wizard: 6-step self-service (company → template → modules → structure → users → go-live)
+- 7 Industry Templates: Retail, Manufacturing, Food & Beverage, Services, Construction, Trading, Distribution
+- Enterprise Structure: Company → Branch → Warehouse hierarchy, Sales Channels
+- Role-Based UI: 8 role templates, /ui/config endpoint, sidebar auto-filtering
+
+#### IFRS / Compliance (9 features)
+- IFRS 16 Lease Accounting: ROU asset + liability + amortization schedule + monthly JE
+- Parallel Accounting: IFRS + Thai GAAP + TFRS for NPAEs simultaneous ledgers
+- e-Tax Invoice XML: UBL 2.1 per Thai ETDA schema
+- PromptPay B2B + BAHTNET + SCB/KBank/BBL payment file generation
+- Revenue Recognition IFRS 15: contracts + performance obligations + 5-step model
+- e-WHT filing data for Revenue Department e-Filing
+- Deferred Tax calculation (DTA/DTL) with JE posting
+
+#### Finance & Controlling (15 features)
+- Batch Payment Run (SAP F110): propose → execute with bank file
+- Collections Management: worklist, promise-to-pay, dashboard, escalation
+- Down Payments (AR + AP): advance tracking with JE + clearing against invoices
+- Pro-Forma Invoice: create + convert to standard
+- Asset Under Construction (AuC) with capitalization
+- MT940 Bank Statement Import
+- Vendor Evaluation Scorecard
+- Interest on Overdue: auto-calculate + debit notes
+- Dispute Management: AR dispute tracking + resolution
+- Standard Cost Estimate + Actual Costing / Material Ledger
+- WIP Calculation for production orders
+- Cost Allocation Cycles: assessment/distribution with rules
+- Internal Orders with settlement
+- Transfer Pricing for intercompany
+- Financial Closing Cockpit: 11-step checklist
+
+#### Sales & Distribution (10 features)
+- Rebate Management: volume/value agreements with accrual + settlement
+- Free Goods: buy X get Y promotions
+- Milestone Billing: project/SO-linked billing plans
+- Periodic/Subscription Billing: auto-generate invoices on schedule
+- Third-Party Orders (Drop-ship): SO auto-creates vendor PO
+- Batch Determination: FEFO/FIFO picking strategies
+- Partner Determination: sold-to / ship-to / bill-to / payer
+- Output Determination: auto email/print/webhook per document event
+- Intercompany Billing
+- Serial Number tracking in SD
+
+#### Materials Management + Production (12 features)
+- Outline Agreements (purchasing contracts with release orders)
+- Scheduling Agreements with delivery schedules
+- Stock Transport Orders (inter-branch with accounting)
+- Source List (preferred vendor per material)
+- Consignment Stock: receive → consume (creates AP) → return
+- Special Stocks: project/sales order/consignment types
+- Capacity Requirements Planning (CRP): load vs capacity per work center
+- Kanban: demand-driven replenishment cards
+- Process Orders: recipe-based manufacturing with batch output
+- Co-Products / By-Products: multiple outputs per production order
+- Engineering Change Management: version-controlled BOM changes
+- Demand Management: Planned Independent Requirements for MRP
+
+#### EWM + Project System + Quality (12 features)
+- Storage Bins: zone/aisle/rack/level bin-level tracking
+- Putaway Strategies: fixed bin, nearest empty, zone-based
+- Pick Lists: FIFO/FEFO/LIFO with bin assignments
+- Pick/Pack/Ship: shipment workflow with carrier/tracking
+- Mobile Scanning API: barcode putaway/pick/count/inquiry
+- WBS Elements: multi-level project hierarchy
+- Network Activities: predecessor/successor with Gantt support
+- Earned Value Management: SPI, CPI, EAC calculations
+- Inspection Plans: dynamic frequency with auto-trigger on GR
+- CAPA: Corrective & Preventive Action workflow
+- Defect Recording: severity/cause codes linked to inspections
+
+#### HR & System (15 features)
+- Employee Self-Service (ESS): profile, payslips, leave, attendance
+- Manager Self-Service (MSS): team view, pending approvals
+- Travel Expense Management: requests + expense claims + settlement
+- Recruitment / ATS: job postings, applications, convert-to-employee
+- Performance & Goals: OKR/KPI, review cycles, ratings
+- Compensation Management: merit/promotion/adjustment proposals
+- Benefits Administration: health/life/PF enrollment
+- Shift Scheduling: definitions + employee assignments + weekly view
+- GRC Access Control (SoD): conflict rules + violation scanning
+- Business Partner: unified customer/vendor/employee contact
+- Document Management System (DMS): file attachments with versioning
+- EDI: inbound/outbound electronic document interchange
+- Data Archiving: retention policies + archive/restore
+- Master Data Governance: change requests with approval
+- Missing permissions migration: all 373 permissions seeded
+
+### Added — Web UI (27 new pages)
+- Onboarding wizard, module settings, leases, revenue, parallel accounting
+- Collections, down payments, batch payments, closing cockpit
+- Manufacturing (BOM, production, MRP), maintenance, maintenance plans
+- Trade declarations, letters of credit, services, warehouse bins, picking, shipments
+- ESS portal, recruitment, performance, travel expense, shifts
+- GRC/SoD, document management
+
+### Added — MCP Tools (60 new, total ~170)
+- 25 list + 15 create + 15 action + 5 report tools for all new modules
+
+### Added — CLI Commands (12 new files, total ~100)
+- manufacturing, maintenance, leases, revenue, services, ess, recruitment
+- performance, travel, grc, dms, enterprise
+
+### Added — Documentation
+- Finance manual: +458 lines (IFRS 16, Parallel, IFRS 15, Batch Payment, Collections, etc.)
+- Operations manual: +393 lines (PP, PM, Service, EWM, Advanced MM/PP)
+- Enterprise manual: +417 lines (Module Toggle, Onboarding, Templates, ESS, GRC, etc.)
+- Training guide: +315 lines (Make-to-Stock, Maintenance, Lease, Service flows)
+
+### Fixed
+- 13 failing endpoints (nextDocNumber, CHECK constraints, column names, RLS)
+- All permissions seeded (373 constants + admin role full access)
+- TypeScript 0 errors across all 14 packages
+
+### Stats
+- 186 DB tables, ~500+ API endpoints, ~170 MCP tools, ~100 CLI commands
+- 140+ Web UI pages, 8 AI agents, 7 industry templates, 23 modules
+- 15 Thai business types integration tested (96% pass rate)
+
 ## [0.9.0] - 2026-04-11
 
 ### Added — Phase 6: AI & Analytics
