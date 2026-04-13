@@ -14,12 +14,16 @@ import { NotFoundError, ValidationError, API_V1_PREFIX } from '@neip/shared';
 import { requireAuth } from '../../hooks/require-auth.js';
 
 /** Resolve employee ID from user's JWT sub (user_id → employee) */
-async function resolveEmployeeId(fastify: FastifyInstance, userId: string, tenantId: string): Promise<string> {
+async function resolveEmployeeId(fastify: FastifyInstance, userId: string, tenantId: string): Promise<string | null> {
   const rows = await fastify.sql`
     SELECT id FROM employees WHERE user_id = ${userId} AND tenant_id = ${tenantId} LIMIT 1
   `;
-  if (!rows[0]) throw new NotFoundError({ detail: 'No employee record linked to this user.' });
+  if (!rows[0]) return null;
   return (rows[0] as { id: string }).id;
+}
+
+function requireEmployeeId(employeeId: string | null): asserts employeeId is string {
+  if (!employeeId) throw new NotFoundError({ detail: 'No employee record linked to this user. Please contact your HR administrator to link your account.' });
 }
 
 export async function essRoutes(
@@ -37,9 +41,10 @@ export async function essRoutes(
     async (request, reply) => {
       const { tenantId, sub } = request.user;
       const employeeId = await resolveEmployeeId(fastify, sub, tenantId);
+      requireEmployeeId(employeeId);
 
       const rows = await fastify.sql`
-        SELECT e.*, d.name_th as department_name, p.title_th as position_title
+        SELECT e.*, d.name_th as department_name, p.title as position_title
         FROM employees e
         LEFT JOIN departments d ON d.id = e.department_id
         LEFT JOIN positions p ON p.id = e.position_id
@@ -61,13 +66,13 @@ export async function essRoutes(
     async (request, reply) => {
       const { tenantId, sub } = request.user;
       const employeeId = await resolveEmployeeId(fastify, sub, tenantId);
+      requireEmployeeId(employeeId);
 
       const b = request.body;
       await fastify.sql`
         UPDATE employees SET
           phone = COALESCE(${(b['phone'] as string) ?? null}, phone),
-          email = COALESCE(${(b['email'] as string) ?? null}, email),
-          address = COALESCE(${(b['address'] as string) ?? null}, address)
+          email = COALESCE(${(b['email'] as string) ?? null}, email)
         WHERE id = ${employeeId} AND tenant_id = ${tenantId}
       `;
       const rows = await fastify.sql`
@@ -87,6 +92,7 @@ export async function essRoutes(
     async (request, reply) => {
       const { tenantId, sub } = request.user;
       const employeeId = await resolveEmployeeId(fastify, sub, tenantId);
+      requireEmployeeId(employeeId);
 
       const rows = await fastify.sql`
         SELECT ps.* FROM payslips ps
@@ -108,6 +114,7 @@ export async function essRoutes(
     async (request, reply) => {
       const { tenantId, sub } = request.user;
       const employeeId = await resolveEmployeeId(fastify, sub, tenantId);
+      requireEmployeeId(employeeId);
 
       const rows = await fastify.sql`
         SELECT ps.* FROM payslips ps
@@ -132,6 +139,7 @@ export async function essRoutes(
     async (request, reply) => {
       const { tenantId, sub } = request.user;
       const employeeId = await resolveEmployeeId(fastify, sub, tenantId);
+      requireEmployeeId(employeeId);
 
       const rows = await fastify.sql`
         SELECT lt.name_th, lt.name_en,
@@ -157,6 +165,7 @@ export async function essRoutes(
     async (request, reply) => {
       const { tenantId, sub } = request.user;
       const employeeId = await resolveEmployeeId(fastify, sub, tenantId);
+      requireEmployeeId(employeeId);
 
       const b = request.body;
       if (!b['leaveTypeId']) throw new ValidationError({ detail: 'leaveTypeId is required.' });
@@ -186,6 +195,7 @@ export async function essRoutes(
     async (request, reply) => {
       const { tenantId, sub } = request.user;
       const employeeId = await resolveEmployeeId(fastify, sub, tenantId);
+      requireEmployeeId(employeeId);
 
       const { month } = request.query as Record<string, string | undefined>;
       if (month) {

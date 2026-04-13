@@ -457,26 +457,26 @@ export async function enterpriseRoutes(
 
       // Fetch all entities in parallel
       const [companies, branchRows, warehouseRows, departmentRows, costCenterRows] = await Promise.all([
-        fastify.sql<Array<{ id: string; code: string; name: string; company_type: string; parent_company_id: string | null; is_active: boolean }>>`
-          SELECT id, code, name, COALESCE(company_type, 'subsidiary') as company_type, parent_company_id, is_active
+        fastify.sql<Array<{ id: string; code: string; name: string; is_branch: boolean; parent_company_id: string | null; is_active: boolean }>>`
+          SELECT id, code, name, is_branch, parent_company_id, is_active
           FROM companies WHERE tenant_id = ${tenantId} ORDER BY code
         `,
         fastify.sql<Array<{ id: string; code: string; name_th: string; company_id: string | null; branch_type: string; is_active: boolean }>>`
           SELECT id, code, name_th, company_id, branch_type, is_active
           FROM branches WHERE tenant_id = ${tenantId} ORDER BY code
         `,
-        fastify.sql<Array<{ id: string; code: string; name: string; branch_id: string | null }>>`
-          SELECT id, code, name, branch_id FROM warehouses WHERE tenant_id = ${tenantId} ORDER BY code
+        fastify.sql<Array<{ id: string; code: string; name: string }>>`
+          SELECT id, code, name FROM warehouses WHERE tenant_id = ${tenantId} ORDER BY code
         `,
-        fastify.sql<Array<{ id: string; code: string; name_th: string; branch_id: string | null }>>`
-          SELECT id, code, name_th, branch_id FROM departments WHERE tenant_id = ${tenantId} ORDER BY code
+        fastify.sql<Array<{ id: string; code: string; name_th: string }>>`
+          SELECT id, code, name_th FROM departments WHERE tenant_id = ${tenantId} ORDER BY code
         `,
-        fastify.sql<Array<{ id: string; code: string; name_th: string; branch_id: string | null }>>`
-          SELECT id, code, name_th, branch_id FROM cost_centers WHERE tenant_id = ${tenantId} ORDER BY code
+        fastify.sql<Array<{ id: string; code: string; name_th: string }>>`
+          SELECT id, code, name_th FROM cost_centers WHERE tenant_id = ${tenantId} ORDER BY code
         `,
       ]);
 
-      // Build tree: Company → Branches → children
+      // Build tree: Company → Branches (warehouses/departments/cost_centers listed at tenant level)
       const tree = companies.map((company) => {
         const companyBranches = branchRows
           .filter((b) => b.company_id === company.id)
@@ -486,16 +486,13 @@ export async function enterpriseRoutes(
             nameTh: branch.name_th,
             branchType: branch.branch_type,
             isActive: branch.is_active,
-            warehouses: warehouseRows.filter((w) => w.branch_id === branch.id).map((w) => ({ id: w.id, code: w.code, name: w.name })),
-            departments: departmentRows.filter((d) => d.branch_id === branch.id).map((d) => ({ id: d.id, code: d.code, nameTh: d.name_th })),
-            costCenters: costCenterRows.filter((cc) => cc.branch_id === branch.id).map((cc) => ({ id: cc.id, code: cc.code, nameTh: cc.name_th })),
           }));
 
         return {
           id: company.id,
           code: company.code,
           name: company.name,
-          companyType: company.company_type,
+          isBranch: company.is_branch,
           parentCompanyId: company.parent_company_id,
           isActive: company.is_active,
           branches: companyBranches,
@@ -511,12 +508,15 @@ export async function enterpriseRoutes(
           nameTh: branch.name_th,
           branchType: branch.branch_type,
           isActive: branch.is_active,
-          warehouses: warehouseRows.filter((w) => w.branch_id === branch.id).map((w) => ({ id: w.id, code: w.code, name: w.name })),
-          departments: departmentRows.filter((d) => d.branch_id === branch.id).map((d) => ({ id: d.id, code: d.code, nameTh: d.name_th })),
-          costCenters: costCenterRows.filter((cc) => cc.branch_id === branch.id).map((cc) => ({ id: cc.id, code: cc.code, nameTh: cc.name_th })),
         }));
 
-      return reply.send({ companies: tree, unassignedBranches });
+      return reply.send({
+        companies: tree,
+        unassignedBranches,
+        warehouses: warehouseRows.map((w) => ({ id: w.id, code: w.code, name: w.name })),
+        departments: departmentRows.map((d) => ({ id: d.id, code: d.code, nameTh: d.name_th })),
+        costCenters: costCenterRows.map((cc) => ({ id: cc.id, code: cc.code, nameTh: cc.name_th })),
+      });
     },
   );
 

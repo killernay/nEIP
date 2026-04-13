@@ -249,20 +249,22 @@ export async function uiConfigRoute(
     async (request, _reply) => {
       const { sub: userId, tenantId } = request.user;
 
-      // 1. Get tenant's active modules
+      // 1. Get tenant's active modules (if none configured, return all known modules)
       const tenantModules = await fastify.sql<TenantModuleRow[]>`
         SELECT module_code
         FROM tenant_modules
         WHERE tenant_id = ${tenantId}
           AND is_active = true
       `;
-      const tenantModuleSet = new Set(tenantModules.map((r) => r.module_code));
+      const tenantModuleSet = tenantModules.length > 0
+        ? new Set(tenantModules.map((r) => r.module_code))
+        : new Set(Object.keys(MODULE_NAV_MAP));
 
       // 2. Get user's role template code from user_roles
       //    We look for the user's first role that matches a role_template code.
       //    Falls back to 'system_admin' if no role is assigned (owner/admin).
       const userRoles = await fastify.sql<UserRoleRow[]>`
-        SELECT r.code AS role_code
+        SELECT r.name AS role_code
         FROM user_roles ur
         JOIN roles r ON r.id = ur.role_id AND r.tenant_id = ur.tenant_id
         WHERE ur.user_id = ${userId}
@@ -280,16 +282,17 @@ export async function uiConfigRoute(
         LIMIT 1
       `;
 
-      // Fallback: if no template matches, grant full access (system_admin)
+      // Fallback: if no template matches, grant full access (treat as admin)
+      const isAdmin = !templates[0] || roleCode === 'system_admin';
       const template = templates[0] ?? { allowed_modules: [] as string[], allowed_pages: ['*'] };
       const roleModuleSet = new Set(template.allowed_modules);
       const rolePages = template.allowed_pages;
 
       // 4. Compute intersection: tenant active ∩ role allowed
-      //    system_admin role has all modules → intersection is just tenant modules
+      //    admin roles get all tenant modules; unmatched templates get full access
       const activeModules: string[] = [];
       for (const mod of tenantModuleSet) {
-        if (roleModuleSet.has(mod) || roleCode === 'system_admin') {
+        if (roleModuleSet.has(mod) || isAdmin) {
           activeModules.push(mod);
         }
       }
@@ -323,7 +326,7 @@ export async function uiConfigRoute(
       }
 
       // Always include settings for admins, reports for finance roles
-      if (roleCode === 'system_admin') {
+      if (isAdmin) {
         allowedPages.push('/settings', '/settings/*', '/reports', '/reports/*', '/import', '/approvals');
       }
 

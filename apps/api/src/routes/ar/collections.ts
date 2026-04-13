@@ -163,7 +163,7 @@ export async function collectionRoutes(
           i.id, i.invoice_number, i.customer_id,
           i.total_satang, i.paid_satang, i.due_date,
           (CURRENT_DATE - i.due_date::date) AS days_overdue,
-          c.name AS customer_name,
+          c.company_name AS customer_name,
           c.email AS customer_email,
           c.phone AS customer_phone
         FROM invoices i
@@ -341,7 +341,7 @@ export async function collectionRoutes(
       const topCustomers = await fastify.sql<{ customer_id: string; customer_name: string | null; total_outstanding_satang: string; invoice_count: string }[]>`
         SELECT
           i.customer_id,
-          c.name AS customer_name,
+          c.company_name AS customer_name,
           sum(i.total_satang - i.paid_satang)::text AS total_outstanding_satang,
           count(*)::text AS invoice_count
         FROM invoices i
@@ -351,7 +351,7 @@ export async function collectionRoutes(
           AND i.total_satang > i.paid_satang
           AND i.due_date::date < CURRENT_DATE
           AND i.invoice_type = 'standard'
-        GROUP BY i.customer_id, c.name
+        GROUP BY i.customer_id, c.company_name
         ORDER BY sum(i.total_satang - i.paid_satang) DESC
         LIMIT 10
       `;

@@ -162,21 +162,21 @@ export async function controllingRoutes(
 
       // Explode BOM to sum material costs
       const bomLines = await fastify.sql`
-        SELECT bl.component_id, bl.quantity, p.unit_cost_satang
+        SELECT bl.component_product_id, bl.quantity, p.cost_price_satang
         FROM bom_lines bl
         JOIN bom_headers bh ON bh.id = bl.bom_id AND bh.tenant_id = ${tenantId}
-        JOIN products p ON p.id = bl.component_id AND p.tenant_id = ${tenantId}
+        JOIN products p ON p.id = bl.component_product_id AND p.tenant_id = ${tenantId}
         WHERE bh.product_id = ${productId} AND bh.tenant_id = ${tenantId}
       `;
 
       let materialCost = 0n;
       for (const line of bomLines) {
-        materialCost += BigInt(line['unit_cost_satang'] ?? 0) * BigInt(Math.round(Number(line['quantity'])));
+        materialCost += BigInt(line['cost_price_satang'] ?? 0) * BigInt(Math.round(Number(line['quantity'])));
       }
 
       // Labor + overhead from work centers (simplified: sum hourly rates)
       const wcRows = await fastify.sql`
-        SELECT COALESCE(SUM(hourly_rate_satang), 0) AS labor
+        SELECT COALESCE(SUM(cost_rate_satang), 0) AS labor
         FROM work_centers
         WHERE tenant_id = ${tenantId}
       `;
@@ -377,9 +377,11 @@ export async function controllingRoutes(
       const { tenantId, sub: userId } = (request as any).user;
       const id = crypto.randomUUID();
 
+      const targetArray = `{${targetCostCenterIds.map((s: string) => `"${s}"`).join(',')}}`;
+      const pctArray = `{${percentages.join(',')}}`;
       await fastify.sql`
         INSERT INTO cost_allocation_rules (id, name, source_cost_center_id, target_cost_center_ids, allocation_basis, percentages, tenant_id, created_by)
-        VALUES (${id}, ${name}, ${sourceCostCenterId}, ${targetCostCenterIds}, ${allocationBasis ?? 'fixed_percent'}, ${percentages.map(String)}, ${tenantId}, ${userId})
+        VALUES (${id}, ${name}, ${sourceCostCenterId}, ${targetArray}::text[], ${allocationBasis ?? 'fixed_percent'}, ${pctArray}::numeric[], ${tenantId}, ${userId})
       `;
 
       return reply.status(201).send({ id, name, sourceCostCenterId, targetCostCenterIds, allocationBasis: allocationBasis ?? 'fixed_percent', percentages });
@@ -413,12 +415,14 @@ export async function controllingRoutes(
       const { id } = request.params;
       const { name, sourceCostCenterId, targetCostCenterIds, allocationBasis, percentages } = request.body as any;
 
+      const targetArray = `{${targetCostCenterIds.map((s: string) => `"${s}"`).join(',')}}`;
+      const pctArray = `{${percentages.join(',')}}`;
       const result = await fastify.sql`
         UPDATE cost_allocation_rules
         SET name = ${name}, source_cost_center_id = ${sourceCostCenterId},
-            target_cost_center_ids = ${targetCostCenterIds},
+            target_cost_center_ids = ${targetArray}::text[],
             allocation_basis = ${allocationBasis ?? 'fixed_percent'},
-            percentages = ${percentages.map(String)},
+            percentages = ${pctArray}::numeric[],
             updated_at = now()
         WHERE id = ${id} AND tenant_id = ${tenantId}
         RETURNING *
