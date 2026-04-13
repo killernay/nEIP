@@ -17,6 +17,19 @@
 8. [Roles & Permissions / บทบาทและสิทธิ์](#8-roles--permissions--บทบาทและสิทธิ์)
 9. [PDPA Data Subject Rights / สิทธิ์เจ้าของข้อมูล PDPA](#9-pdpa-data-subject-rights--สิทธิ์เจ้าของข้อมูล-pdpa)
 10. [Settings / การตั้งค่า](#10-settings--การตั้งค่า)
+11. [Module Toggle System / ระบบเปิด-ปิดโมดูล](#11-module-toggle-system--ระบบเปิด-ปิดโมดูล)
+12. [Onboarding Wizard — วิซาร์ดตั้งค่าเริ่มต้น](#12-onboarding-wizard--วิซาร์ดตั้งค่าเริ่มต้น)
+13. [Industry Templates — แพ็กเกจตามอุตสาหกรรม](#13-industry-templates--แพ็กเกจตามอุตสาหกรรม)
+14. [Enterprise Structure — โครงสร้างองค์กร](#14-enterprise-structure--โครงสร้างองค์กร)
+15. [Role-Based UI Visibility / การแสดงผลตามบทบาท](#15-role-based-ui-visibility--การแสดงผลตามบทบาท)
+16. [ESS/MSS — Employee & Manager Self-Service](#16-essmss--employee--manager-self-service--บริการตนเองพนักงาน-ผู้จัดการ)
+17. [Travel Expense Management / จัดการค่าเดินทาง](#17-travel-expense-management--จัดการค่าเดินทาง)
+18. [Recruitment / ATS — ระบบสรรหาบุคลากร](#18-recruitment--ats--ระบบสรรหาบุคลากร)
+19. [Performance & Goals — ประเมินผลและเป้าหมาย](#19-performance--goals--ประเมินผลและเป้าหมาย)
+20. [GRC / SoD — Governance, Risk & Compliance](#20-grc--sod--governance-risk--compliance--การกำกับดูแลและควบคุมภายใน)
+21. [DMS — Document Management System](#21-dms--document-management-system--ระบบจัดการเอกสาร)
+22. [EDI — Electronic Data Interchange](#22-edi--electronic-data-interchange--แลกเปลี่ยนข้อมูลอิเล็กทรอนิกส์)
+23. [Data Archiving — การจัดเก็บข้อมูลเก่า](#23-data-archiving--การจัดเก็บข้อมูลเก่า)
 
 ---
 
@@ -1133,3 +1146,407 @@ The Settings section provides configuration pages for all system-level parameter
 8. **Intercompany:** Mirror journal entries are auto-created. IC elimination in consolidated reports relies on `IC:` prefix in descriptions. / รายการกระจกสร้างอัตโนมัติ
 9. **Dashboard:** Use role-based config to customize widgets per role (CFO, Accountant, Sales, HR). / ใช้ config ตามบทบาทเพื่อปรับแต่งวิดเจ็ต
 10. **Token Security:** Access tokens expire in 1 hour. Use refresh tokens to obtain new access tokens. / Access token หมดอายุ 1 ชม. ใช้ refresh token ต่ออายุ
+
+---
+
+## 11. Module Toggle System / ระบบเปิด-ปิดโมดูล
+
+### 11.1 Overview / ภาพรวม
+
+Module Toggle System ช่วยให้ผู้ดูแลระบบเปิด/ปิดโมดูลตามความต้องการของธุรกิจ โมดูลที่ปิดจะไม่แสดงในเมนู ไม่สามารถเข้าถึง API ได้ และไม่รวมอยู่ในผลการค้นหา
+
+Module Toggle System allows administrators to enable/disable modules per business needs. Disabled modules are hidden from menus, APIs return 403, and they are excluded from search results.
+
+### 11.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Module Manager | `/settings/modules` | จัดการโมดูล — Enable/disable modules |
+
+### 11.3 Step-by-Step: เปิด/ปิดโมดูล
+
+1. ไปที่ **Settings > Modules** (`/settings/modules`)
+2. ระบบแสดงรายการโมดูลทั้งหมด พร้อมสถานะ Toggle (On/Off)
+3. คลิก Toggle เพื่อเปิด/ปิดโมดูล
+4. ระบบแจ้งเตือน dependency ถ้ามี (เช่น ปิด GL จะกระทบ AR/AP)
+5. ยืนยัน → เมนูและสิทธิ์อัปเดตทันที
+
+### 11.4 Module Dependencies / การพึ่งพาระหว่างโมดูล
+
+| Module | Requires |
+|--------|----------|
+| AR (Accounts Receivable) | GL |
+| AP (Accounts Payable) | GL |
+| Payroll | HR, GL |
+| Manufacturing | Inventory, GL |
+| MRP | Manufacturing, Inventory |
+| Multi-Currency | GL |
+
+**Permission required:** `system:modules:manage`
+
+---
+
+## 12. Onboarding Wizard — วิซาร์ดตั้งค่าเริ่มต้น
+
+### 12.1 Overview / ภาพรวม
+
+Onboarding Wizard เป็นขั้นตอน 6 ขั้นที่นำผู้ใช้ใหม่ผ่านการตั้งค่าเริ่มต้นระบบ ERP ทำให้เริ่มใช้งานได้รวดเร็วโดยไม่ต้องตั้งค่าเอง
+
+The 6-step Onboarding Wizard guides new users through initial ERP setup for a quick start.
+
+### 12.2 Six Steps / 6 ขั้นตอน
+
+| Step | Title | Description |
+|------|-------|-------------|
+| 1 | **Company Profile** | ข้อมูลบริษัท — ชื่อ, ที่อยู่, Tax ID, โลโก้ |
+| 2 | **Industry Selection** | เลือกอุตสาหกรรม → โหลด template ที่เหมาะสม |
+| 3 | **Chart of Accounts** | ผังบัญชี — ใช้ template หรือสร้างเอง |
+| 4 | **Modules Selection** | เลือกโมดูลที่ต้องการใช้ (Toggle System) |
+| 5 | **Users & Roles** | เพิ่มผู้ใช้, กำหนดบทบาท, ตั้งสิทธิ์ |
+| 6 | **Opening Balances** | ยอดยกมา — นำเข้าข้อมูลเริ่มต้น |
+
+### 12.3 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Wizard | `/onboarding` | วิซาร์ดตั้งค่า — Setup wizard |
+| Wizard Status | `/onboarding/status` | สถานะการตั้งค่า — Setup progress |
+
+---
+
+## 13. Industry Templates — แพ็กเกจตามอุตสาหกรรม
+
+### 13.1 Overview / ภาพรวม
+
+Industry Templates ให้ชุดค่าเริ่มต้น (CoA, Modules, Tax Settings, Reports) สำหรับ 7 ประเภทธุรกิจ เพื่อให้เริ่มใช้งานได้ทันทีโดยไม่ต้องตั้งค่าจากศูนย์
+
+Industry Templates provide preset configurations (CoA, Modules, Tax, Reports) for 7 business types for instant startup.
+
+### 13.2 Available Templates / แพ็กเกจที่มี
+
+| # | Template | Description | Modules Enabled |
+|---|----------|-------------|-----------------|
+| 1 | **Trading** | ธุรกิจซื้อ-ขาย | SD, MM, FI, AR, AP, Inventory |
+| 2 | **Manufacturing** | โรงงานผลิต | SD, MM, PP, PM, FI, QM, Inventory |
+| 3 | **Service** | ธุรกิจบริการ | SD, FI, HR, Project, Time |
+| 4 | **Restaurant** | ร้านอาหาร | SD, Inventory, FI, POS |
+| 5 | **Construction** | ก่อสร้าง | MM, Project, FI, HR, PM |
+| 6 | **Import/Export** | นำเข้า-ส่งออก | SD, MM, FI, Customs, Multi-Currency |
+| 7 | **Retail** | ค้าปลีก | SD, Inventory, FI, POS, Loyalty |
+
+---
+
+## 14. Enterprise Structure — โครงสร้างองค์กร
+
+### 14.1 Overview / ภาพรวม
+
+Enterprise Structure กำหนดโครงสร้างลำดับชั้นขององค์กร: Company → Branch → Warehouse/Plant → Department ทุก transaction อ้างอิงโครงสร้างนี้เพื่อ reporting และ authorization
+
+Enterprise Structure defines the organizational hierarchy: Company → Branch → Warehouse/Plant → Department. All transactions reference this structure.
+
+### 14.2 Hierarchy / ลำดับชั้น
+
+```
+Company (บริษัท)
+├── Branch (สาขา)
+│   ├── Warehouse (คลังสินค้า)
+│   │   └── Storage Bins (ตำแหน่งจัดเก็บ)
+│   ├── Plant (โรงงาน)
+│   │   └── Work Centers (ศูนย์การทำงาน)
+│   └── Department (แผนก)
+│       └── Cost Center (ศูนย์ต้นทุน)
+└── Branch 2 ...
+```
+
+### 14.3 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Company Structure | `/settings/structure` | โครงสร้างองค์กร — Org structure |
+| Branches | `/settings/branches` | สาขา — Branch management |
+
+### 14.4 Key Rules / กฎสำคัญ
+
+- ทุก transaction ต้องอ้างอิง Branch
+- ผู้ใช้สามารถถูก assign ให้เข้าถึงเฉพาะบาง Branch ได้
+- รายงานสามารถกรองตาม Branch/Warehouse/Department
+- Intercompany transactions เกิดระหว่าง Company ที่ต่างกัน
+
+---
+
+## 15. Role-Based UI Visibility / การแสดงผลตามบทบาท
+
+### 15.1 Overview / ภาพรวม
+
+Role-Based UI Visibility ซ่อน/แสดงเมนู, ปุ่ม, ฟิลด์ ตาม Role ของผู้ใช้ ไม่ใช่แค่ permission check แต่เป็นการออกแบบ UI ให้แต่ละบทบาทเห็นเฉพาะสิ่งที่จำเป็น
+
+Role-Based UI Visibility hides/shows menus, buttons, and fields based on user roles — not just permission checks but UX-tailored views per role.
+
+### 15.2 Default Role Profiles / โปรไฟล์ตามบทบาท
+
+| Role | Visible Modules | Dashboard Widgets |
+|------|----------------|-------------------|
+| **CFO** | All Finance + Reports | P&L, Cash Flow, Budget vs Actual |
+| **Accountant** | GL, AR, AP, Bank, Tax | JE Queue, Aging, Reconciliation |
+| **Sales** | SD, CRM, Inventory | Pipeline, Quota, Revenue |
+| **Procurement** | MM, Inventory | PO Status, Vendor Perf |
+| **HR Manager** | HR, Payroll | Headcount, Attendance, Leave |
+| **Warehouse** | Inventory, EWM | Stock Levels, Pick Queue |
+| **Factory** | PP, PM, QM | Production Status, OEE |
+
+---
+
+## 16. ESS/MSS — Employee & Manager Self-Service / บริการตนเองพนักงาน-ผู้จัดการ
+
+### 16.1 Overview / ภาพรวม
+
+ESS (Employee Self-Service) ให้พนักงานจัดการข้อมูลตัวเองได้ เช่น ดูสลิปเงินเดือน, ขอลา, ลงเวลา MSS (Manager Self-Service) ให้หัวหน้าอนุมัติและดูรายงานทีม
+
+ESS lets employees manage their own data (payslips, leave, attendance). MSS lets managers approve requests and view team reports.
+
+### 16.2 ESS Features / ฟีเจอร์พนักงาน
+
+| Feature | Path | Description |
+|---------|------|-------------|
+| My Profile | `/ess/profile` | ข้อมูลส่วนตัว — Personal info |
+| My Payslips | `/ess/payslips` | สลิปเงินเดือน — View/download payslips |
+| Leave Request | `/ess/leave` | ขอลา — Request leave |
+| My Attendance | `/ess/attendance` | บันทึกเวลา — Clock in/out |
+| My Benefits | `/ess/benefits` | สวัสดิการ — Benefits info |
+| My Training | `/ess/training` | อบรม — Training records |
+
+### 16.3 MSS Features / ฟีเจอร์ผู้จัดการ
+
+| Feature | Path | Description |
+|---------|------|-------------|
+| Team Overview | `/mss/team` | ภาพรวมทีม — Team dashboard |
+| Approve Leave | `/mss/approvals/leave` | อนุมัติลา — Approve leave |
+| Approve OT | `/mss/approvals/overtime` | อนุมัติ OT — Approve overtime |
+| Team Attendance | `/mss/attendance` | เวลาทำงานทีม — Team attendance |
+| Team Reports | `/mss/reports` | รายงานทีม — Team reports |
+
+---
+
+## 17. Travel Expense Management / จัดการค่าเดินทาง
+
+### 17.1 Overview / ภาพรวม
+
+Travel Expense Management จัดการค่าใช้จ่ายเดินทาง ตั้งแต่ขออนุมัติเดินทาง → บันทึกค่าใช้จ่าย → อนุมัติ → เบิกเงิน พร้อมตรวจสอบตามนโยบายบริษัทอัตโนมัติ
+
+Travel Expense Management handles travel expenses from request → expense recording → approval → reimbursement, with automatic policy compliance checks.
+
+### 17.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Travel Requests | `/travel/requests` | คำขอเดินทาง — Travel requests |
+| Expense Reports | `/travel/expenses` | รายงานค่าใช้จ่าย — Expense reports |
+| Policy Config | `/settings/travel-policy` | นโยบายค่าเดินทาง — Travel policy |
+
+### 17.3 Step-by-Step: เบิกค่าเดินทาง
+
+1. สร้าง **Travel Request** → ระบุจุดหมาย, วันที่, วัตถุประสงค์
+2. ผู้จัดการ **อนุมัติ** คำขอเดินทาง
+3. เดินทางแล้ว → สร้าง **Expense Report** → แนบใบเสร็จ
+4. ระบุ **Expense Lines**:
+   - ค่าตั๋วเครื่องบิน / ค่ารถ
+   - ค่าที่พัก
+   - ค่าอาหาร (ตาม Per Diem หรือจริง)
+   - ค่าอื่นๆ
+5. ระบบตรวจสอบตาม **Travel Policy** (เกินเพดานหรือไม่)
+6. ผู้จัดการ **อนุมัติ** Expense Report
+7. ส่ง AP → สร้าง **Payment** → โอนเงินคืนพนักงาน
+
+#### GL Entries:
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Travel Expense (5300) | Expense total | ค่าเดินทาง |
+| Dr | Input VAT (1110) | VAT (if applicable) | ภาษีซื้อ |
+| Cr | Employee Payable (2350) | Net amount | เจ้าหนี้พนักงาน |
+
+---
+
+## 18. Recruitment / ATS — ระบบสรรหาบุคลากร
+
+### 18.1 Overview / ภาพรวม
+
+Recruitment / Applicant Tracking System (ATS) จัดการกระบวนการสรรหาบุคลากรตั้งแต่เปิดตำแหน่ง → รับใบสมัคร → สัมภาษณ์ → เสนองาน → Onboard
+
+Recruitment / ATS manages the hiring process: open position → receive applications → interview → offer → onboard.
+
+### 18.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Job Requisitions | `/recruitment/requisitions` | ใบเปิดตำแหน่ง — Job requisitions |
+| Applicants | `/recruitment/applicants` | ผู้สมัคร — Applicant list |
+| Interview Schedule | `/recruitment/interviews` | ตารางสัมภาษณ์ — Interview schedule |
+| Offers | `/recruitment/offers` | จดหมายเสนองาน — Job offers |
+| Recruitment Pipeline | `/recruitment/pipeline` | Pipeline สรรหา — Hiring pipeline |
+
+### 18.3 Pipeline Stages / ขั้นตอน
+
+```
+Applied → Screening → Interview → Assessment → Offer → Hired
+                                              → Rejected
+```
+
+### 18.4 Step-by-Step: กระบวนการสรรหา
+
+1. HR/Manager สร้าง **Job Requisition** → ระบุตำแหน่ง, คุณสมบัติ, จำนวนรับ
+2. อนุมัติ Requisition → ประกาศรับสมัคร
+3. ผู้สมัคร Apply → ข้อมูลเข้าระบบ ATS
+4. HR **Screen** → ย้ายผู้ผ่านไป Interview stage
+5. จัดตาราง **สัมภาษณ์** → บันทึกผลสัมภาษณ์ + คะแนน
+6. **Assessment** → ทดสอบ (ถ้ามี)
+7. สร้าง **Offer Letter** → ส่งให้ผู้สมัคร
+8. Accept → Trigger **Onboarding** → สร้าง Employee record
+
+---
+
+## 19. Performance & Goals — ประเมินผลและเป้าหมาย
+
+### 19.1 Overview / ภาพรวม
+
+Performance & Goals module จัดการการตั้งเป้าหมาย (OKR/KPI), ประเมินผลงานรายปี/รายไตรมาส, 360-degree feedback, และเชื่อมโยงกับ Compensation
+
+Performance & Goals manages goal setting (OKR/KPI), periodic performance reviews, 360-degree feedback, and compensation linkage.
+
+### 19.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Goals | `/performance/goals` | เป้าหมาย — Goal management |
+| Reviews | `/performance/reviews` | ประเมินผล — Performance reviews |
+| 360 Feedback | `/performance/feedback` | ข้อมูลป้อนกลับ — 360 feedback |
+| Calibration | `/performance/calibration` | ปรับเทียบ — Rating calibration |
+
+### 19.3 Review Cycle / วงจรประเมิน
+
+```
+Goal Setting → Mid-Year Review → Year-End Review → Calibration → Rating Final
+ตั้งเป้าหมาย    ทบทวนกลางปี       ประเมินสิ้นปี      ปรับเทียบ      ผลสุดท้าย
+```
+
+---
+
+## 20. GRC / SoD — Governance, Risk & Compliance / การกำกับดูแลและควบคุมภายใน
+
+### 20.1 Overview / ภาพรวม
+
+GRC module จัดการ Governance, Risk, and Compliance รวมถึง Segregation of Duties (SoD) ที่ป้องกันการมอบสิทธิ์ที่ขัดกัน เช่น สร้าง PO + อนุมัติ PO โดยคนเดียว
+
+GRC manages governance, risk, and compliance including Segregation of Duties (SoD) to prevent conflicting role assignments (e.g., create PO + approve PO by same person).
+
+### 20.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| SoD Rules | `/grc/sod-rules` | กฎ SoD — SoD conflict rules |
+| SoD Violations | `/grc/violations` | การฝ่าฝืน SoD — Violation report |
+| Risk Register | `/grc/risks` | ทะเบียนความเสี่ยง — Risk register |
+| Compliance Tasks | `/grc/compliance` | งาน Compliance — Compliance tasks |
+| Audit Log | `/grc/audit-log` | บันทึกตรวจสอบ — Audit trail |
+
+### 20.3 SoD Rule Examples / ตัวอย่างกฎ SoD
+
+| Rule | Permission A | Permission B | Risk |
+|------|-------------|-------------|------|
+| PO Creation vs Approval | `mm:po:create` | `mm:po:approve` | Fraud |
+| Vendor Create vs Payment | `mm:vendor:create` | `ap:payment:create` | Fictitious vendor |
+| JE Create vs JE Post | `fi:je:create` | `fi:je:post` | Unauthorized posting |
+| Employee Create vs Payroll Run | `hr:employee:create` | `hr:payroll:run` | Ghost employee |
+
+---
+
+## 21. DMS — Document Management System / ระบบจัดการเอกสาร
+
+### 21.1 Overview / ภาพรวม
+
+DMS จัดเก็บและจัดการเอกสารที่เชื่อมโยงกับ transactions ต่างๆ เช่น ใบแจ้งหนี้, สัญญา, ใบเสร็จ รองรับ versioning, OCR, และ full-text search
+
+DMS stores and manages documents linked to transactions (invoices, contracts, receipts) with versioning, OCR, and full-text search.
+
+### 21.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Document Library | `/documents` | คลังเอกสาร — Document library |
+| Upload | `/documents/upload` | อัปโหลด — Upload documents |
+
+### 21.3 Features / ฟีเจอร์
+
+- **Auto-link** — แนบเอกสารกับ SO, PO, Invoice, JE อัตโนมัติ
+- **Version Control** — เก็บทุก version, เปรียบเทียบได้
+- **OCR** — สแกนเอกสาร → ดึงข้อมูลอัตโนมัติ (AI-assisted)
+- **Full-text Search** — ค้นหาเนื้อหาภายในเอกสาร
+- **Retention Policy** — กำหนดระยะเวลาเก็บรักษา
+- **Access Control** — กำหนดสิทธิ์เข้าถึงตามบทบาท
+
+---
+
+## 22. EDI — Electronic Data Interchange / แลกเปลี่ยนข้อมูลอิเล็กทรอนิกส์
+
+### 22.1 Overview / ภาพรวม
+
+EDI module รับ-ส่งเอกสารธุรกิจ (PO, Invoice, ASN) ในรูปแบบอิเล็กทรอนิกส์มาตรฐาน ลดการป้อนข้อมูลด้วยมือ เพิ่มความเร็วและความถูกต้อง
+
+EDI module sends/receives business documents (PO, Invoice, ASN) in standard electronic formats, reducing manual entry and increasing speed and accuracy.
+
+### 22.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| EDI Dashboard | `/edi` | ภาพรวม EDI — EDI overview |
+| Partner Profiles | `/edi/partners` | คู่ค้า EDI — Trading partner profiles |
+| Message Monitor | `/edi/messages` | ติดตามข้อความ — Message monitor |
+| Mapping Config | `/edi/mappings` | ตั้งค่า mapping — Field mapping config |
+
+### 22.3 Supported Document Types / ประเภทเอกสาร
+
+| Document | Direction | Standard |
+|----------|-----------|----------|
+| Purchase Order | Outbound/Inbound | EDIFACT ORDERS |
+| Invoice | Outbound | EDIFACT INVOIC / e-Tax XML |
+| Advance Ship Notice | Inbound | EDIFACT DESADV |
+| Order Response | Inbound | EDIFACT ORDRSP |
+| Payment Advice | Outbound | EDIFACT REMADV |
+
+---
+
+## 23. Data Archiving — การจัดเก็บข้อมูลเก่า
+
+### 23.1 Overview / ภาพรวม
+
+Data Archiving ย้ายข้อมูลเก่าที่ไม่ได้ใช้งานบ่อยออกจากตาราง production ไปเก็บใน archive storage เพื่อรักษาประสิทธิภาพระบบ ข้อมูลยังค้นหาได้แต่ไม่อยู่ใน query ปกติ
+
+Data Archiving moves infrequently accessed data from production tables to archive storage for system performance. Archived data remains searchable but is excluded from normal queries.
+
+### 23.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Archive Runs | `/settings/archiving` | การจัดเก็บข้อมูล — Archive run list |
+| Archive Config | `/settings/archiving/config` | ตั้งค่า — Archive configuration |
+| Archive Search | `/settings/archiving/search` | ค้นหาข้อมูลเก่า — Search archived data |
+
+### 23.3 Archiving Rules / กฎการจัดเก็บ
+
+| Data Type | Archive After | Retention |
+|-----------|--------------|-----------|
+| Journal Entries | 3 fiscal years | 10 years (ตาม พ.ร.บ.สรรพากร) |
+| Invoices | 3 fiscal years | 7 years |
+| Purchase Orders | 2 fiscal years | 5 years |
+| Stock Movements | 2 fiscal years | 5 years |
+| Audit Logs | 1 year | 7 years |
+| Payroll Records | 2 fiscal years | 10 years |
+
+### 23.4 Step-by-Step: รัน Archive
+
+1. ไปที่ **Settings > Archiving** (`/settings/archiving`)
+2. กด **"+ New Archive Run"** → เลือก Data Type
+3. ระบุ **Cutoff Date** (เช่น ข้อมูลก่อน 2024-01-01)
+4. กด **"Preview"** → ดูจำนวนรายการที่จะ archive
+5. ยืนยัน → ระบบย้ายข้อมูลไป archive storage
+6. ข้อมูล archive ค้นหาได้ผ่าน **Archive Search**

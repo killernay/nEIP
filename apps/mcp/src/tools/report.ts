@@ -355,4 +355,127 @@ export function registerReportTools(server: McpServer): void {
       }
     },
   );
+
+  // ===========================================================================
+  // SAP-Parity Report Tools
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_oee_report — Overall Equipment Effectiveness (PP)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_oee_report',
+    'รายงาน OEE — Generate overall equipment effectiveness report (PP)',
+    {
+      workCenterId: z.string().optional().describe('Work center ID (omit for all)'),
+      startDate: z.string().optional().describe('Start date (YYYY-MM-DD)'),
+      endDate: z.string().optional().describe('End date (YYYY-MM-DD)'),
+    },
+    async ({ workCenterId, startDate, endDate }) => {
+      try {
+        const params: string[] = [];
+        if (workCenterId) params.push(`workCenterId=${workCenterId}`);
+        if (startDate) params.push(`startDate=${startDate}`);
+        if (endDate) params.push(`endDate=${endDate}`);
+        const qs = params.length > 0 ? `?${params.join('&')}` : '';
+        const data = await apiCall<Record<string, unknown>>('GET', `/reports/oee${qs}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_profitability — Profitability Analysis (CO-PA)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_profitability',
+    'รายงานวิเคราะห์กำไร — Generate profitability analysis report (CO-PA)',
+    {
+      dimension: z.enum(['product', 'customer', 'region', 'channel']).describe('Analysis dimension'),
+      startDate: z.string().optional().describe('Start date (YYYY-MM-DD)'),
+      endDate: z.string().optional().describe('End date (YYYY-MM-DD)'),
+    },
+    async ({ dimension, startDate, endDate }) => {
+      try {
+        const params: string[] = [`dimension=${dimension}`];
+        if (startDate) params.push(`startDate=${startDate}`);
+        if (endDate) params.push(`endDate=${endDate}`);
+        const data = await apiCall<Record<string, unknown>>('GET', `/reports/profitability?${params.join('&')}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_capacity_plan — Capacity Planning (PP-CRP)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_capacity_plan',
+    'รายงานแผนกำลังการผลิต — Generate capacity planning report (PP-CRP)',
+    {
+      workCenterId: z.string().optional().describe('Work center ID (omit for all)'),
+      horizonWeeks: z.number().optional().default(4).describe('Planning horizon in weeks'),
+    },
+    async ({ workCenterId, horizonWeeks }) => {
+      try {
+        const params: string[] = [`horizonWeeks=${horizonWeeks}`];
+        if (workCenterId) params.push(`workCenterId=${workCenterId}`);
+        const data = await apiCall<Record<string, unknown>>('GET', `/reports/capacity-plan?${params.join('&')}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_evm — Earned Value Management (PS)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_evm',
+    'รายงาน EVM — Generate earned value management report (PS)',
+    {
+      projectId: z.string().describe('Project ID'),
+      asOfDate: z.string().optional().describe('As-of date (YYYY-MM-DD)'),
+    },
+    async ({ projectId, asOfDate }) => {
+      try {
+        const params: string[] = [`projectId=${projectId}`];
+        if (asOfDate) params.push(`asOfDate=${asOfDate}`);
+        const data = await apiCall<Record<string, unknown>>('GET', `/reports/evm?${params.join('&')}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_closing_cockpit — Closing Cockpit (FI)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_closing_cockpit',
+    'แดชบอร์ดปิดงวด — Generate closing cockpit report (FI)',
+    {
+      fiscalYear: z.number().describe('Fiscal year'),
+      fiscalPeriod: z.number().describe('Fiscal period (1-12)'),
+    },
+    async ({ fiscalYear, fiscalPeriod }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/reports/closing-cockpit?fiscalYear=${fiscalYear}&fiscalPeriod=${fiscalPeriod}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
 }

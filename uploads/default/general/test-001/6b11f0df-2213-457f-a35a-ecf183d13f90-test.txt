@@ -1,0 +1,164 @@
+#!/bin/bash
+TOKEN=$(curl -s -X POST http://localhost:5400/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"test-modules@test.com","password":"TestPass1234!@#$"}' | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
+BASE="http://localhost:5400/api/v1"
+AUTH="Authorization: Bearer $TOKEN"
+CT="Content-Type: application/json"
+
+PASS=0; FAIL=0; TOTAL=0
+
+t() {
+  local method=$1 path=$2 data=$3 label=$4
+  TOTAL=$((TOTAL+1))
+  if [ "$method" = "GET" ]; then
+    resp=$(curl -s -w "\n%{http_code}" "$BASE$path" -H "$AUTH" -H "$CT" 2>&1)
+  elif [ "$method" = "UPLOAD" ]; then
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$BASE$path" -H "$AUTH" -F "file=@/tmp/test_final.sh;filename=test.txt" -F "entityType=general" -F "entityId=test-001" 2>&1)
+  else
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$BASE$path" -H "$AUTH" -H "$CT" -d "$data" 2>&1)
+  fi
+  code=$(echo "$resp" | tail -1)
+  body=$(echo "$resp" | sed '$d')
+  echo "$body" > /tmp/last_body.json
+  if [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 300 ] 2>/dev/null; then
+    echo "PASS | $method $path | $code | $label"
+    PASS=$((PASS+1))
+  else
+    error=$(echo "$body" | grep -o '"detail":"[^"]*"' | head -1 | cut -d'"' -f4)
+    [ -z "$error" ] && error=$(echo "$body" | head -c 150)
+    echo "FAIL | $method $path | $code | $label | $error"
+    FAIL=$((FAIL+1))
+  fi
+}
+
+echo "=================================================================="
+echo " nEIP Module Integration Test — FINAL REPORT"
+echo " Date: $(date)"
+echo " Endpoint: $BASE"
+echo "=================================================================="
+echo ""
+
+# --- Prerequisites ---
+echo "=== PREREQUISITES ==="
+# Create vendor
+t POST "/vendors" '{"name":"Test Vendor Co","taxId":"1234567890","address":"Bangkok"}' "Create vendor"
+VEND_ID=$(cat /tmp/last_body.json | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+# Create product
+t POST "/products" '{"sku":"SKU-TEST-001","nameTh":"สินค้าทดสอบ","nameEn":"Test Product","category":"finished","unit":"pcs"}' "Create product"
+PROD_ID=$(cat /tmp/last_body.json | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+echo "Vendor ID: $VEND_ID | Product ID: $PROD_ID"
+echo ""
+
+echo "=== 1. MODULE SYSTEM ==="
+t GET "/modules" "" "List all modules"
+t GET "/modules/tenant" "" "List tenant modules"
+t POST "/modules/activate" '{"module_code":"finance"}' "Activate module"
+
+echo "=== 2. ONBOARDING ==="
+t GET "/onboarding/templates" "" "List templates"
+t POST "/onboarding/step/1" '{"companyName":"Test Corp","companyType":"limited"}' "Step 1"
+
+echo "=== 3. MANUFACTURING ==="
+t POST "/boms" "{\"productId\":\"$PROD_ID\",\"nameTh\":\"BOM ทดสอบ\"}" "Create BOM"
+BOM_ID=$(cat /tmp/last_body.json | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+t GET "/boms" "" "List BOMs"
+t POST "/work-centers" '{"code":"WC-002","nameTh":"สายผลิต 2"}' "Create work center"
+WC_ID=$(cat /tmp/last_body.json | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+t GET "/work-centers" "" "List work centers"
+
+echo "=== 4. TRADE ==="
+t GET "/incoterms" "" "List incoterms"
+t POST "/trade-declarations" '{"documentNumber":"IMP-2026-002","type":"import","portCode":"BKK"}' "Create declaration"
+t POST "/letters-of-credit" '{"lcNumber":"LC-2026-002","type":"import","applicant":"Test Corp","beneficiary":"Supplier","amountSatang":10000000,"currency":"USD","expiryDate":"2026-12-31","issuingBank":"BBL"}' "Create LC"
+
+echo "=== 5. LEASES (IFRS 16) ==="
+t POST "/leases" '{"lessor":"Property Co","lesseeCompanyId":"default","assetDescription":"Office","leaseType":"operating","startDate":"2026-01-01","endDate":"2028-12-31","monthlyPaymentSatang":5000000,"discountRateBp":500}' "Create lease"
+LEASE_ID=$(cat /tmp/last_body.json | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+t GET "/leases" "" "List leases"
+if [ -n "$LEASE_ID" ]; then
+  t POST "/leases/$LEASE_ID/activate" '{}' "Activate lease"
+fi
+
+echo "=== 6. REVENUE (IFRS 15) ==="
+t POST "/revenue/contracts" '{"customerId":"CUST-001","contractDate":"2026-01-01","totalPriceSatang":100000000}' "Create revenue contract"
+t GET "/revenue/contracts" "" "List revenue contracts"
+
+echo "=== 7. PM (MAINTENANCE) ==="
+t POST "/equipment" '{"code":"EQ-002","nameTh":"เครื่อง CNC"}' "Create equipment"
+EQ_ID=$(cat /tmp/last_body.json | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+t GET "/equipment" "" "List equipment"
+if [ -n "$EQ_ID" ]; then
+  t POST "/maintenance/plans" "{\"equipmentId\":\"$EQ_ID\",\"planType\":\"preventive\",\"name\":\"Monthly Check\",\"frequencyDays\":30}" "Create plan"
+  t POST "/maintenance/orders" "{\"equipmentId\":\"$EQ_ID\",\"orderType\":\"corrective\",\"priority\":\"high\",\"description\":\"Belt fix\"}" "Create order"
+fi
+t GET "/maintenance/orders" "" "List orders"
+
+echo "=== 8. BATCH PAYMENT ==="
+t POST "/ap/batch-payment/propose" '{"dueDateFrom":"2026-04-01","dueDateTo":"2026-04-30"}' "Propose batch"
+
+echo "=== 9. COLLECTIONS ==="
+t GET "/ar/collections/worklist" "" "Collections worklist"
+
+echo "=== 10. DOWN PAYMENTS ==="
+if [ -n "$VEND_ID" ]; then
+  t POST "/ap/down-payments" "{\"vendorId\":\"$VEND_ID\",\"amountSatang\":3000000}" "AP down payment"
+fi
+t POST "/ar/down-payments" '{"customerId":"CUST-001","amountSatang":5000000}' "AR down payment"
+
+echo "=== 11. ENTERPRISE ==="
+t POST "/enterprise/branches" '{"code":"BR-003","nameTh":"สาขาเชียงใหม่","branchType":"office"}' "Create branch"
+t GET "/enterprise/branches" "" "List branches"
+t GET "/enterprise/structure" "" "Enterprise structure"
+
+echo "=== 12. ROLE CONFIG ==="
+t GET "/role-templates" "" "List role templates"
+t GET "/ui/config" "" "UI config"
+
+echo "=== 13. PROJECTS ==="
+t POST "/projects" '{"code":"PRJ-002","nameTh":"โปรเจค ERP","projectType":"internal","startDate":"2026-01-01","endDate":"2026-12-31","budgetSatang":500000000}' "Create project"
+PRJ_ID=$(cat /tmp/last_body.json | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+t GET "/projects" "" "List projects"
+
+echo "=== 14. QUALITY ==="
+t POST "/inspections" '{"inspectionType":"incoming","referenceType":"purchase_order","referenceId":"PO-001"}' "Create inspection"
+t GET "/inspections" "" "List inspections"
+
+echo "=== 15. SERVICES ==="
+if [ -n "$VEND_ID" ]; then
+  t POST "/service-entry-sheets" "{\"vendorId\":\"$VEND_ID\",\"description\":\"IT Support\"}" "Create service entry"
+fi
+t GET "/service-entry-sheets" "" "List service entries"
+
+echo "=== 16. CONTROLLING ==="
+if [ -n "$PROD_ID" ]; then
+  t POST "/controlling/standard-cost/calculate" "{\"productId\":\"$PROD_ID\",\"fiscalYear\":\"2026\"}" "Standard cost"
+fi
+t POST "/controlling/allocation/rules" '{"name":"Overhead","sourceCostCenterId":"ADM","targetCostCenterIds":["PROD"],"percentages":[100]}' "Allocation rule"
+
+echo "=== 17. FI GAPS ==="
+t POST "/vendors/test-vendor/evaluate" '{"period":"2026-Q1","deliveryScore":8,"qualityScore":9,"priceScore":7,"serviceScore":8}' "Vendor evaluation"
+t GET "/month-end/cockpit" "" "Month-end cockpit"
+
+echo "=== 18. ESS ==="
+t GET "/ess/profile" "" "ESS profile"
+
+echo "=== 19. RECRUITMENT ==="
+t POST "/job-postings" '{"title":"Dev Lead","department":"IT","location":"BKK","employmentType":"full_time","description":"Lead dev"}' "Create posting"
+t GET "/job-postings" "" "List postings"
+
+echo "=== 20. PERFORMANCE ==="
+t POST "/performance/reviews" '{"employeeId":"EMP-001","reviewerId":"EMP-002","reviewPeriod":"2026-Q1","reviewType":"annual","overallRating":4}' "Create review"
+
+echo "=== 21. GRC ==="
+t GET "/grc/sod-violations" "" "SoD violations"
+
+echo "=== 22. DMS ==="
+t UPLOAD "/documents/upload" "" "Upload document"
+
+echo ""
+echo "=================================================================="
+echo " SUMMARY"
+echo "=================================================================="
+echo " PASS: $PASS / $TOTAL"
+echo " FAIL: $FAIL / $TOTAL"
+echo " Rate: $(echo "scale=1; $PASS * 100 / $TOTAL" | bc)%"
+echo "=================================================================="

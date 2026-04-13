@@ -368,4 +368,248 @@ export function registerActionTools(server: McpServer): void {
       }
     },
   );
+
+  // ===========================================================================
+  // SAP-Parity Module Action Tools
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // Tool: release_production_order
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'release_production_order',
+    'ปล่อยใบสั่งผลิต — Release a production order (PP-SFC)',
+    { productionOrderId: z.string().describe('Production order ID') },
+    wrapTool(({ productionOrderId }) => apiCall('POST', `/production-orders/${productionOrderId}/release`)),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: confirm_production
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'confirm_production',
+    'ยืนยันผลผลิต — Confirm production output (PP-SFC)',
+    {
+      productionOrderId: z.string().describe('Production order ID'),
+      quantityProduced: z.number().describe('Quantity produced'),
+      scrapQuantity: z.number().optional().default(0).describe('Scrap quantity'),
+    },
+    wrapTool(({ productionOrderId, quantityProduced, scrapQuantity }) =>
+      apiCall('POST', `/production-orders/${productionOrderId}/confirm`, { quantityProduced, scrapQuantity }),
+    ),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: run_mrp
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'run_mrp',
+    'รัน MRP — Run material requirements planning (PP-MRP)',
+    {
+      plantId: z.string().optional().describe('Plant/warehouse ID (omit for all)'),
+      productId: z.string().optional().describe('Specific product ID (omit for all)'),
+    },
+    wrapTool(({ plantId, productId }) =>
+      apiCall('POST', '/mrp/run', { plantId, productId }),
+    ),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: activate_lease
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'activate_lease',
+    'เปิดใช้สัญญาเช่า — Activate a lease contract (RE-FX)',
+    { leaseContractId: z.string().describe('Lease contract ID') },
+    wrapTool(({ leaseContractId }) => apiCall('POST', `/lease-contracts/${leaseContractId}/activate`)),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: post_lease_monthly
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'post_lease_monthly',
+    'บันทึกค่าเช่ารายเดือน — Post monthly lease entries (RE-FX / IFRS 16)',
+    {
+      leaseContractId: z.string().describe('Lease contract ID'),
+      postingDate: z.string().optional().describe('Posting date (YYYY-MM-DD), defaults to today'),
+    },
+    wrapTool(({ leaseContractId, postingDate }) =>
+      apiCall('POST', `/lease-contracts/${leaseContractId}/post-monthly`, { postingDate }),
+    ),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: recognize_revenue
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'recognize_revenue',
+    'รับรู้รายได้ — Recognize revenue for obligation (RA / IFRS 15)',
+    {
+      revenueContractId: z.string().describe('Revenue contract ID'),
+      obligationId: z.string().describe('Performance obligation ID'),
+      amountSatang: z.string().optional().describe('Amount to recognize in satang (omit for full)'),
+      recognitionDate: z.string().optional().describe('Recognition date (YYYY-MM-DD)'),
+    },
+    async ({ revenueContractId, obligationId, amountSatang, recognitionDate }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', `/revenue-contracts/${revenueContractId}/recognize`, {
+          obligationId, amountSatang, recognitionDate,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: submit_declaration
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'submit_declaration',
+    'ยื่นใบขนศุลกากร — Submit a trade declaration to customs (FT)',
+    { declarationId: z.string().describe('Trade declaration ID') },
+    wrapTool(({ declarationId }) => apiCall('POST', `/trade-declarations/${declarationId}/submit`)),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: clear_declaration
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'clear_declaration',
+    'ผ่านพิธีการศุลกากร — Clear a customs declaration (FT)',
+    { declarationId: z.string().describe('Trade declaration ID') },
+    wrapTool(({ declarationId }) => apiCall('POST', `/trade-declarations/${declarationId}/clear`)),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: issue_lc
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'issue_lc',
+    'ออก L/C — Issue a letter of credit (FT-LC)',
+    { lcId: z.string().describe('Letter of credit ID') },
+    wrapTool(({ lcId }) => apiCall('POST', `/letters-of-credit/${lcId}/issue`)),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: settle_lc
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'settle_lc',
+    'ชำระ L/C — Settle a letter of credit (FT-LC)',
+    { lcId: z.string().describe('Letter of credit ID') },
+    wrapTool(({ lcId }) => apiCall('POST', `/letters-of-credit/${lcId}/settle`)),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: propose_batch_payment
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'propose_batch_payment',
+    'เสนอจ่ายชำระกลุ่ม — Propose a batch payment run (FI-AP)',
+    {
+      paymentDate: z.string().describe('Payment date (YYYY-MM-DD)'),
+      vendorIds: z.array(z.string()).optional().describe('Specific vendor IDs (omit for all due)'),
+      bankAccountId: z.string().optional().describe('Bank account to pay from'),
+    },
+    async ({ paymentDate, vendorIds, bankAccountId }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/batch-payments/propose', {
+          paymentDate, vendorIds, bankAccountId,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: execute_batch_payment
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'execute_batch_payment',
+    'ดำเนินการจ่ายชำระกลุ่ม — Execute a batch payment run (FI-AP)',
+    { batchPaymentId: z.string().describe('Batch payment proposal ID') },
+    wrapTool(({ batchPaymentId }) => apiCall('POST', `/batch-payments/${batchPaymentId}/execute`)),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: approve_service_entry
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'approve_service_entry',
+    'อนุมัติใบรับบริการ — Approve a service entry sheet (MM-SRV)',
+    {
+      serviceEntryId: z.string().describe('Service entry ID'),
+      notes: z.string().optional().describe('Approval notes'),
+    },
+    async ({ serviceEntryId, notes }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', `/service-entries/${serviceEntryId}/approve`, { notes });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: generate_maintenance_orders
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'generate_maintenance_orders',
+    'สร้างใบสั่งซ่อมจากแผน — Generate maintenance orders from plans (PM-PRM)',
+    {
+      asOfDate: z.string().optional().describe('As-of date (YYYY-MM-DD), defaults to today'),
+      equipmentId: z.string().optional().describe('Specific equipment ID'),
+    },
+    async ({ asOfDate, equipmentId }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/maintenance-plans/generate-orders', {
+          asOfDate, equipmentId,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: run_sod_check
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'run_sod_check',
+    'ตรวจสอบ SoD — Run segregation of duties check (GRC)',
+    {
+      userId: z.string().optional().describe('Check specific user (omit for all)'),
+      roleId: z.string().optional().describe('Check specific role (omit for all)'),
+    },
+    async ({ userId, roleId }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/sod-rules/check', { userId, roleId });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
 }

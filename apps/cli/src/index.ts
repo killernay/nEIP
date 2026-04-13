@@ -45,6 +45,18 @@
  *   neip batch list/create/trace
  *   neip pdpa access-request/erasure-request
  *   neip ai anomaly-scan/forecast/categorize/predict
+ *   neip manufacturing bom/work-centers/orders/mrp/kanban
+ *   neip maintenance equipment/plans/orders
+ *   neip leases list/create/activate/post-monthly
+ *   neip revenue contracts/recognize
+ *   neip services list/approve
+ *   neip ess profile/payslips/leave
+ *   neip recruitment postings/applications
+ *   neip performance reviews/goals
+ *   neip travel requests/claims
+ *   neip grc sod/violations
+ *   neip dms list/upload/delete
+ *   neip enterprise branches/structure
  *
  * Global flags:
  *   --format <table|json>   Output format (default: table)
@@ -106,6 +118,18 @@ import { buildBatchCommand } from './commands/batches.js';
 import { buildPdpaCommand } from './commands/pdpa.js';
 import { buildAiCommand } from './commands/ai.js';
 import { buildTradeCommand } from './commands/trade.js';
+import { buildManufacturingCommand } from './commands/manufacturing.js';
+import { buildMaintenanceCommand } from './commands/maintenance.js';
+import { buildLeasesCommand } from './commands/leases.js';
+import { buildRevenueCommand } from './commands/revenue.js';
+import { buildServicesCommand } from './commands/services.js';
+import { buildEssCommand } from './commands/ess.js';
+import { buildRecruitmentCommand } from './commands/recruitment.js';
+import { buildPerformanceCommand } from './commands/performance.js';
+import { buildTravelCommand } from './commands/travel.js';
+import { buildGrcCommand } from './commands/grc.js';
+import { buildDmsCommand } from './commands/dms.js';
+import { buildEnterpriseCommand } from './commands/enterprise.js';
 import { ApiError } from './lib/api-client.js';
 import { type OutputFormat, printError, setFormat } from './output/formatter.js';
 
@@ -285,6 +309,20 @@ program.addCommand(buildBatchCommand());
 program.addCommand(buildPdpaCommand());
 program.addCommand(buildAiCommand());
 program.addCommand(buildTradeCommand());
+
+// Phase 7: SAP-parity module commands
+program.addCommand(buildManufacturingCommand());
+program.addCommand(buildMaintenanceCommand());
+program.addCommand(buildLeasesCommand());
+program.addCommand(buildRevenueCommand());
+program.addCommand(buildServicesCommand());
+program.addCommand(buildEssCommand());
+program.addCommand(buildRecruitmentCommand());
+program.addCommand(buildPerformanceCommand());
+program.addCommand(buildTravelCommand());
+program.addCommand(buildGrcCommand());
+program.addCommand(buildDmsCommand());
+program.addCommand(buildEnterpriseCommand());
 
 // ---------------------------------------------------------------------------
 // Parse and run

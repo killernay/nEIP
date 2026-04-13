@@ -1112,4 +1112,597 @@ export function registerListTools(server: McpServer): void {
       }
     },
   );
+
+  // ===========================================================================
+  // SAP-Parity Module List Tools (PP, PM, RE, RA, FT, MM-SRV, WM, PS, HR, GRC, DMS)
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_bom — Bill of Materials (PP-BOM)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_bom',
+    'ดู BOM — List bills of materials (PP-BOM)',
+    {
+      productId: z.string().optional().describe('Filter by finished product ID'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ productId, limit }) => {
+      try {
+        let path = `/bom?limit=${limit}`;
+        if (productId) path += `&productId=${productId}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_work_centers — Work Centers (PP-CRP)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_work_centers',
+    'ดูศูนย์งาน — List work centers (PP-CRP)',
+    {
+      limit: z.number().optional().default(50).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/work-centers?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_production_orders — Production Orders (PP-SFC)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_production_orders',
+    'ดูใบสั่งผลิต — List production orders (PP-SFC)',
+    {
+      status: z.string().optional().describe('Filter by status: planned, released, in_progress, completed, closed'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/production-orders?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_equipment — Equipment Master (PM-EQM)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_equipment',
+    'ดูเครื่องจักร/อุปกรณ์ — List equipment (PM-EQM)',
+    {
+      status: z.string().optional().describe('Filter by status: active, inactive, under_maintenance'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/equipment?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_maintenance_plans — Maintenance Plans (PM-PRM)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_maintenance_plans',
+    'ดูแผนบำรุงรักษา — List maintenance plans (PM-PRM)',
+    {
+      equipmentId: z.string().optional().describe('Filter by equipment ID'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ equipmentId, limit }) => {
+      try {
+        let path = `/maintenance-plans?limit=${limit}`;
+        if (equipmentId) path += `&equipmentId=${equipmentId}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_maintenance_orders — Maintenance Orders (PM-WOC)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_maintenance_orders',
+    'ดูใบสั่งซ่อม — List maintenance orders (PM-WOC)',
+    {
+      status: z.string().optional().describe('Filter by status: planned, in_progress, completed'),
+      equipmentId: z.string().optional().describe('Filter by equipment ID'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, equipmentId, limit }) => {
+      try {
+        let path = `/maintenance-orders?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        if (equipmentId) path += `&equipmentId=${equipmentId}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_lease_contracts — Lease Contracts (RE-FX)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_lease_contracts',
+    'ดูสัญญาเช่า — List lease contracts (RE-FX / IFRS 16)',
+    {
+      status: z.string().optional().describe('Filter by status: draft, active, expired, terminated'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/lease-contracts?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_revenue_contracts — Revenue Contracts (RA / IFRS 15)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_revenue_contracts',
+    'ดูสัญญารายรับ — List revenue contracts (RA / IFRS 15)',
+    {
+      status: z.string().optional().describe('Filter by status: draft, active, fulfilled, terminated'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/revenue-contracts?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_trade_declarations — Trade Declarations (FT)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_trade_declarations',
+    'ดูใบขนสินค้า — List trade declarations (FT)',
+    {
+      type: z.string().optional().describe('Filter: import or export'),
+      status: z.string().optional().describe('Filter by status'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ type, status, limit }) => {
+      try {
+        let path = `/trade-declarations?limit=${limit}`;
+        if (type) path += `&type=${type}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_letters_of_credit — Letters of Credit (FT-LC)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_letters_of_credit',
+    'ดู L/C — List letters of credit (FT-LC)',
+    {
+      status: z.string().optional().describe('Filter by status: draft, issued, negotiated, settled, cancelled'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/letters-of-credit?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_purchasing_contracts — Purchasing Contracts (MM-PUR)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_purchasing_contracts',
+    'ดูสัญญาจัดซื้อ — List purchasing contracts (MM-PUR)',
+    {
+      vendorId: z.string().optional().describe('Filter by vendor ID'),
+      status: z.string().optional().describe('Filter by status: draft, active, expired'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ vendorId, status, limit }) => {
+      try {
+        let path = `/purchasing-contracts?limit=${limit}`;
+        if (vendorId) path += `&vendorId=${vendorId}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_kanban_cards — Kanban Cards (PP-KAN)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_kanban_cards',
+    'ดูบัตร Kanban — List kanban cards (PP-KAN)',
+    {
+      workCenterId: z.string().optional().describe('Filter by work center ID'),
+      status: z.string().optional().describe('Filter by status: empty, in_transit, full'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ workCenterId, status, limit }) => {
+      try {
+        let path = `/kanban-cards?limit=${limit}`;
+        if (workCenterId) path += `&workCenterId=${workCenterId}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_service_entries — Service Entry Sheets (MM-SRV)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_service_entries',
+    'ดูใบรับบริการ — List service entry sheets (MM-SRV)',
+    {
+      status: z.string().optional().describe('Filter by status: draft, submitted, approved, rejected'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/service-entries?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_storage_bins — Storage Bins (WM)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_storage_bins',
+    'ดูตำแหน่งจัดเก็บ — List storage bins (WM)',
+    {
+      warehouseId: z.string().optional().describe('Filter by warehouse ID'),
+      limit: z.number().optional().default(50).describe('Max items'),
+    },
+    async ({ warehouseId, limit }) => {
+      try {
+        let path = `/storage-bins?limit=${limit}`;
+        if (warehouseId) path += `&warehouseId=${warehouseId}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_pick_lists — Pick Lists (WM)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_pick_lists',
+    'ดูใบหยิบสินค้า — List pick lists (WM)',
+    {
+      status: z.string().optional().describe('Filter by status: open, in_progress, completed'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/pick-lists?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_shipments — Shipments (LE-TRA)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_shipments',
+    'ดูรายการจัดส่ง — List shipments (LE-TRA)',
+    {
+      status: z.string().optional().describe('Filter by status: planned, in_transit, delivered'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/shipments?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_wbs_elements — WBS Elements (PS)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_wbs_elements',
+    'ดู WBS — List WBS elements (PS)',
+    {
+      projectId: z.string().optional().describe('Filter by project ID'),
+      limit: z.number().optional().default(50).describe('Max items'),
+    },
+    async ({ projectId, limit }) => {
+      try {
+        let path = `/wbs-elements?limit=${limit}`;
+        if (projectId) path += `&projectId=${projectId}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_job_postings — Job Postings (HR-RCF)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_job_postings',
+    'ดูประกาศรับสมัครงาน — List job postings (HR-RCF)',
+    {
+      status: z.string().optional().describe('Filter by status: draft, open, closed'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ status, limit }) => {
+      try {
+        let path = `/job-postings?limit=${limit}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_job_applications — Job Applications (HR-RCF)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_job_applications',
+    'ดูใบสมัครงาน — List job applications (HR-RCF)',
+    {
+      jobPostingId: z.string().optional().describe('Filter by job posting ID'),
+      status: z.string().optional().describe('Filter by status: applied, screening, interview, offered, hired, rejected'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ jobPostingId, status, limit }) => {
+      try {
+        let path = `/job-applications?limit=${limit}`;
+        if (jobPostingId) path += `&jobPostingId=${jobPostingId}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_performance_reviews — Performance Reviews (HR-PA)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_performance_reviews',
+    'ดูการประเมินผล — List performance reviews (HR-PA)',
+    {
+      employeeId: z.string().optional().describe('Filter by employee ID'),
+      period: z.string().optional().describe('Filter by period (e.g. 2026-Q1)'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ employeeId, period, limit }) => {
+      try {
+        let path = `/performance-reviews?limit=${limit}`;
+        if (employeeId) path += `&employeeId=${employeeId}`;
+        if (period) path += `&period=${period}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_travel_requests — Travel Requests (HR-TRV)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_travel_requests',
+    'ดูคำขอเดินทาง — List travel requests (HR-TRV)',
+    {
+      employeeId: z.string().optional().describe('Filter by employee ID'),
+      status: z.string().optional().describe('Filter by status: draft, submitted, approved, rejected, completed'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ employeeId, status, limit }) => {
+      try {
+        let path = `/travel-requests?limit=${limit}`;
+        if (employeeId) path += `&employeeId=${employeeId}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_expense_claims — Expense Claims (HR-TRV)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_expense_claims',
+    'ดูเบิกค่าใช้จ่าย — List expense claims (HR-TRV)',
+    {
+      employeeId: z.string().optional().describe('Filter by employee ID'),
+      status: z.string().optional().describe('Filter by status: draft, submitted, approved, rejected, paid'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ employeeId, status, limit }) => {
+      try {
+        let path = `/expense-claims?limit=${limit}`;
+        if (employeeId) path += `&employeeId=${employeeId}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_sod_rules — SoD Rules (GRC)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_sod_rules',
+    'ดูกฎ SoD — List segregation of duties rules (GRC)',
+    {
+      limit: z.number().optional().default(50).describe('Max items'),
+    },
+    async ({ limit }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('GET', `/sod-rules?limit=${limit}`);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_documents — Document Management (DMS)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_documents',
+    'ดูเอกสาร — List documents (DMS)',
+    {
+      entityType: z.string().optional().describe('Filter by entity type (e.g. invoice, contract)'),
+      entityId: z.string().optional().describe('Filter by entity ID'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ entityType, entityId, limit }) => {
+      try {
+        let path = `/documents?limit=${limit}`;
+        if (entityType) path += `&entityType=${entityType}`;
+        if (entityId) path += `&entityId=${entityId}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: list_down_payments — Down Payments (FI-AP/AR)
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'list_down_payments',
+    'ดูเงินมัดจำ — List down payments (FI-AP/AR)',
+    {
+      type: z.enum(['customer', 'vendor']).optional().describe('Filter: customer or vendor'),
+      status: z.string().optional().describe('Filter by status: open, applied, refunded'),
+      limit: z.number().optional().default(20).describe('Max items'),
+    },
+    async ({ type, status, limit }) => {
+      try {
+        let path = `/down-payments?limit=${limit}`;
+        if (type) path += `&type=${type}`;
+        if (status) path += `&status=${status}`;
+        const data = await apiCall<Record<string, unknown>>('GET', path);
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
 }

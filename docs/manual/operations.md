@@ -45,6 +45,12 @@
    - 7.1 [Cost Centers — ศูนย์ต้นทุน](#71-cost-centers--ศูนย์ต้นทุน)
    - 7.2 [Profit Centers — ศูนย์กำไร](#72-profit-centers--ศูนย์กำไร)
 8. [End-to-End Process Flows — ขั้นตอนทำงานครบวงจร](#8-end-to-end-process-flows--ขั้นตอนทำงานครบวงจร)
+9. [Manufacturing (PP) — ระบบการผลิต](#9-manufacturing-pp--ระบบการผลิต)
+10. [Plant Maintenance (PM) — ระบบบำรุงรักษา](#10-plant-maintenance-pm--ระบบบำรุงรักษา)
+11. [Service Procurement — ใบรับงานบริการ](#11-service-procurement--ใบรับงานบริการ)
+12. [EWM — Extended Warehouse Management](#12-ewm--extended-warehouse-management--การจัดการคลังสินค้าขั้นสูง)
+13. [Purchasing Advanced — จัดซื้อขั้นสูง](#13-purchasing-advanced--จัดซื้อขั้นสูง)
+14. [PP Advanced — การผลิตขั้นสูง](#14-pp-advanced--การผลิตขั้นสูง)
 
 ---
 
@@ -1369,3 +1375,390 @@ Same structure as Cost Centers: `code`, `nameTh`, `nameEn`, `parentId`, `isActiv
 
 > **nEIP v0.9.0** — AI-Native ERP for Thai SMEs  
 > Generated from source code analysis on 2026-04-12
+
+---
+
+## 9. Manufacturing (PP) — ระบบการผลิต
+
+### 9.1 Overview / ภาพรวม
+
+Manufacturing module (Production Planning — PP) จัดการกระบวนการผลิตครบวงจร ตั้งแต่ Bill of Materials (BOM), Work Centers, Production Orders, ไปจนถึง Material Requirements Planning (MRP)
+
+The Manufacturing module covers end-to-end production management: BOM, Work Centers, Production Orders, and MRP.
+
+### 9.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| BOM List | `/manufacturing/bom` | รายการสูตรการผลิต — BOM list |
+| New BOM | `/manufacturing/bom/new` | สร้าง BOM — Create BOM |
+| Work Centers | `/manufacturing/work-centers` | ศูนย์การทำงาน — Work center list |
+| Production Orders | `/manufacturing/production-orders` | ใบสั่งผลิต — Production order list |
+| MRP Run | `/manufacturing/mrp` | วางแผนความต้องการวัสดุ — MRP run |
+| Shop Floor | `/manufacturing/shop-floor` | ควบคุมพื้นที่ผลิต — Shop floor control |
+
+### 9.3 Bill of Materials (BOM) / สูตรการผลิต
+
+#### Step-by-Step: สร้าง BOM
+
+1. ไปที่ **Manufacturing > BOM** (`/manufacturing/bom`) → กด **"+ New BOM"**
+2. เลือก **Finished Product** — สินค้าสำเร็จรูปที่ต้องการผลิต
+3. กำหนด **Batch Size** — จำนวนผลิตต่อ 1 ครั้ง (เช่น 100 ชิ้น)
+4. เพิ่ม **Components** — วัตถุดิบแต่ละรายการ:
+   - **Material** — เลือกวัตถุดิบจาก Product master
+   - **Quantity** — จำนวนที่ใช้ต่อ batch
+   - **UOM** — หน่วย (ชิ้น/กก./ลิตร)
+   - **Scrap %** — เปอร์เซ็นต์ของเสีย (optional)
+5. เพิ่ม **Operations** — ขั้นตอนการผลิต:
+   - **Work Center** — ศูนย์การทำงาน
+   - **Setup Time** — เวลาตั้งเครื่อง (นาที)
+   - **Run Time** — เวลาผลิตต่อชิ้น (นาที)
+6. กด **Save** → สถานะ `draft`
+7. กด **Activate** → สถานะ `active` พร้อมใช้ผลิต
+
+### 9.4 Work Centers / ศูนย์การทำงาน
+
+| Field | Description | ตัวอย่าง |
+|-------|-------------|---------|
+| Code | รหัสศูนย์งาน | WC-ASSEMBLY-01 |
+| Name | ชื่อศูนย์งาน | สายการประกอบ 1 |
+| Capacity/Hour | กำลังผลิตต่อชั่วโมง | 50 ชิ้น/ชม. |
+| Cost Rate | อัตราต้นทุนต่อชั่วโมง | 500 บาท/ชม. |
+| Calendar | ปฏิทินทำงาน | Mon-Sat, 08:00-17:00 |
+
+### 9.5 Production Orders / ใบสั่งผลิต
+
+#### Status Flow:
+
+```
+planned → released → in_progress → completed → closed
+                                  → partially_completed
+```
+
+#### Step-by-Step: สร้างใบสั่งผลิต
+
+1. ไปที่ **Production Orders** → กด **"+ New Order"**
+2. เลือก **BOM** → ระบบดึง Components & Operations อัตโนมัติ
+3. ระบุ **Planned Quantity** และ **Planned Start/End Date**
+4. กด **Release** → สถานะเปลี่ยนเป็น `released`
+5. เริ่มผลิต → บันทึก **Confirmations** (จำนวนที่ผลิตได้/ของเสีย)
+6. ระบบตัดวัตถุดิบจากคลังอัตโนมัติ (Goods Issue)
+7. เสร็จผลิต → **Goods Receipt** → รับสินค้าสำเร็จรูปเข้าคลัง
+
+#### GL Entries — Production Order:
+
+**Goods Issue (ตัดวัตถุดิบ):**
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | WIP — Work in Process (1400) | Material cost | งานระหว่างทำ |
+| Cr | Raw Material Inventory (1200) | Material cost | ตัดวัตถุดิบ |
+
+**Goods Receipt (รับสำเร็จรูป):**
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Finished Goods Inventory (1210) | Production cost | รับสินค้าสำเร็จรูป |
+| Cr | WIP — Work in Process (1400) | Production cost | ตัดงานระหว่างทำ |
+
+### 9.6 MRP — Material Requirements Planning / วางแผนความต้องการวัสดุ
+
+#### Step-by-Step: รัน MRP
+
+1. ไปที่ **MRP Run** (`/manufacturing/mrp`) → กด **"Run MRP"**
+2. ระบุ **Planning Horizon** — ช่วงเวลาที่ต้องการวางแผน (เช่น 30 วัน)
+3. ระบบคำนวณ:
+   - **Gross Requirement** — ความต้องการรวม (จาก SO + Forecast)
+   - **Available Stock** — สต็อกที่มี + PO ที่อยู่ระหว่างรับ
+   - **Net Requirement** — ความต้องการสุทธิ
+4. ระบบสร้าง **Planned Orders**:
+   - **Production Order** — สำหรับสินค้าที่ผลิตเอง (มี BOM)
+   - **Purchase Requisition** — สำหรับวัตถุดิบที่ต้องซื้อ
+5. ตรวจสอบ → กด **Convert** → แปลงเป็น Production Order / PR จริง
+
+---
+
+## 10. Plant Maintenance (PM) — ระบบบำรุงรักษา
+
+### 10.1 Overview / ภาพรวม
+
+Plant Maintenance module จัดการการบำรุงรักษาเครื่องจักรและอุปกรณ์ ครอบคลุม Equipment Master, Maintenance Plans, Work Orders, และ OEE (Overall Equipment Effectiveness)
+
+Plant Maintenance module manages machinery and equipment maintenance: Equipment Master, Maintenance Plans, Work Orders, and OEE tracking.
+
+### 10.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Equipment List | `/maintenance/equipment` | ทะเบียนเครื่องจักร — Equipment register |
+| New Equipment | `/maintenance/equipment/new` | เพิ่มเครื่องจักร — Add equipment |
+| Maintenance Plans | `/maintenance/plans` | แผนบำรุงรักษา — Maintenance plans |
+| Work Orders | `/maintenance/work-orders` | ใบสั่งงานซ่อม — Work order list |
+| OEE Dashboard | `/maintenance/oee` | ดัชนีประสิทธิภาพ — OEE dashboard |
+
+### 10.3 Equipment Master / ทะเบียนเครื่องจักร
+
+| Field | Description | ตัวอย่าง |
+|-------|-------------|---------|
+| Equipment ID | รหัสเครื่องจักร | EQ-CNC-001 |
+| Name | ชื่อเครื่อง | CNC Lathe #1 |
+| Category | ประเภท | Machine / Vehicle / Building |
+| Location | ตำแหน่งที่ตั้ง | Factory A, Line 3 |
+| Status | สถานะ | active / maintenance / retired |
+| Warranty End | วันหมดประกัน | 2027-12-31 |
+| Cost Center | ศูนย์ต้นทุน | CC-PROD-01 |
+
+### 10.4 Maintenance Plans / แผนบำรุงรักษา
+
+#### Types:
+
+| Type | Description | ตัวอย่าง |
+|------|-------------|---------|
+| `time_based` | ตามระยะเวลา | ทุก 3 เดือน |
+| `counter_based` | ตามจำนวนการใช้งาน | ทุก 1,000 ชั่วโมงเดินเครื่อง |
+| `condition_based` | ตามสภาพ (IoT sensor) | เมื่อ vibration > threshold |
+
+#### Step-by-Step: สร้างแผนบำรุงรักษา
+
+1. ไปที่ **Maintenance Plans** → กด **"+ New Plan"**
+2. เลือก **Equipment** ที่ต้องบำรุง
+3. เลือก **Plan Type** (time/counter/condition)
+4. สำหรับ time_based: ระบุ **Interval** (เช่น ทุก 90 วัน)
+5. ระบุ **Task List** — รายการงานที่ต้องทำ:
+   - เช่น "เปลี่ยนน้ำมัน", "ตรวจสอบสายพาน", "ทดสอบระบบนิรภัย"
+6. ระบุ **Spare Parts** ที่ต้องใช้ (link กับ Product master)
+7. กด **Activate** → ระบบสร้าง Work Order อัตโนมัติตาม schedule
+
+### 10.5 Work Orders / ใบสั่งงานซ่อม
+
+#### Status Flow:
+
+```
+planned → released → in_progress → completed → closed
+                                  → cancelled
+```
+
+#### Step-by-Step: ดำเนินการ Work Order
+
+1. Work Order สร้างอัตโนมัติจาก Maintenance Plan (หรือสร้างมือจาก Breakdown)
+2. ช่างดูรายละเอียด → กด **Start** → สถานะ `in_progress`
+3. บันทึก **Time** ที่ใช้, **Spare Parts** ที่เบิก
+4. ระบบตัดอะไหล่จากคลังอัตโนมัติ (Goods Issue)
+5. เสร็จงาน → กด **Complete** → บันทึกสาเหตุ/ผลการซ่อม
+6. ระบบสร้าง JE ต้นทุนซ่อมบำรุงอัตโนมัติ
+
+#### GL Entries — Work Order:
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Maintenance Expense (5800) | Parts + Labor | ค่าซ่อมบำรุง |
+| Cr | Spare Parts Inventory (1220) | Parts cost | ตัดอะไหล่ |
+| Cr | Wages Payable (2300) | Labor cost | ค่าแรงช่าง |
+
+### 10.6 OEE — Overall Equipment Effectiveness / ดัชนีประสิทธิภาพ
+
+| Metric | Formula | คำอธิบาย |
+|--------|---------|---------|
+| Availability | (Run Time / Planned Time) × 100 | ความพร้อมใช้งาน |
+| Performance | (Actual Output / Theoretical Output) × 100 | ประสิทธิภาพ |
+| Quality | (Good Units / Total Units) × 100 | คุณภาพ |
+| **OEE** | Availability × Performance × Quality | ดัชนีรวม |
+
+---
+
+## 11. Service Procurement — ใบรับงานบริการ
+
+### 11.1 Overview / ภาพรวม
+
+Service Entry Sheet (SES) จัดการการจัดซื้อบริการ (ไม่ใช่สินค้า) เช่น งานรับเหมาก่อสร้าง, ที่ปรึกษา, ทำความสะอาด โดยยืนยันงานที่ทำเสร็จก่อนจ่ายเงิน
+
+Service Entry Sheet manages service procurement (non-goods) such as construction, consulting, and cleaning. It confirms work completion before payment.
+
+### 11.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Service Entries | `/procurement/service-entries` | ใบรับงานบริการ — SES list |
+| New SES | `/procurement/service-entries/new` | สร้างใบรับงาน — Create SES |
+
+### 11.3 Step-by-Step: Service Entry Sheet
+
+1. สร้าง **Purchase Order** ประเภท `service` (ไม่ใช่ `goods`)
+2. ผู้รับเหมาส่งงาน → ไปที่ **Service Entries** → กด **"+ New Entry"**
+3. เลือก **PO** ที่เกี่ยวข้อง
+4. ระบุ **Service Lines**:
+   - Description — คำอธิบายงาน (เช่น "ทาสีอาคาร ชั้น 1-3")
+   - Quantity — จำนวน (เช่น 500 ตร.ม.)
+   - Unit Price — ราคาต่อหน่วย
+5. กด **Submit** → ส่งอนุมัติ (ผ่าน Approval Workflow)
+6. อนุมัติ → ระบบสร้าง **Goods Receipt (Service)** + สามารถสร้าง Bill ได้
+
+#### GL Entries:
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Service Expense (5400) | Service cost | ค่าบริการ |
+| Dr | Input VAT (1110) | VAT 7% | ภาษีซื้อ |
+| Cr | Accounts Payable (2100) | Total | เจ้าหนี้ |
+| Cr | WHT Payable (2120) | WHT amount | ภาษีหัก ณ ที่จ่าย |
+
+---
+
+## 12. EWM — Extended Warehouse Management / การจัดการคลังสินค้าขั้นสูง
+
+### 12.1 Overview / ภาพรวม
+
+EWM module ขยายความสามารถจากระบบ Inventory พื้นฐาน เพิ่มการจัดการ Storage Bins (ตำแหน่งจัดเก็บ), Pick/Pack/Ship process, Wave Management, และ Putaway Strategy
+
+EWM extends basic inventory with Storage Bins, Pick/Pack/Ship processes, Wave Management, and Putaway Strategies.
+
+### 12.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Storage Bins | `/warehouse/bins` | ตำแหน่งจัดเก็บ — Bin locations |
+| Putaway | `/warehouse/putaway` | จัดเก็บสินค้า — Putaway tasks |
+| Pick Lists | `/warehouse/picking` | รายการหยิบสินค้า — Pick lists |
+| Pack Station | `/warehouse/packing` | สถานีแพ็ค — Packing station |
+| Shipments | `/warehouse/shipments` | การจัดส่ง — Shipment management |
+| Wave Management | `/warehouse/waves` | จัดกลุ่มงาน — Wave management |
+
+### 12.3 Storage Bin Structure / โครงสร้างตำแหน่งจัดเก็บ
+
+```
+Warehouse → Zone → Aisle → Rack → Level → Bin
+คลัง      → โซน  → ทางเดิน → ชั้นวาง → ระดับ → ช่อง
+
+ตัวอย่าง: WH01-A-03-R2-L3-B05
+         คลัง1-โซนA-ทางเดิน3-ชั้น2-ระดับ3-ช่อง05
+```
+
+### 12.4 Pick/Pack/Ship Process
+
+1. **Sales Order** → สร้าง **Delivery Note** (DO)
+2. ระบบสร้าง **Pick List** → กำหนด Bin ที่ต้องหยิบ (FIFO/FEFO)
+3. พนักงานหยิบสินค้า → Confirm Pick → สินค้าย้ายไปพื้นที่ Pack
+4. **Packing** → สแกนสินค้า → จัดใส่กล่อง → Print Shipping Label
+5. **Shipment** → บันทึกข้อมูลขนส่ง (carrier, tracking#) → Post Goods Issue
+6. ระบบตัดสต็อกอัตโนมัติ
+
+---
+
+## 13. Purchasing Advanced — จัดซื้อขั้นสูง
+
+### 13.1 Outline Agreements / สัญญาร่มจัดซื้อ
+
+สัญญาระยะยาวกับผู้ขาย กำหนดราคาและเงื่อนไขล่วงหน้า สามารถสร้าง PO อ้างอิงสัญญาได้เรื่อยๆ
+
+| Type | Description | ตัวอย่าง |
+|------|-------------|---------|
+| `contract` | สัญญาราคา — ตกลงราคา ไม่กำหนดจำนวน | สัญญาซื้อเหล็กราคา 25 บาท/กก. |
+| `scheduling_agreement` | สัญญากำหนดการส่ง — กำหนดจำนวน+วันส่ง | ส่งเหล็ก 100 ตัน/เดือน 12 เดือน |
+
+#### Step-by-Step: สร้าง Outline Agreement
+
+1. ไปที่ **Procurement > Agreements** (`/procurement/agreements`) → กด **"+ New"**
+2. เลือก **Type** (contract / scheduling_agreement)
+3. เลือก **Vendor** → กำหนด **Validity Period** (เช่น 1 ปี)
+4. เพิ่ม **Line Items** — สินค้า, ราคาตกลง, จำนวน (ถ้า scheduling)
+5. กด **Activate** → สามารถสร้าง PO อ้างอิงสัญญาได้
+
+### 13.2 Scheduling Agreements / สัญญากำหนดการส่ง
+
+Schedule Lines กำหนดวันส่งและจำนวนล่วงหน้า:
+
+| Delivery Date | Quantity | Status |
+|---------------|----------|--------|
+| 2026-05-01 | 100 ตัน | Pending |
+| 2026-06-01 | 100 ตัน | Pending |
+| 2026-07-01 | 100 ตัน | Pending |
+
+### 13.3 Consignment / ฝากขาย
+
+Vendor ส่งสินค้ามาเก็บที่คลังเรา แต่ยังเป็นกรรมสิทธิ์ของ vendor จนกว่าจะใช้/ขาย
+
+- **Consignment Fill-Up** — vendor ส่งสินค้ามาเติม (ไม่สร้าง AP)
+- **Consignment Issue** — เบิกใช้/ขาย → โอนกรรมสิทธิ์ → สร้าง AP
+- **Consignment Return** — คืนสินค้าให้ vendor
+
+### 13.4 Source List / รายการแหล่งจัดหา
+
+กำหนดว่าแต่ละสินค้าสามารถซื้อจาก vendor ไหนได้บ้าง ระบุ preferred vendor, validity period, และ fixed/blocked status
+
+### 13.5 Stock Transfer Order (STO) / ใบโอนสต็อกระหว่างคลัง
+
+โอนสินค้าระหว่างคลัง โดยใช้กระบวนการ procurement (PR → PO → GR) สำหรับกรณีโอนข้ามบริษัท (Intercompany STO)
+
+#### Step-by-Step: สร้าง STO
+
+1. ไปที่ **Procurement > STO** (`/procurement/sto`) → กด **"+ New STO"**
+2. เลือก **Source Warehouse** (คลังต้นทาง) และ **Target Warehouse** (คลังปลายทาง)
+3. เพิ่ม **Line Items** — สินค้า + จำนวน
+4. กด **Release** → สร้าง Goods Issue จากคลังต้นทาง
+5. ปลายทาง → **Goods Receipt** → รับสินค้าเข้าคลัง
+
+---
+
+## 14. PP Advanced — การผลิตขั้นสูง
+
+### 14.1 Kanban / คัมบัง
+
+ระบบดึง (Pull System) สำหรับการผลิตแบบ Just-in-Time:
+
+| Field | Description |
+|-------|-------------|
+| Kanban Board | กระดาน Kanban แสดงสถานะ containers |
+| Container | ภาชนะบรรจุสินค้า กำหนดจำนวน fixed |
+| Status | `full` → `empty` → `in_process` → `full` |
+| Trigger | เมื่อ container `empty` → สร้าง Production Order อัตโนมัติ |
+
+### 14.2 Process Orders / ใบสั่งผลิตแบบกระบวนการ
+
+สำหรับอุตสาหกรรมกระบวนการ (เคมี, อาหาร, ยา) ต่างจาก Production Order ตรงที่:
+
+| Feature | Production Order | Process Order |
+|---------|-----------------|---------------|
+| Industry | Discrete (ชิ้นส่วน) | Process (เคมี/อาหาร) |
+| Recipe | BOM | Master Recipe |
+| Phases | Operations | Phases + Process Instructions |
+| Batch | Optional | Mandatory |
+| Co-Products | ไม่รองรับ | รองรับ |
+
+### 14.3 CRP — Capacity Requirements Planning / วางแผนกำลังการผลิต
+
+วิเคราะห์ว่า Work Centers มีกำลังเพียงพอต่อแผนการผลิตหรือไม่:
+
+1. รัน MRP → ได้ Planned Production Orders
+2. รัน **CRP** → ระบบคำนวณ capacity load ต่อ Work Center
+3. แสดง **Capacity Leveling Chart** — สีเขียว (ปกติ) / สีแดง (เกิน capacity)
+4. ปรับแผน: เลื่อนวันผลิต, เพิ่มกะ, ย้าย work center
+
+### 14.4 Co-Products & By-Products / ผลิตภัณฑ์ร่วมและผลิตภัณฑ์พลอยได้
+
+เมื่อกระบวนการผลิตได้สินค้ามากกว่า 1 ชนิด:
+
+| Type | Description | ตัวอย่าง |
+|------|-------------|---------|
+| Co-Product | ผลิตภัณฑ์ร่วม (ต้องการ) | น้ำมันปาล์มดิบ + กากปาล์ม |
+| By-Product | ผลิตภัณฑ์พลอยได้ (ได้เอง) | ไอน้ำจากการกลั่น |
+
+### 14.5 ECM — Engineering Change Management / จัดการการเปลี่ยนแปลงทางวิศวกรรม
+
+จัดการการเปลี่ยนแปลง BOM/Routing อย่างเป็นระบบ:
+
+```
+Change Request → Review → Approve → Change Order → Implement → Close
+```
+
+- **Effectivity Date** — วันที่มีผลบังคับ
+- **Version Control** — BOM version 1.0 → 1.1
+- **Impact Analysis** — แสดงผลกระทบต่อ Production Orders / Stock
+
+### 14.6 Demand Management / จัดการความต้องการ
+
+วางแผนความต้องการ (Demand Plan) เพื่อเป็น input ให้ MRP:
+
+| Source | Description |
+|--------|-------------|
+| Sales Forecast | พยากรณ์ยอดขาย (manual / AI-predicted) |
+| Customer Orders | ยอดสั่งจริงจาก SO |
+| Safety Stock | สต็อกสำรอง |
+| Planned Independent Req. | ความต้องการวางแผน (PIR) |

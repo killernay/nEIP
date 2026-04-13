@@ -17,6 +17,16 @@
 7. [Tax & VAT — อัตราภาษีและ VAT Return](#7-tax--vat--อัตราภาษีและ-vat-return)
 8. [Recurring Journal Entries / รายการบันทึกอัตโนมัติ](#8-recurring-journal-entries--รายการบันทึกอัตโนมัติ)
 9. [Financial Reports / รายงานทางการเงิน](#9-financial-reports--รายงานทางการเงิน)
+10. [IFRS 16 — Lease Accounting / สัญญาเช่า](#10-ifrs-16--lease-accounting--สัญญาเช่าตาม-ifrs-16)
+11. [Parallel Accounting — IFRS + Thai GAAP / บัญชีคู่ขนาน](#11-parallel-accounting--ifrs--thai-gaap--บัญชีคู่ขนาน)
+12. [Revenue Recognition — IFRS 15 / การรับรู้รายได้](#12-revenue-recognition--ifrs-15--การรับรู้รายได้ตาม-ifrs-15)
+13. [Batch Payment Run (F110) / การจ่ายเงินเป็นชุด](#13-batch-payment-run-f110--การจ่ายเงินเป็นชุด)
+14. [Collections Management / บริหารการติดตามหนี้](#14-collections-management--บริหารการติดตามหนี้)
+15. [Down Payments — AR & AP / เงินมัดจำรับ-จ่าย](#15-down-payments--ar--ap--เงินมัดจำรับ-จ่าย)
+16. [Deferred Tax / ภาษีเงินได้รอตัดบัญชี](#16-deferred-tax--ภาษีเงินได้รอตัดบัญชี)
+17. [Interest on Overdue / ดอกเบี้ยค้างชำระ](#17-interest-on-overdue--ดอกเบี้ยค้างชำระ)
+18. [Dispute Management / การจัดการข้อพิพาท](#18-dispute-management--การจัดการข้อพิพาท)
+19. [Financial Closing Cockpit / ห้องบัญชาการปิดงวด](#19-financial-closing-cockpit--ห้องบัญชาการปิดงวด)
 
 ---
 
@@ -987,3 +997,451 @@ WHT Amount = Income Amount * WHT Rate / 10000 (round half-up)
 ### Year-End
 - ปิดทุก 12 งวดก่อน → Close Year → ระบบสร้าง Closing JE ให้อัตโนมัติ
 - ถ้ามีข้อผิดพลาด สามารถ Reopen Year แก้ไข แล้ว Close ใหม่ได้
+
+---
+
+## 10. IFRS 16 — Lease Accounting / สัญญาเช่าตาม IFRS 16
+
+### 10.1 Overview / ภาพรวม
+
+IFRS 16 Lease Accounting module จัดการสัญญาเช่าตามมาตรฐาน IFRS 16 โดยรับรู้ Right-of-Use (ROU) Asset และ Lease Liability ในงบแสดงฐานะการเงิน สำหรับสัญญาเช่าที่มีระยะเวลามากกว่า 12 เดือน
+
+The IFRS 16 module manages lease contracts per IFRS 16 standard, recognizing Right-of-Use (ROU) Assets and Lease Liabilities on the balance sheet for leases exceeding 12 months.
+
+### 10.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Lease Contracts | `/leases` | รายการสัญญาเช่าทั้งหมด — All lease contracts |
+| New Lease | `/leases/new` | สร้างสัญญาเช่าใหม่ — Create new lease |
+| Lease Detail | `/leases/[id]` | รายละเอียดสัญญา — Lease detail & schedule |
+| Lease Dashboard | `/leases/dashboard` | สรุปภาพรวมสัญญาเช่า — Lease overview |
+
+### 10.3 Lease Types / ประเภทสัญญา
+
+| Type | Description | ตัวอย่าง |
+|------|-------------|---------|
+| `operating` | สัญญาเช่าดำเนินงาน (short-term ≤12 months, exempt) | เช่ารถ 6 เดือน |
+| `finance` | สัญญาเช่าการเงิน (IFRS 16 recognized) | เช่าอาคาร 5 ปี |
+| `low_value` | สินทรัพย์มูลค่าต่ำ (exempt from ROU recognition) | เช่าเครื่องพิมพ์ |
+
+### 10.4 Step-by-Step: สร้างสัญญาเช่า
+
+1. ไปที่ **Leases** (`/leases`) → กด **"+ New Lease"**
+2. กรอกข้อมูล:
+   - **Lessor** — ผู้ให้เช่า (เลือกจาก Vendor master)
+   - **Asset Description** — คำอธิบายสินทรัพย์ (เช่น "อาคารสำนักงาน ชั้น 5")
+   - **Lease Type** — `finance` / `operating` / `low_value`
+   - **Start Date / End Date** — วันเริ่ม/สิ้นสุดสัญญา
+   - **Monthly Payment** — ค่าเช่ารายเดือน
+   - **Discount Rate** — อัตราคิดลด (IBR หรือ implicit rate)
+   - **Initial Direct Costs** — ต้นทุนโดยตรงเริ่มแรก (ถ้ามี)
+3. กด **Save** → ระบบคำนวณ PV ของ Lease Liability & ROU Asset อัตโนมัติ
+4. กด **Activate** → ระบบสร้าง Journal Entry เริ่มต้น
+
+### 10.5 GL Entries / การบันทึกบัญชี
+
+#### Activation (เริ่มสัญญา)
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | ROU Asset (1600) | PV of payments | รับรู้สินทรัพย์สิทธิการใช้ |
+| Cr | Lease Liability (2500) | PV of payments | รับรู้หนี้สินตามสัญญาเช่า |
+
+#### Monthly Payment (จ่ายค่าเช่ารายเดือน)
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Lease Liability (2500) | Principal portion | ลดเงินต้น |
+| Dr | Interest Expense (5600) | Interest portion | ดอกเบี้ยจ่าย |
+| Cr | Bank (1010) | Payment amount | จ่ายเงิน |
+
+#### Depreciation (ค่าเสื่อมราคา ROU Asset)
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Depreciation Expense (5500) | Monthly depreciation | ค่าเสื่อมราคา |
+| Cr | Accumulated Depreciation — ROU (1601) | Monthly depreciation | ค่าเสื่อมสะสม |
+
+### 10.6 MCP Tools & CLI
+
+| Tool/CLI | Description |
+|----------|-------------|
+| `lease_create` | สร้างสัญญาเช่าใหม่ |
+| `lease_activate` | เปิดใช้งานสัญญาเช่า → สร้าง JE |
+| `lease_monthly_je` | สร้างรายการบัญชีรายเดือน (interest + principal) |
+| `lease_depreciate` | คำนวณค่าเสื่อม ROU Asset |
+| `lease_terminate` | ยกเลิกสัญญาก่อนกำหนด |
+| `cli: lease list` | แสดงสัญญาเช่าทั้งหมด |
+| `cli: lease schedule [id]` | แสดงตารางชำระ |
+
+---
+
+## 11. Parallel Accounting — IFRS + Thai GAAP / บัญชีคู่ขนาน
+
+### 11.1 Overview / ภาพรวม
+
+Parallel Accounting module ช่วยให้องค์กรบันทึกบัญชีพร้อมกัน 2 มาตรฐาน: IFRS (สำหรับรายงานบริษัทแม่/ตลาดทุน) และ Thai GAAP (สำหรับยื่นภาษีสรรพากร) โดยใช้ Ledger Group เดียวกัน แต่แยก posting rules
+
+The Parallel Accounting module enables dual-standard recording: IFRS (for parent company / capital market reporting) and Thai GAAP (for Revenue Department tax filing), using the same Ledger Group but separate posting rules.
+
+### 11.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Ledger Groups | `/settings/ledger-groups` | จัดการกลุ่มบัญชี — Manage ledger groups |
+| Parallel Postings | `/parallel-accounting` | ดูรายการบัญชีแยกตามมาตรฐาน |
+| GAAP Comparison | `/reports/gaap-comparison` | เปรียบเทียบ IFRS vs Thai GAAP |
+
+### 11.3 Key Concepts / แนวคิดหลัก
+
+| Concept | IFRS | Thai GAAP |
+|---------|------|-----------|
+| Depreciation | Component depreciation, useful life review | Straight-line ตาม พ.ร.บ.สรรพากร |
+| Lease | IFRS 16 — ROU asset + liability | Operating lease = expense |
+| Revenue | IFRS 15 — 5-step model | เกณฑ์ส่งมอบ / ตาม TAS 18 |
+| Revaluation | Fair value allowed | Cost model only |
+
+### 11.4 Step-by-Step: ตั้งค่าบัญชีคู่ขนาน
+
+1. ไปที่ **Settings > Ledger Groups** (`/settings/ledger-groups`)
+2. ระบบจะมี Ledger Group เริ่มต้น 2 กลุ่ม:
+   - **IFRS** — มาตรฐานรายงานทางการเงินระหว่างประเทศ
+   - **TGAAP** — มาตรฐานการบัญชีไทย (สรรพากร)
+3. สร้าง Journal Entry → เลือก **"Post to Both"** หรือ **"Post to IFRS Only"** / **"Post to TGAAP Only"**
+4. สำหรับรายการที่แตกต่าง (เช่น ค่าเสื่อม) → สร้าง Adjustment JE แยกในแต่ละ Ledger
+
+### 11.5 GL Entries — ตัวอย่างความแตกต่าง
+
+#### Fixed Asset Depreciation Difference
+
+**IFRS Ledger:**
+| Dr/Cr | Account | Amount | Note |
+|-------|---------|--------|------|
+| Dr | Depreciation Expense (5500) | 10,000 | Component depreciation 10 ปี |
+| Cr | Acc. Depreciation (1501) | 10,000 | |
+
+**Thai GAAP Ledger:**
+| Dr/Cr | Account | Amount | Note |
+|-------|---------|--------|------|
+| Dr | Depreciation Expense (5500) | 12,000 | Straight-line 5 ปีตามสรรพากร |
+| Cr | Acc. Depreciation (1501) | 12,000 | |
+
+---
+
+## 12. Revenue Recognition — IFRS 15 / การรับรู้รายได้ตาม IFRS 15
+
+### 12.1 Overview / ภาพรวม
+
+Revenue Recognition module ใช้หลัก 5 ขั้นตอนตาม IFRS 15 ในการรับรู้รายได้จากสัญญากับลูกค้า รองรับทั้งรายได้ ณ จุดเวลา (point in time) และรายได้ตลอดช่วงเวลา (over time)
+
+The Revenue Recognition module implements the IFRS 15 five-step model for recognizing revenue from contracts with customers, supporting both point-in-time and over-time recognition.
+
+### 12.2 Five-Step Model / 5 ขั้นตอน
+
+| Step | Description | คำอธิบาย |
+|------|-------------|---------|
+| 1 | Identify the contract | ระบุสัญญากับลูกค้า |
+| 2 | Identify performance obligations | ระบุภาระผูกพัน |
+| 3 | Determine transaction price | กำหนดราคาธุรกรรม |
+| 4 | Allocate price to obligations | จัดสรรราคาตามภาระผูกพัน |
+| 5 | Recognize revenue when obligation satisfied | รับรู้รายได้เมื่อภาระเสร็จสิ้น |
+
+### 12.3 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Revenue Contracts | `/revenue-recognition` | รายการสัญญา — Contract list |
+| New Contract | `/revenue-recognition/new` | สร้างสัญญา — Create contract |
+| Performance Obligations | `/revenue-recognition/[id]/obligations` | ภาระผูกพัน |
+| Recognition Schedule | `/revenue-recognition/[id]/schedule` | ตารางรับรู้รายได้ |
+
+### 12.4 Step-by-Step: สร้างสัญญารับรู้รายได้
+
+1. ไปที่ **Revenue Recognition** (`/revenue-recognition`) → กด **"+ New Contract"**
+2. เลือกลูกค้า, ระบุวันเริ่ม/สิ้นสุดสัญญา, จำนวนเงินรวม
+3. เพิ่ม **Performance Obligations** — แต่ละ obligation ระบุ:
+   - Description — คำอธิบาย
+   - Standalone Selling Price — ราคาขายแยกเดี่ยว
+   - Recognition Method — `point_in_time` หรือ `over_time`
+   - Completion Criteria — เกณฑ์เสร็จสิ้น
+4. ระบบจัดสรรราคาตามสัดส่วน Standalone Selling Price อัตโนมัติ
+5. กด **Activate** → ระบบสร้าง Recognition Schedule
+
+### 12.5 GL Entries / การบันทึกบัญชี
+
+#### Contract Activation (เริ่มสัญญา — ออก Invoice)
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Accounts Receivable (1100) | Invoice amount | ลูกหนี้ |
+| Cr | Deferred Revenue (2600) | Invoice amount | รายได้รอรับรู้ |
+
+#### Revenue Recognition (รับรู้รายได้เมื่อ obligation เสร็จ)
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Deferred Revenue (2600) | Allocated amount | ตัดรายได้รอรับรู้ |
+| Cr | Revenue (4000) | Allocated amount | รับรู้รายได้ |
+
+---
+
+## 13. Batch Payment Run (F110) / การจ่ายเงินเป็นชุด
+
+### 13.1 Overview / ภาพรวม
+
+Batch Payment Run (เทียบเท่า SAP F110) ช่วยจ่ายเงินผู้ขายหลายรายพร้อมกัน เลือกรายการจ่ายตามเกณฑ์ (วันครบกำหนด, vendor, จำนวนเงิน) แล้วสร้างไฟล์โอนเงินธนาคารอัตโนมัติ
+
+Batch Payment Run (SAP F110 equivalent) enables paying multiple vendors in a single run. Select payables by criteria (due date, vendor, amount) and generate bank transfer files automatically.
+
+### 13.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Payment Runs | `/batch-payments` | รายการชุดจ่ายเงิน — Payment run list |
+| New Payment Run | `/batch-payments/new` | สร้างชุดจ่ายใหม่ — Create run |
+| Run Detail | `/batch-payments/[id]` | รายละเอียดชุดจ่าย — Run detail |
+
+### 13.3 Step-by-Step: สร้างชุดจ่ายเงิน
+
+1. ไปที่ **Batch Payments** (`/batch-payments`) → กด **"+ New Run"**
+2. ตั้งเกณฑ์:
+   - **Payment Date** — วันที่จ่ายเงิน
+   - **Due Date Range** — ช่วงวันครบกำหนด (เช่น ถึง 30 เม.ย.)
+   - **Vendor Filter** — เฉพาะ vendor ที่ต้องการ (optional)
+   - **Payment Method** — โอนธนาคาร / เช็ค
+   - **Bank Account** — บัญชีธนาคารที่ใช้จ่าย
+3. กด **"Propose"** → ระบบค้นหา AP Open Items ที่ตรงเกณฑ์
+4. ตรวจสอบรายการ → ลบรายการที่ไม่ต้องการจ่ายออก
+5. กด **"Execute"** → ระบบสร้าง Payment JE + Bank Transfer File
+6. ดาวน์โหลดไฟล์ส่งธนาคาร (CSV/BAHTNET format)
+
+### 13.4 GL Entries / การบันทึกบัญชี
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Accounts Payable (2100) | Total payables | ตัดเจ้าหนี้ |
+| Dr | WHT Payable (2120) | WHT amount (if applicable) | ภาษีหัก ณ ที่จ่าย |
+| Cr | Bank (1010) | Net payment | จ่ายสุทธิ |
+
+---
+
+## 14. Collections Management / บริหารการติดตามหนี้
+
+### 14.1 Overview / ภาพรวม
+
+Collections Management จัดการการติดตามหนี้ลูกค้าอย่างเป็นระบบ ด้วยกลยุทธ์ติดตาม (Collection Strategy), Work List, และ Promise-to-Pay tracking ทำงานร่วมกับ Dunning module
+
+Collections Management provides systematic debt collection with Collection Strategies, Work Lists, and Promise-to-Pay tracking. Works in conjunction with the Dunning module.
+
+### 14.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Collections Worklist | `/collections` | รายการติดตามหนี้ — Collection worklist |
+| Collection Strategy | `/settings/collection-strategy` | กลยุทธ์ติดตาม — Strategy config |
+| Promise-to-Pay | `/collections/promises` | สัญญาจ่ายเงิน — Promise tracking |
+| Customer Aging | `/reports/customer-aging` | อายุหนี้ลูกค้า — Aging report |
+
+### 14.3 Step-by-Step: ติดตามหนี้
+
+1. ไปที่ **Collections** (`/collections`) → ระบบแสดง Worklist เรียงตามอายุหนี้
+2. เลือกลูกค้าที่ต้องติดตาม → ดู **Open Items** (ใบแจ้งหนี้ค้างชำระ)
+3. บันทึก **Contact Activity** (โทร/อีเมล/เยี่ยม)
+4. สร้าง **Promise-to-Pay** — ลูกค้าสัญญาจะจ่ายวันไหน จำนวนเท่าไร
+5. ระบบติดตาม Promise อัตโนมัติ → แจ้งเตือนถ้าผิดนัด
+6. Escalate → ส่งหนังสือทวงถาม (ผ่าน Dunning) หรือ ระงับเครดิต
+
+---
+
+## 15. Down Payments — AR & AP / เงินมัดจำรับ-จ่าย
+
+### 15.1 Overview / ภาพรวม
+
+Down Payment module จัดการเงินมัดจำทั้งฝั่งลูกค้า (AR Down Payment) และฝั่งผู้ขาย (AP Down Payment) พร้อมตัดเงินมัดจำเมื่อออกใบแจ้งหนี้จริง
+
+Down Payment module handles advance payments from customers (AR) and to vendors (AP), with automatic clearing against final invoices.
+
+### 15.2 AR Down Payment (เงินมัดจำรับจากลูกค้า)
+
+#### Step-by-Step:
+
+1. สร้าง **Down Payment Request** จาก Sales Order → ระบุ % หรือจำนวนเงิน
+2. ลูกค้าจ่ายเงินมัดจำ → บันทึก **Down Payment Receipt**
+3. เมื่อส่งสินค้า/บริการ → ออก **Final Invoice**
+4. ระบบตัด Down Payment อัตโนมัติจาก Final Invoice
+
+#### GL Entries:
+
+**รับเงินมัดจำ:**
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Bank (1010) | Down payment | รับเงิน |
+| Cr | Customer Down Payment (2610) | Down payment | เงินมัดจำรับล่วงหน้า |
+| Cr | Output VAT (2110) | VAT on DP | VAT ภาษีขาย |
+
+**ตัดกับ Final Invoice:**
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Customer Down Payment (2610) | DP amount | ตัดเงินมัดจำ |
+| Cr | Accounts Receivable (1100) | DP amount | ลดลูกหนี้ |
+
+### 15.3 AP Down Payment (เงินมัดจำจ่ายให้ผู้ขาย)
+
+#### GL Entries:
+
+**จ่ายเงินมัดจำ:**
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Vendor Down Payment (1310) | Down payment | เงินมัดจำจ่ายล่วงหน้า |
+| Cr | Bank (1010) | Down payment | จ่ายเงิน |
+
+**ตัดกับ Final Bill:**
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Accounts Payable (2100) | DP amount | ตัดเจ้าหนี้ |
+| Cr | Vendor Down Payment (1310) | DP amount | ตัดเงินมัดจำ |
+
+---
+
+## 16. Deferred Tax / ภาษีเงินได้รอตัดบัญชี
+
+### 16.1 Overview / ภาพรวม
+
+Deferred Tax module คำนวณภาษีเงินได้รอตัดบัญชี (Deferred Tax Asset & Liability) จากผลต่างชั่วคราว (Temporary Differences) ระหว่างมูลค่าตามบัญชีและฐานภาษี
+
+Deferred Tax module calculates Deferred Tax Assets & Liabilities from temporary differences between book values and tax bases.
+
+### 16.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Deferred Tax Summary | `/deferred-tax` | สรุปภาษีรอตัดบัญชี |
+| Temporary Differences | `/deferred-tax/differences` | ผลต่างชั่วคราว |
+| DTA/DTL Register | `/deferred-tax/register` | ทะเบียน DTA/DTL |
+
+### 16.3 Types of Temporary Differences / ประเภทผลต่างชั่วคราว
+
+| Source | Book vs Tax | Result |
+|--------|-------------|--------|
+| Depreciation difference | Book > Tax → Taxable | Deferred Tax Liability (DTL) |
+| Provisions (e.g. warranty) | Book > Tax → Deductible | Deferred Tax Asset (DTA) |
+| Lease (IFRS 16 vs Tax) | ROU ≠ Expense pattern | DTA or DTL |
+| Doubtful debts | Book > Tax → Deductible | DTA |
+
+### 16.4 GL Entries / การบันทึกบัญชี
+
+**Deferred Tax Liability (DTL):**
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Income Tax Expense (5700) | CIT rate × difference | ค่าใช้จ่ายภาษี |
+| Cr | Deferred Tax Liability (2700) | CIT rate × difference | ภาษีรอตัดบัญชี (หนี้สิน) |
+
+**Deferred Tax Asset (DTA):**
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Deferred Tax Asset (1700) | CIT rate × difference | ภาษีรอตัดบัญชี (สินทรัพย์) |
+| Cr | Income Tax Expense (5700) | CIT rate × difference | ลดค่าใช้จ่ายภาษี |
+
+---
+
+## 17. Interest on Overdue / ดอกเบี้ยค้างชำระ
+
+### 17.1 Overview / ภาพรวม
+
+Interest on Overdue module คำนวณดอกเบี้ยสำหรับใบแจ้งหนี้ที่ลูกค้าจ่ายเกินกำหนด โดยคำนวณตามอัตราดอกเบี้ยที่กำหนดและจำนวนวันที่เกินกำหนด
+
+Interest on Overdue module calculates interest charges for overdue customer invoices based on configured interest rates and overdue days.
+
+### 17.2 Step-by-Step: คำนวณดอกเบี้ย
+
+1. ตั้งค่า **Interest Rate** ที่ **Settings > Interest Config** (เช่น 1.25%/เดือน)
+2. ไปที่ **Interest on Overdue** (`/interest-overdue`) → กด **"Calculate"**
+3. ระบุ **Calculation Date** → ระบบค้นหา AR Open Items ที่เกินกำหนด
+4. ตรวจสอบรายการ → กด **"Post"** → สร้าง Debit Note + JE
+
+### 17.3 GL Entries / การบันทึกบัญชี
+
+| Dr/Cr | Account | Amount | คำอธิบาย |
+|-------|---------|--------|---------|
+| Dr | Accounts Receivable (1100) | Interest amount | เพิ่มลูกหนี้ |
+| Cr | Interest Income (4200) | Interest amount | รายได้ดอกเบี้ย |
+
+---
+
+## 18. Dispute Management / การจัดการข้อพิพาท
+
+### 18.1 Overview / ภาพรวม
+
+Dispute Management module จัดการกรณีที่ลูกค้าโต้แย้งยอดใบแจ้งหนี้ เช่น สินค้าไม่ตรง ราคาผิด ส่งไม่ครบ ระบบติดตาม dispute case จนปิดเคส
+
+Dispute Management handles cases where customers dispute invoice amounts (wrong items, incorrect pricing, short delivery). The system tracks dispute cases through resolution.
+
+### 18.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Dispute Cases | `/disputes` | รายการข้อพิพาท — Dispute case list |
+| New Dispute | `/disputes/new` | สร้างเคสใหม่ — Create case |
+| Dispute Detail | `/disputes/[id]` | รายละเอียดเคส — Case detail |
+
+### 18.3 Status Flow / สถานะ
+
+```
+new → investigating → resolved → closed
+                    → escalated → resolved → closed
+```
+
+### 18.4 Step-by-Step: สร้างเคสข้อพิพาท
+
+1. ไปที่ **Disputes** (`/disputes`) → กด **"+ New Dispute"**
+2. เลือก **Invoice** ที่ถูกโต้แย้ง + **Reason Code** (wrong_price / wrong_qty / damaged / other)
+3. ระบุ **Disputed Amount** และ **Description**
+4. Assign ให้ทีมสอบสวน → สถานะเปลี่ยนเป็น `investigating`
+5. เมื่อสอบสวนเสร็จ เลือก Resolution:
+   - **Credit Note** — ออก Credit Note ให้ลูกค้า
+   - **Write-off** — ตัดเป็นหนี้สูญ
+   - **No Action** — ปฏิเสธข้อโต้แย้ง
+6. ปิดเคส
+
+---
+
+## 19. Financial Closing Cockpit / ห้องบัญชาการปิดงวด
+
+### 19.1 Overview / ภาพรวม
+
+Financial Closing Cockpit เป็นศูนย์รวมขั้นตอนปิดงวดบัญชี (Month-End / Year-End) แสดง checklist, สถานะแต่ละขั้นตอน, และ dependency ระหว่าง task ช่วยให้ทีมบัญชีทำงานได้อย่างเป็นระบบ
+
+Financial Closing Cockpit is a centralized hub for period-end closing steps (Month-End / Year-End), showing checklists, step statuses, and task dependencies to help the accounting team work systematically.
+
+### 19.2 Screens / หน้าจอ
+
+| Screen | Path | Description |
+|--------|------|-------------|
+| Closing Cockpit | `/closing-cockpit` | หน้าหลักปิดงวด — Main cockpit |
+| Closing Template | `/settings/closing-template` | แม่แบบขั้นตอนปิดงวด |
+| Closing History | `/closing-cockpit/history` | ประวัติการปิดงวด |
+
+### 19.3 Month-End Closing Checklist / รายการปิดงวดรายเดือน
+
+| # | Task | Module | คำอธิบาย |
+|---|------|--------|---------|
+| 1 | Run Depreciation | FI-AA | คำนวณค่าเสื่อมราคา |
+| 2 | Run Lease Monthly JE | IFRS 16 | บันทึกรายการเช่ารายเดือน |
+| 3 | Post Recurring JE | GL | ผ่านรายการอัตโนมัติ |
+| 4 | Run FX Revaluation | Multi-Currency | ปรับมูลค่าสกุลเงินต่างประเทศ |
+| 5 | Calculate Deferred Tax | Tax | คำนวณภาษีรอตัดบัญชี |
+| 6 | Calculate Interest on Overdue | AR | คำนวณดอกเบี้ยค้างชำระ |
+| 7 | Run Bank Reconciliation | FI-BL | กระทบยอดธนาคาร |
+| 8 | Post Accruals | GL | บันทึกค่าใช้จ่ายค้างจ่าย |
+| 9 | Revenue Recognition | IFRS 15 | รับรู้รายได้ |
+| 10 | Review Trial Balance | Reports | ตรวจสอบงบทดลอง |
+| 11 | Close Period | Fiscal | ปิดงวดบัญชี |
+
+### 19.4 Step-by-Step: ใช้ Closing Cockpit
+
+1. ไปที่ **Closing Cockpit** (`/closing-cockpit`) → เลือก Period (เช่น 2026-04)
+2. ระบบแสดง Checklist พร้อมสถานะ: ⬜ Pending / 🔄 In Progress / ✅ Done
+3. ทำตามลำดับ — คลิกแต่ละ task → ระบบนำไปหน้าจอที่เกี่ยวข้อง
+4. เมื่อ task เสร็จ → mark as Done → ระบบปลดล็อค task ถัดไป
+5. เมื่อทำครบทุก task → กด **"Close Period"** → ระบบปิดงวดบัญชี

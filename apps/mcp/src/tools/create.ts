@@ -650,4 +650,408 @@ export function registerCreateTools(server: McpServer): void {
       }
     },
   );
+
+  // ===========================================================================
+  // SAP-Parity Module Create Tools
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_bom
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_bom',
+    'สร้าง BOM — Create a bill of materials (PP-BOM)',
+    {
+      productId: z.string().describe('Finished product ID'),
+      name: z.string().describe('BOM name'),
+      components: z.array(z.object({
+        materialId: z.string().describe('Component material ID'),
+        quantity: z.number().describe('Quantity per unit'),
+        unit: z.string().optional().default('ชิ้น').describe('Unit of measure'),
+      })).describe('BOM components'),
+    },
+    async ({ productId, name, components }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/bom', { productId, name, components });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_work_center
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_work_center',
+    'สร้างศูนย์งาน — Create a work center (PP-CRP)',
+    {
+      code: z.string().describe('Work center code'),
+      name: z.string().describe('Work center name'),
+      capacityPerHour: z.number().optional().describe('Capacity per hour'),
+      costCenterId: z.string().optional().describe('Linked cost center ID'),
+    },
+    async ({ code, name, capacityPerHour, costCenterId }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/work-centers', { code, name, capacityPerHour, costCenterId });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_production_order
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_production_order',
+    'สร้างใบสั่งผลิต — Create a production order (PP-SFC)',
+    {
+      bomId: z.string().describe('BOM ID'),
+      quantity: z.number().describe('Planned quantity'),
+      plannedStartDate: z.string().describe('Planned start date (YYYY-MM-DD)'),
+      plannedEndDate: z.string().describe('Planned end date (YYYY-MM-DD)'),
+      workCenterId: z.string().optional().describe('Work center ID'),
+    },
+    async ({ bomId, quantity, plannedStartDate, plannedEndDate, workCenterId }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/production-orders', {
+          bomId, quantity, plannedStartDate, plannedEndDate, workCenterId,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_equipment
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_equipment',
+    'สร้างเครื่องจักร/อุปกรณ์ — Create equipment (PM-EQM)',
+    {
+      code: z.string().describe('Equipment code'),
+      name: z.string().describe('Equipment name'),
+      category: z.string().optional().describe('Category: machine, vehicle, tool, building'),
+      location: z.string().optional().describe('Location'),
+      purchaseDate: z.string().optional().describe('Purchase date (YYYY-MM-DD)'),
+    },
+    async ({ code, name, category, location, purchaseDate }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/equipment', { code, name, category, location, purchaseDate });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_maintenance_plan
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_maintenance_plan',
+    'สร้างแผนบำรุงรักษา — Create a maintenance plan (PM-PRM)',
+    {
+      equipmentId: z.string().describe('Equipment ID'),
+      name: z.string().describe('Plan name'),
+      frequency: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly']).describe('Maintenance frequency'),
+      nextDueDate: z.string().describe('Next due date (YYYY-MM-DD)'),
+      tasks: z.array(z.string()).optional().describe('Maintenance task descriptions'),
+    },
+    async ({ equipmentId, name, frequency, nextDueDate, tasks }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/maintenance-plans', {
+          equipmentId, name, frequency, nextDueDate, tasks,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_maintenance_order
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_maintenance_order',
+    'สร้างใบสั่งซ่อม — Create a maintenance order (PM-WOC)',
+    {
+      equipmentId: z.string().describe('Equipment ID'),
+      type: z.enum(['preventive', 'corrective', 'predictive']).describe('Order type'),
+      description: z.string().describe('Work description'),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).optional().default('medium').describe('Priority'),
+      plannedDate: z.string().optional().describe('Planned date (YYYY-MM-DD)'),
+    },
+    async ({ equipmentId, type, description, priority, plannedDate }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/maintenance-orders', {
+          equipmentId, type, description, priority, plannedDate,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_lease_contract
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_lease_contract',
+    'สร้างสัญญาเช่า — Create a lease contract (RE-FX / IFRS 16)',
+    {
+      lessorName: z.string().describe('Lessor name'),
+      assetDescription: z.string().describe('Leased asset description'),
+      startDate: z.string().describe('Lease start date (YYYY-MM-DD)'),
+      endDate: z.string().describe('Lease end date (YYYY-MM-DD)'),
+      monthlyRentSatang: z.string().describe('Monthly rent in satang'),
+      discountRate: z.number().optional().describe('Incremental borrowing rate (%)'),
+    },
+    async ({ lessorName, assetDescription, startDate, endDate, monthlyRentSatang, discountRate }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/lease-contracts', {
+          lessorName, assetDescription, startDate, endDate, monthlyRentSatang, discountRate,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_revenue_contract
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_revenue_contract',
+    'สร้างสัญญารายรับ — Create a revenue contract (RA / IFRS 15)',
+    {
+      customerId: z.string().describe('Customer ID'),
+      contractDate: z.string().describe('Contract date (YYYY-MM-DD)'),
+      obligations: z.array(z.object({
+        description: z.string(),
+        transactionPriceSatang: z.string().describe('Transaction price in satang'),
+        satisfactionType: z.enum(['point_in_time', 'over_time']).describe('Revenue recognition type'),
+      })).describe('Performance obligations'),
+    },
+    async ({ customerId, contractDate, obligations }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/revenue-contracts', {
+          customerId, contractDate, obligations,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_trade_declaration
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_trade_declaration',
+    'สร้างใบขนสินค้า — Create a trade declaration (FT)',
+    {
+      type: z.enum(['import', 'export']).describe('Declaration type'),
+      purchaseOrderId: z.string().optional().describe('Related purchase order ID'),
+      salesOrderId: z.string().optional().describe('Related sales order ID'),
+      hsCode: z.string().describe('HS tariff code'),
+      description: z.string().describe('Goods description'),
+      valueSatang: z.string().describe('Declared value in satang'),
+    },
+    async ({ type, purchaseOrderId, salesOrderId, hsCode, description, valueSatang }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/trade-declarations', {
+          type, purchaseOrderId, salesOrderId, hsCode, description, valueSatang,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_letter_of_credit
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_letter_of_credit',
+    'สร้าง L/C — Create a letter of credit (FT-LC)',
+    {
+      type: z.enum(['import', 'export']).describe('LC type'),
+      applicant: z.string().describe('Applicant name'),
+      beneficiary: z.string().describe('Beneficiary name'),
+      amountSatang: z.string().describe('LC amount in satang'),
+      currency: z.string().optional().default('USD').describe('Currency code'),
+      expiryDate: z.string().describe('Expiry date (YYYY-MM-DD)'),
+    },
+    async ({ type, applicant, beneficiary, amountSatang, currency, expiryDate }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/letters-of-credit', {
+          type, applicant, beneficiary, amountSatang, currency, expiryDate,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_purchasing_contract
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_purchasing_contract',
+    'สร้างสัญญาจัดซื้อ — Create a purchasing contract (MM-PUR)',
+    {
+      vendorId: z.string().describe('Vendor ID'),
+      contractType: z.enum(['quantity', 'value']).describe('Contract type'),
+      startDate: z.string().describe('Start date (YYYY-MM-DD)'),
+      endDate: z.string().describe('End date (YYYY-MM-DD)'),
+      targetAmountSatang: z.string().optional().describe('Target amount in satang'),
+      items: z.array(z.object({
+        productId: z.string(),
+        unitPriceSatang: z.string().describe('Contracted unit price in satang'),
+        quantity: z.number().optional(),
+      })).describe('Contract items'),
+    },
+    async ({ vendorId, contractType, startDate, endDate, targetAmountSatang, items }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/purchasing-contracts', {
+          vendorId, contractType, startDate, endDate, targetAmountSatang, items,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_job_posting
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_job_posting',
+    'สร้างประกาศรับสมัครงาน — Create a job posting (HR-RCF)',
+    {
+      positionId: z.string().describe('Position ID'),
+      title: z.string().describe('Job title'),
+      description: z.string().describe('Job description'),
+      requirements: z.string().optional().describe('Requirements'),
+      closingDate: z.string().optional().describe('Closing date (YYYY-MM-DD)'),
+    },
+    async ({ positionId, title, description, requirements, closingDate }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/job-postings', {
+          positionId, title, description, requirements, closingDate,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_travel_request
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_travel_request',
+    'สร้างคำขอเดินทาง — Create a travel request (HR-TRV)',
+    {
+      employeeId: z.string().describe('Employee ID'),
+      destination: z.string().describe('Travel destination'),
+      startDate: z.string().describe('Start date (YYYY-MM-DD)'),
+      endDate: z.string().describe('End date (YYYY-MM-DD)'),
+      purpose: z.string().describe('Purpose of travel'),
+      estimatedCostSatang: z.string().optional().describe('Estimated cost in satang'),
+    },
+    async ({ employeeId, destination, startDate, endDate, purpose, estimatedCostSatang }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/travel-requests', {
+          employeeId, destination, startDate, endDate, purpose, estimatedCostSatang,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_expense_claim
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_expense_claim',
+    'สร้างเบิกค่าใช้จ่าย — Create an expense claim (HR-TRV)',
+    {
+      employeeId: z.string().describe('Employee ID'),
+      travelRequestId: z.string().optional().describe('Related travel request ID'),
+      description: z.string().describe('Claim description'),
+      lines: z.array(z.object({
+        description: z.string(),
+        amountSatang: z.string().describe('Amount in satang'),
+        category: z.string().describe('Expense category'),
+        receiptDate: z.string().describe('Receipt date (YYYY-MM-DD)'),
+      })).describe('Expense line items'),
+    },
+    async ({ employeeId, travelRequestId, description, lines }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/expense-claims', {
+          employeeId, travelRequestId, description, lines,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Tool: create_down_payment
+  // ---------------------------------------------------------------------------
+
+  server.tool(
+    'create_down_payment',
+    'สร้างเงินมัดจำ — Create a down payment (FI-AP/AR)',
+    {
+      type: z.enum(['customer', 'vendor']).describe('Down payment type'),
+      contactId: z.string().describe('Customer or vendor ID'),
+      amountSatang: z.string().describe('Down payment amount in satang'),
+      referenceDocument: z.string().optional().describe('Reference document (PO/SO ID)'),
+      dueDate: z.string().describe('Due date (YYYY-MM-DD)'),
+    },
+    async ({ type, contactId, amountSatang, referenceDocument, dueDate }) => {
+      try {
+        const data = await apiCall<Record<string, unknown>>('POST', '/down-payments', {
+          type, contactId, amountSatang, referenceDocument, dueDate,
+        });
+        return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: 'text' as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  );
 }

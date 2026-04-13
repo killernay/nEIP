@@ -1,0 +1,143 @@
+#!/bin/bash
+TOKEN=$(curl -s -X POST http://localhost:5400/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"test-modules@test.com","password":"TestPass1234!@#$"}' | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
+BASE="http://localhost:5400/api/v1"
+AUTH="Authorization: Bearer $TOKEN"
+CT="Content-Type: application/json"
+
+PASS=0
+FAIL=0
+RESULTS=""
+
+test_ep() {
+  local method=$1 path=$2 data=$3 label=$4
+  if [ "$method" = "GET" ]; then
+    resp=$(curl -s -w "\n%{http_code}" -X GET "$BASE$path" -H "$AUTH" -H "$CT" 2>&1)
+  else
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$BASE$path" -H "$AUTH" -H "$CT" -d "$data" 2>&1)
+  fi
+  code=$(echo "$resp" | tail -1)
+  body=$(echo "$resp" | sed '$d')
+  if [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 300 ] 2>/dev/null; then
+    line="PASS | $method $path | $code | $label"
+    echo "$line"
+    RESULTS="$RESULTS\n$line"
+    PASS=$((PASS+1))
+    # Extract ID if present
+    echo "$body" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4
+  else
+    error=$(echo "$body" | grep -o '"detail":"[^"]*"' | head -1 | cut -d'"' -f4)
+    [ -z "$error" ] && error=$(echo "$body" | head -c 200)
+    line="FAIL | $method $path | $code | $label | $error"
+    echo "$line"
+    RESULTS="$RESULTS\n$line"
+    FAIL=$((FAIL+1))
+  fi
+}
+
+echo "========== MODULE INTEGRATION TEST REPORT (Round 3 - Final) =========="
+echo "Date: $(date)"
+echo ""
+
+echo "--- 1. Module System ---"
+test_ep GET "/modules" "" "List all modules"
+test_ep GET "/modules/tenant" "" "List tenant modules"
+test_ep POST "/modules/activate" '{"module_code":"PP"}' "Activate module PP"
+
+echo "--- 2. Onboarding ---"
+test_ep GET "/onboarding/templates" "" "List onboarding templates"
+test_ep POST "/onboarding/step/1" '{"companyName":"Test Corp","companyType":"limited"}' "Onboarding step 1"
+
+echo "--- 3. Manufacturing ---"
+test_ep POST "/boms" '{"productId":"PROD-001","nameTh":"สินค้าทดสอบ","outputQty":1}' "Create BOM"
+test_ep GET "/boms" "" "List BOMs"
+test_ep POST "/work-centers" '{"code":"WC-001","nameTh":"สายการผลิต 1","capacityPerHour":10}' "Create work center"
+test_ep GET "/work-centers" "" "List work centers"
+
+echo "--- 4. Trade ---"
+test_ep GET "/incoterms" "" "List incoterms"
+test_ep POST "/trade-declarations" '{"documentNumber":"IMP-2026-001","type":"import","declarationType":"standard","portCode":"BKK"}' "Create trade declaration"
+test_ep POST "/letters-of-credit" '{"lcNumber":"LC-2026-001","type":"import","applicant":"Test Corp","beneficiary":"Supplier Co","amountSatang":10000000,"currency":"USD","expiryDate":"2026-12-31","issuingBank":"Bangkok Bank"}' "Create LC"
+
+echo "--- 5. Leases (IFRS 16) ---"
+test_ep POST "/leases" '{"lessor":"Property Co","lesseeCompanyId":"default","assetDescription":"Office Space Floor 5","leaseType":"operating","startDate":"2026-01-01","endDate":"2028-12-31","monthlyPaymentSatang":5000000,"discountRateBp":500}' "Create lease"
+
+echo "--- 6. Revenue (IFRS 15) ---"
+test_ep POST "/revenue/contracts" '{"customerId":"CUST-001","contractDate":"2026-01-01","totalPriceSatang":100000000}' "Create revenue contract"
+
+echo "--- 7. PM (Maintenance) ---"
+test_ep POST "/equipment" '{"code":"EQ-001","nameTh":"เครื่อง CNC","equipmentType":"machine","location":"Factory A"}' "Create equipment"
+test_ep GET "/equipment" "" "List equipment"
+
+echo "--- 8. Batch Payment ---"
+test_ep POST "/ap/batch-payment/propose" '{"dueDateFrom":"2026-04-01","dueDateTo":"2026-04-30"}' "Propose batch payment"
+
+echo "--- 9. Collections ---"
+test_ep GET "/ar/collections/worklist" "" "Get collections worklist"
+
+echo "--- 10. Down Payments ---"
+test_ep POST "/ar/down-payments" '{"customerId":"CUST-001","amountSatang":5000000}' "Create AR down payment"
+test_ep POST "/ap/down-payments" '{"vendorId":"VEND-001","amountSatang":3000000}' "Create AP down payment"
+
+echo "--- 11. Enterprise ---"
+test_ep POST "/enterprise/branches" '{"code":"BR-001","nameTh":"สาขากรุงเทพ","nameEn":"Bangkok Branch","branchType":"branch"}' "Create branch"
+test_ep GET "/enterprise/structure" "" "Get enterprise structure"
+
+echo "--- 12. Role Config ---"
+test_ep GET "/role-templates" "" "List role templates"
+test_ep GET "/ui/config" "" "Get UI config"
+
+echo "--- 13. Projects Enhanced ---"
+test_ep POST "/projects" '{"code":"PRJ-001","nameTh":"โปรเจค ERP","projectType":"internal","startDate":"2026-01-01","endDate":"2026-12-31","budgetSatang":500000000}' "Create project"
+test_ep GET "/projects" "" "List projects"
+test_ep POST "/time-entries" '{"projectId":"PRJ-001","employeeId":"EMP-001","entryDate":"2026-04-01","hours":8,"rateSatang":50000,"description":"Dev work"}' "Create time entry"
+
+echo "--- 14. Quality Enhanced ---"
+test_ep POST "/inspections" '{"inspectionType":"incoming","referenceType":"po","referenceId":"PO-001","materialCode":"MAT-001","lotSize":100}' "Create inspection"
+test_ep GET "/inspections" "" "List inspections"
+
+echo "--- 15. Services ---"
+test_ep POST "/service-entry-sheets" '{"vendorId":"VEND-001","poNumber":"PO-001","description":"IT Support","lines":[{"description":"Support hours","quantity":40,"unitPriceSatang":500000}]}' "Create service entry sheet"
+test_ep GET "/service-entry-sheets" "" "List service entry sheets"
+
+echo "--- 16. Controlling ---"
+test_ep POST "/controlling/standard-cost/calculate" '{"productId":"PROD-001","fiscalYear":"2026"}' "Calculate standard cost"
+test_ep POST "/controlling/allocation/rules" '{"name":"Overhead Allocation","sourceCostCenterId":"ADM","targetCostCenterIds":["PROD","SALES"],"percentages":[60,40]}' "Create allocation rule"
+
+echo "--- 17. FI Gaps ---"
+test_ep POST "/vendors/test-vendor/evaluate" '{"period":"2026-Q1","deliveryScore":8,"qualityScore":9,"priceScore":7,"serviceScore":8}' "Evaluate vendor"
+test_ep GET "/month-end/cockpit" "" "Month-end cockpit"
+
+echo "--- 18. ESS ---"
+test_ep GET "/ess/profile" "" "ESS profile"
+
+echo "--- 19. Recruitment ---"
+test_ep POST "/job-postings" '{"title":"Software Engineer","department":"IT","location":"Bangkok","employmentType":"full_time","description":"Looking for experienced developer"}' "Create job posting"
+test_ep GET "/job-postings" "" "List job postings"
+
+echo "--- 20. Performance ---"
+test_ep POST "/performance/reviews" '{"employeeId":"EMP-001","reviewerId":"EMP-002","period":"2026-Q1","reviewType":"annual","overallRating":4}' "Create performance review"
+
+echo "--- 21. GRC ---"
+test_ep GET "/grc/sod-violations" "" "Get SoD violations"
+
+echo "--- 22. DMS ---"
+resp=$(curl -s -w "\n%{http_code}" -X POST "$BASE/documents/upload" -H "$AUTH" -F "file=@/tmp/test_modules3.sh;filename=test.txt" -F "entityType=general" -F "entityId=test-001" 2>&1)
+code=$(echo "$resp" | tail -1)
+body=$(echo "$resp" | sed '$d')
+if [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 300 ] 2>/dev/null; then
+  echo "PASS | POST /documents/upload | $code | Upload document"
+  PASS=$((PASS+1))
+else
+  error=$(echo "$body" | grep -o '"detail":"[^"]*"' | head -1 | cut -d'"' -f4)
+  [ -z "$error" ] && error=$(echo "$body" | head -c 200)
+  echo "FAIL | POST /documents/upload | $code | Upload document | $error"
+  FAIL=$((FAIL+1))
+fi
+
+echo ""
+echo "========== SUMMARY =========="
+echo "PASS: $PASS"
+echo "FAIL: $FAIL"
+echo "TOTAL: $((PASS+FAIL))"
+echo "PASS RATE: $(echo "scale=1; $PASS * 100 / ($PASS + $FAIL)" | bc)%"
+echo "========== END =========="

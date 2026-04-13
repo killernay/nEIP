@@ -18,6 +18,10 @@
 9. [Approval Workflows](#9-approval-workflows)
 10. [Multi-Company](#10-multi-company)
 11. [Month-End / Year-End Checklist](#11-month-end--year-end-checklist)
+12. [Make-to-Stock Flow (ผลิตเพื่อสต็อก)](#12-make-to-stock-flow-ผลิตเพื่อสต็อก--bom--mrp--production--gr)
+13. [Maintenance Flow (บำรุงรักษา)](#13-maintenance-flow-บำรุงรักษา--equipment--plan--work-order--parts--close)
+14. [Lease Flow (สัญญาเช่า IFRS 16)](#14-lease-flow-สัญญาเช่า--contract--activate--monthly-je--depreciation)
+15. [Service Procurement Flow (จัดซื้อบริการ)](#15-service-procurement-flow-จัดซื้อบริการ--pr--service-entry--approve--bill)
 
 ---
 
@@ -1264,5 +1268,316 @@ Leave Request:
 
 ---
 
-*สร้างโดย nEIP Training Team — อัพเดทล่าสุด: 2026-04-12*
+---
+
+## 12. Make-to-Stock Flow (ผลิตเพื่อสต็อก — BOM → MRP → Production → GR)
+
+### ภาพรวม
+
+กระบวนการผลิตสินค้าเพื่อเก็บสต็อก เริ่มจากสูตรการผลิต (BOM) → วางแผนความต้องการวัสดุ (MRP) → สั่งผลิต (Production Order) → รับสินค้าเข้าคลัง (Goods Receipt)
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║                  Make-to-Stock Flow                              ║
+║                  กระบวนการผลิตเพื่อสต็อก                           ║
+║                                                                  ║
+║  Step 1: Bill of Materials (BOM)                                ║
+║  ──────────────────────────────                                  ║
+║  สร้างสูตรการผลิต:                                                ║
+║    Finished Product: เก้าอี้สำนักงาน (CHAIR-001)                  ║
+║    ├─ เหล็กโครง (STEEL-001) × 5 กก.                              ║
+║    ├─ เบาะนั่ง (CUSHION-001) × 1 ชิ้น                            ║
+║    ├─ ล้อเลื่อน (WHEEL-001) × 5 ชิ้น                             ║
+║    └─ สกรู (SCREW-001) × 20 ตัว                                  ║
+║                                                                  ║
+║  Step 2: Demand Management                                      ║
+║  ──────────────────────────                                      ║
+║  Sales Forecast: ต้องการเก้าอี้ 500 ตัว ในเดือนหน้า                ║
+║  Current Stock: 50 ตัว                                           ║
+║  Net Requirement: 450 ตัว                                        ║
+║                                                                  ║
+║  Step 3: MRP Run                                                ║
+║  ──────────────                                                  ║
+║  ระบบคำนวณ:                                                      ║
+║    ├─ Planned Production Order: เก้าอี้ 450 ตัว                   ║
+║    ├─ Planned PR: เหล็ก 2,250 กก. (450×5)                        ║
+║    ├─ Planned PR: เบาะ 450 ชิ้น                                  ║
+║    ├─ Planned PR: ล้อ 2,250 ชิ้น                                 ║
+║    └─ Planned PR: สกรู 9,000 ตัว                                 ║
+║                                                                  ║
+║  Step 4: Convert Planned Orders                                 ║
+║  ─────────────────────────────                                   ║
+║  MRP Results → Convert:                                         ║
+║    ├─ Production Order #PO-001: เก้าอี้ 450 ตัว                   ║
+║    ├─ Purchase Requisition → PO: เหล็ก 2,250 กก.                 ║
+║    └─ Purchase Requisition → PO: อื่นๆ                            ║
+║                                                                  ║
+║  Step 5: Production Execution                                   ║
+║  ───────────────────────────                                     ║
+║  Release Production Order → Shop Floor:                         ║
+║    ├─ Goods Issue: ตัดวัตถุดิบจากคลัง                              ║
+║    │   Dr: WIP (1400)                                           ║
+║    │   Cr: Raw Material Inventory (1200)                        ║
+║    ├─ Operations: ตัด → ประกอบ → ทดสอบ                           ║
+║    ├─ Confirmations: บันทึกจำนวน/เวลา/ของเสีย                     ║
+║    └─ Goods Receipt: รับสำเร็จรูปเข้าคลัง                          ║
+║        Dr: Finished Goods (1210)                                ║
+║        Cr: WIP (1400)                                           ║
+║                                                                  ║
+║  Step 6: Available for Sale                                     ║
+║  ─────────────────────────                                       ║
+║  Stock Level Updated:                                           ║
+║    เก้าอี้: 50 (เดิม) + 450 (ผลิต) = 500 ตัว                     ║
+║    พร้อมขาย → Sales Order → Delivery → Invoice                  ║
+║                                                                  ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+### สรุป GL Entries ในกระบวนการผลิต
+
+| Step | Dr | Cr | คำอธิบาย |
+|------|----|----|---------|
+| ซื้อวัตถุดิบ | Raw Material (1200) | AP (2100) | รับวัตถุดิบ |
+| ตัดวัตถุดิบ | WIP (1400) | Raw Material (1200) | เบิกเข้าผลิต |
+| ค่าแรง | WIP (1400) | Wages Payable (2300) | ต้นทุนแรงงาน |
+| โสหุ้ย | WIP (1400) | Manufacturing OH (5900) | ค่าโสหุ้ยการผลิต |
+| รับสำเร็จรูป | Finished Goods (1210) | WIP (1400) | เสร็จผลิต |
+| ขายสินค้า | COGS (5100) | Finished Goods (1210) | ตัดต้นทุนขาย |
+
+---
+
+## 13. Maintenance Flow (บำรุงรักษา — Equipment → Plan → Work Order → Parts → Close)
+
+### ภาพรวม
+
+กระบวนการบำรุงรักษาเครื่องจักร เริ่มจากทะเบียนเครื่อง → แผนบำรุง → ใบสั่งซ่อม → เบิกอะไหล่ → ปิดงาน
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║                  Maintenance Flow                                ║
+║                  กระบวนการบำรุงรักษา                                ║
+║                                                                  ║
+║  Step 1: Equipment Master                                       ║
+║  ──────────────────────────                                      ║
+║  ลงทะเบียนเครื่องจักร:                                             ║
+║    Equipment ID: EQ-CNC-001                                     ║
+║    Name: CNC Lathe Machine #1                                   ║
+║    Location: Factory A, Line 3                                  ║
+║    Status: Active                                               ║
+║    Cost Center: CC-PROD-01                                      ║
+║                                                                  ║
+║  Step 2: Maintenance Plan                                       ║
+║  ───────────────────────                                         ║
+║  สร้างแผนบำรุงรักษา:                                               ║
+║    Type: Time-based (ทุก 90 วัน)                                  ║
+║    Equipment: EQ-CNC-001                                        ║
+║    Task List:                                                   ║
+║      ├─ เปลี่ยนน้ำมันหล่อเย็น                                      ║
+║      ├─ ตรวจสอบสายพานขับ                                         ║
+║      ├─ ทดสอบระบบนิรภัย                                           ║
+║      └─ สอบเทียบ (Calibration)                                   ║
+║    Spare Parts:                                                 ║
+║      ├─ น้ำมันหล่อเย็น (OIL-001) × 5 ลิตร                        ║
+║      └─ สายพาน (BELT-001) × 1 เส้น (ถ้าชำรุด)                    ║
+║                                                                  ║
+║  Step 3: Auto-Generate Work Order                               ║
+║  ───────────────────────────────                                  ║
+║  ระบบสร้าง Work Order อัตโนมัติเมื่อถึงกำหนด:                       ║
+║    WO-2026-0042                                                 ║
+║    Status: Planned → Released                                   ║
+║    Planned Date: 2026-04-15                                     ║
+║    Assigned To: ช่างสมชาย                                        ║
+║                                                                  ║
+║  Step 4: Execute Work Order                                     ║
+║  ─────────────────────────                                       ║
+║  ช่างดำเนินงาน:                                                   ║
+║    ├─ กด Start → Status: In Progress                            ║
+║    ├─ เปลี่ยนน้ำมัน ✓                                             ║
+║    ├─ ตรวจสายพาน → พบชำรุด → เปลี่ยนใหม่                         ║
+║    ├─ ทดสอบนิรภัย ✓                                               ║
+║    └─ สอบเทียบ ✓                                                 ║
+║                                                                  ║
+║  Step 5: Parts Issue (เบิกอะไหล่)                                 ║
+║  ────────────────────────────                                    ║
+║  ตัดอะไหล่จากคลัง:                                                 ║
+║    ├─ น้ำมันหล่อเย็น 5 ลิตร → ตัดสต็อก                             ║
+║    └─ สายพาน 1 เส้น → ตัดสต็อก                                    ║
+║  GL:                                                            ║
+║    Dr: Maintenance Expense (5800)                               ║
+║    Cr: Spare Parts Inventory (1220)                             ║
+║                                                                  ║
+║  Step 6: Complete & Close                                       ║
+║  ───────────────────────                                         ║
+║  ช่างกด Complete:                                                ║
+║    ├─ บันทึกเวลาทำงาน: 3 ชั่วโมง                                  ║
+║    ├─ บันทึกสาเหตุ: Preventive maintenance                      ║
+║    ├─ บันทึกผล: All checks passed                               ║
+║    └─ Status: Completed → Closed                                ║
+║  GL (ค่าแรง):                                                    ║
+║    Dr: Maintenance Expense (5800)                               ║
+║    Cr: Wages Payable (2300)                                     ║
+║                                                                  ║
+║  Step 7: OEE Update                                             ║
+║  ──────────────                                                  ║
+║  ระบบอัปเดต OEE Dashboard:                                       ║
+║    Availability: 95% (Downtime 3 hrs / 60 hrs planned)         ║
+║    Performance: 88%                                             ║
+║    Quality: 99%                                                 ║
+║    OEE = 83.2%                                                  ║
+║                                                                  ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## 14. Lease Flow (สัญญาเช่า — Contract → Activate → Monthly JE → Depreciation)
+
+### ภาพรวม
+
+กระบวนการจัดการสัญญาเช่าตาม IFRS 16 เริ่มจากสร้างสัญญา → เปิดใช้งาน → บันทึกรายการรายเดือน → ค่าเสื่อมราคา
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║                  Lease Flow (IFRS 16)                            ║
+║                  กระบวนการสัญญาเช่า                                ║
+║                                                                  ║
+║  Step 1: Create Lease Contract                                  ║
+║  ────────────────────────────                                    ║
+║  สร้างสัญญาเช่า:                                                  ║
+║    Lessor: บจก.เจ้าของตึก ABC                                    ║
+║    Asset: อาคารสำนักงาน ชั้น 5                                    ║
+║    Type: Finance Lease (IFRS 16)                                ║
+║    Start: 2026-01-01                                            ║
+║    End: 2030-12-31 (5 ปี)                                       ║
+║    Monthly Payment: 100,000 บาท                                 ║
+║    Discount Rate: 5% per annum                                  ║
+║                                                                  ║
+║  Step 2: Activate Lease                                         ║
+║  ─────────────────────                                           ║
+║  ระบบคำนวณ:                                                      ║
+║    PV of Lease Payments = 5,328,947 บาท                         ║
+║    (60 payments × 100,000 discounted at 5%)                    ║
+║                                                                  ║
+║  Initial Recognition JE:                                        ║
+║    Dr: ROU Asset (1600)          5,328,947                     ║
+║    Cr: Lease Liability (2500)    5,328,947                     ║
+║                                                                  ║
+║  Step 3: Monthly Payment JE                                     ║
+║  ───────────────────────────                                     ║
+║  เดือนที่ 1 (January 2026):                                      ║
+║    Interest = 5,328,947 × 5%/12 = 22,204 บาท                   ║
+║    Principal = 100,000 - 22,204 = 77,796 บาท                   ║
+║                                                                  ║
+║    Dr: Lease Liability (2500)     77,796                       ║
+║    Dr: Interest Expense (5600)    22,204                       ║
+║    Cr: Bank (1010)               100,000                       ║
+║                                                                  ║
+║  Step 4: Monthly Depreciation                                   ║
+║  ───────────────────────────                                     ║
+║  ROU Depreciation (straight-line over lease term):              ║
+║    Monthly = 5,328,947 / 60 months = 88,816 บาท                ║
+║                                                                  ║
+║    Dr: Depreciation Expense (5500)           88,816            ║
+║    Cr: Accumulated Depreciation-ROU (1601)   88,816            ║
+║                                                                  ║
+║  Step 5: Amortization Schedule (ตาราง)                           ║
+║  ────────────────────────────────────                             ║
+║  Month │ Payment  │ Interest │ Principal │ Liability Balance    ║
+║  ──────┼──────────┼──────────┼───────────┼──────────────────    ║
+║    1   │ 100,000  │  22,204  │  77,796   │ 5,251,151          ║
+║    2   │ 100,000  │  21,880  │  78,120   │ 5,173,031          ║
+║    3   │ 100,000  │  21,554  │  78,446   │ 5,094,585          ║
+║   ...  │   ...    │   ...    │   ...     │    ...             ║
+║   60   │ 100,000  │    414   │  99,586   │       0            ║
+║                                                                  ║
+║  Step 6: End of Lease                                           ║
+║  ────────────────────                                            ║
+║  Options:                                                       ║
+║    A) Return asset → Derecognize ROU + Acc. Dep.               ║
+║    B) Purchase → Transfer to Fixed Asset                       ║
+║    C) Extend → Remeasure Lease Liability                       ║
+║                                                                  ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## 15. Service Procurement Flow (จัดซื้อบริการ — PR → Service Entry → Approve → Bill)
+
+### ภาพรวม
+
+กระบวนการจัดซื้อบริการ (ไม่ใช่สินค้า) เช่น รับเหมาก่อสร้าง ที่ปรึกษา ทำความสะอาด เริ่มจากขอซื้อ → สร้าง PO → รับงาน → อนุมัติ → จ่ายเงิน
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║              Service Procurement Flow                            ║
+║              กระบวนการจัดซื้อบริการ                                 ║
+║                                                                  ║
+║  Step 1: Purchase Requisition (ใบขอซื้อ)                         ║
+║  ──────────────────────────────────────                           ║
+║  ผู้ขอ: ฝ่ายอาคาร                                                 ║
+║    Service: ทาสีอาคาร ชั้น 1-3                                    ║
+║    Estimated: 450,000 บาท (500 ตร.ม. × 900 บาท)               ║
+║    Vendor Suggestion: บจก.สีสวย                                  ║
+║    → Submit → Approve (ตาม Approval Workflow)                   ║
+║                                                                  ║
+║  Step 2: Purchase Order — Service (ใบสั่งซื้อบริการ)              ║
+║  ─────────────────────────────────────────────                    ║
+║  แปลง PR → PO:                                                  ║
+║    PO Type: Service                                             ║
+║    Vendor: บจก.สีสวย                                             ║
+║    Service Lines:                                               ║
+║      ├─ ทาสีภายนอก ชั้น 1: 150 ตร.ม. × 1,000 = 150,000        ║
+║      ├─ ทาสีภายนอก ชั้น 2: 150 ตร.ม. × 1,000 = 150,000        ║
+║      └─ ทาสีภายนอก ชั้น 3: 150 ตร.ม. × 1,000 = 150,000        ║
+║    Total: 450,000 บาท (ก่อน VAT)                                ║
+║    → Release PO → ส่งให้ผู้รับเหมา                                ║
+║                                                                  ║
+║  Step 3: Service Execution (ทำงาน)                               ║
+║  ────────────────────────────────                                 ║
+║  ผู้รับเหมาดำเนินงาน:                                              ║
+║    ├─ ชั้น 1: เสร็จ ✓                                             ║
+║    ├─ ชั้น 2: เสร็จ ✓                                             ║
+║    └─ ชั้น 3: กำลังทำ (80%)                                      ║
+║                                                                  ║
+║  Step 4: Service Entry Sheet — Partial (ใบรับงานบางส่วน)         ║
+║  ──────────────────────────────────────────────────              ║
+║  สร้าง SES สำหรับชั้น 1-2 ที่เสร็จแล้ว:                            ║
+║    SES-001:                                                     ║
+║      ├─ ทาสี ชั้น 1: 150 ตร.ม. ✓                                 ║
+║      └─ ทาสี ชั้น 2: 150 ตร.ม. ✓                                 ║
+║    Amount: 300,000 บาท                                          ║
+║    → Submit → Manager Approve                                   ║
+║                                                                  ║
+║  Step 5: Bill (ใบวางบิล)                                         ║
+║  ──────────────────                                              ║
+║  สร้าง Bill จาก SES ที่อนุมัติแล้ว:                                ║
+║    Subtotal: 300,000                                            ║
+║    VAT 7%:   21,000                                             ║
+║    WHT 3%:   -9,000                                             ║
+║    Net Pay:  312,000                                            ║
+║                                                                  ║
+║  GL:                                                            ║
+║    Dr: Service Expense (5400)     300,000                      ║
+║    Dr: Input VAT (1110)            21,000                      ║
+║    Cr: Accounts Payable (2100)    312,000                      ║
+║    Cr: WHT Payable (2120)           9,000                      ║
+║                                                                  ║
+║  Step 6: Payment (จ่ายเงิน)                                      ║
+║  ──────────────────────                                          ║
+║  จ่ายเงินผ่าน Batch Payment Run:                                  ║
+║    Dr: Accounts Payable (2100)    312,000                      ║
+║    Cr: Bank (1010)                312,000                      ║
+║                                                                  ║
+║  Step 7: Remaining Service                                      ║
+║  ─────────────────────                                           ║
+║  ชั้น 3 เสร็จ → SES-002 → Approve → Bill → Pay                 ║
+║  (กระบวนการเดียวกัน ทำซ้ำจนครบสัญญา)                              ║
+║                                                                  ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+*สร้างโดย nEIP Training Team — อัพเดทล่าสุด: 2026-04-13*
 *เอกสารนี้อ้างอิงจาก source code จริงของระบบ nEIP ERP v0.9.0*
