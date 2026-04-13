@@ -47,6 +47,8 @@ const fiscalQuerySchema = {
     fiscalYear: { type: 'integer', description: 'Fiscal year to report on' },
     period: { type: 'integer', minimum: 1, maximum: 12, description: 'Fiscal period (1-12)' },
     asOfDate: { type: 'string', format: 'date', description: 'Report as-of date' },
+    profitCenterId: { type: 'string', description: 'Filter by profit center ID' },
+    costCenterId: { type: 'string', description: 'Filter by cost center ID' },
   },
 } as const;
 
@@ -54,6 +56,8 @@ interface FiscalQuery {
   fiscalYear?: number;
   period?: number;
   asOfDate?: string;
+  profitCenterId?: string;
+  costCenterId?: string;
 }
 
 interface AccountBalanceRow {
@@ -113,9 +117,9 @@ export async function reportRoutes(
               generatedAt: { type: 'string', format: 'date-time' },
               fiscalYear: { type: 'integer' },
               period: { type: 'integer', nullable: true },
-              assets: { type: 'array', items: { type: 'object' } },
-              liabilities: { type: 'array', items: { type: 'object' } },
-              equity: { type: 'array', items: { type: 'object' } },
+              assets: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              liabilities: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              equity: { type: 'array', items: { type: 'object', additionalProperties: true } },
               totalAssets: moneySchema,
               totalLiabilities: moneySchema,
               totalEquity: moneySchema,
@@ -247,8 +251,8 @@ export async function reportRoutes(
               generatedAt: { type: 'string', format: 'date-time' },
               fiscalYear: { type: 'integer' },
               period: { type: 'integer', nullable: true },
-              revenue: { type: 'array', items: { type: 'object' } },
-              expenses: { type: 'array', items: { type: 'object' } },
+              revenue: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              expenses: { type: 'array', items: { type: 'object', additionalProperties: true } },
               totalRevenue: moneySchema,
               totalExpenses: moneySchema,
               netIncome: moneySchema,
@@ -262,6 +266,14 @@ export async function reportRoutes(
       const { tenantId } = request.user;
       const fiscalYear = request.query.fiscalYear ?? new Date().getFullYear();
       const period = request.query.period;
+      const profitCenterId = request.query.profitCenterId;
+      const costCenterId = request.query.costCenterId;
+
+      // Build optional segment filters for journal entry lines
+      const segmentFilter = fastify.sql`
+        ${profitCenterId ? fastify.sql`AND jel2.profit_center_id = ${profitCenterId}` : fastify.sql``}
+        ${costCenterId ? fastify.sql`AND jel2.cost_center_id = ${costCenterId}` : fastify.sql``}
+      `;
 
       let balanceRows: AccountBalanceRow[];
       if (period !== undefined) {
@@ -279,6 +291,7 @@ export async function reportRoutes(
               AND je2.fiscal_year = ${fiscalYear}
               AND je2.fiscal_period = ${period}
               AND je2.tenant_id = ${tenantId}
+            WHERE 1=1 ${segmentFilter}
           ) jel ON jel.account_id = coa.id
           WHERE coa.tenant_id = ${tenantId}
             AND coa.account_type IN ('revenue', 'expense')
@@ -299,6 +312,7 @@ export async function reportRoutes(
               AND je2.status = 'posted'
               AND je2.fiscal_year = ${fiscalYear}
               AND je2.tenant_id = ${tenantId}
+            WHERE 1=1 ${segmentFilter}
           ) jel ON jel.account_id = coa.id
           WHERE coa.tenant_id = ${tenantId}
             AND coa.account_type IN ('revenue', 'expense')
@@ -333,6 +347,8 @@ export async function reportRoutes(
         generatedAt: new Date().toISOString(),
         fiscalYear,
         period: period ?? null,
+        profitCenterId: profitCenterId ?? null,
+        costCenterId: costCenterId ?? null,
         revenue,
         expenses,
         totalRevenue: money(totalRevenue),
@@ -361,7 +377,7 @@ export async function reportRoutes(
               reportName: { type: 'string' },
               generatedAt: { type: 'string', format: 'date-time' },
               fiscalYear: { type: 'integer' },
-              accounts: { type: 'array', items: { type: 'object' } },
+              accounts: { type: 'array', items: { type: 'object', additionalProperties: true } },
               totalDebits: moneySchema,
               totalCredits: moneySchema,
             },
@@ -389,7 +405,6 @@ export async function reportRoutes(
             AND je2.tenant_id = ${tenantId}
         ) jel ON jel.account_id = coa.id
         WHERE coa.tenant_id = ${tenantId}
-          AND coa.is_active = true
         GROUP BY coa.id, coa.code, coa.name_en, coa.name_th, coa.account_type
         ORDER BY coa.code
       `;
@@ -443,7 +458,7 @@ export async function reportRoutes(
               reportName: { type: 'string' },
               generatedAt: { type: 'string', format: 'date-time' },
               fiscalYear: { type: 'integer' },
-              items: { type: 'array', items: { type: 'object' } },
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
               totalBudget: moneySchema,
               totalActual: moneySchema,
               totalVariance: moneySchema,
@@ -547,7 +562,7 @@ export async function reportRoutes(
               reportName: { type: 'string' },
               generatedAt: { type: 'string', format: 'date-time' },
               fiscalYear: { type: 'integer' },
-              items: { type: 'array', items: { type: 'object' } },
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
               openingBalance: moneySchema,
               closingBalance: moneySchema,
               netChange: moneySchema,
@@ -674,7 +689,7 @@ export async function reportRoutes(
                 },
               },
               total: moneySchema,
-              customers: { type: 'array', items: { type: 'object' } },
+              customers: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
         },
@@ -807,7 +822,7 @@ export async function reportRoutes(
                 },
               },
               total: moneySchema,
-              vendors: { type: 'array', items: { type: 'object' } },
+              vendors: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
         },
@@ -1682,8 +1697,8 @@ export async function reportRoutes(
       const month = request.query.month ?? (now.getMonth() + 1);
 
       // H-5: Query actual VAT amounts from JE lines on GL accounts
-      // Output VAT = credit balance on VAT Payable (2110)
-      // Input VAT = debit balance on Input VAT (1170)
+      // Output VAT = credit balance on VAT Payable (TFAC 2210)
+      // Input VAT = debit balance on Input VAT (TFAC 1410)
       const outputVatRows = await fastify.sql<[{ vat_amount: string; tx_count: string }]>`
         SELECT
           COALESCE(SUM(jel.credit_satang) - SUM(jel.debit_satang), 0)::text as vat_amount,
@@ -1695,7 +1710,7 @@ export async function reportRoutes(
           AND je.status = 'posted'
           AND je.fiscal_year = ${year}
           AND je.fiscal_period = ${month}
-          AND coa.code LIKE '2110%'
+          AND coa.code LIKE '2210%'
       `;
 
       const inputVatRows = await fastify.sql<[{ vat_amount: string; tx_count: string }]>`
@@ -1709,7 +1724,7 @@ export async function reportRoutes(
           AND je.status = 'posted'
           AND je.fiscal_year = ${year}
           AND je.fiscal_period = ${month}
-          AND coa.code LIKE '1170%'
+          AND coa.code LIKE '1410%'
       `;
 
       const outputVatAmount = BigInt(outputVatRows[0].vat_amount);
@@ -1768,7 +1783,7 @@ export async function reportRoutes(
               generatedAt: { type: 'string', format: 'date-time' },
               filingYear: { type: 'integer' },
               filingMonth: { type: 'integer' },
-              employees: { type: 'array', items: { type: 'object' } },
+              employees: { type: 'array', items: { type: 'object', additionalProperties: true } },
               totalEmployeeSSCSatang: { type: 'string' },
               totalEmployerSSCSatang: { type: 'string' },
               grandTotalSSCSatang: { type: 'string' },

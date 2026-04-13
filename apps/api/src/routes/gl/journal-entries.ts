@@ -38,6 +38,8 @@ const journalEntryLineSchema = {
     description: { type: 'string', maxLength: 500 },
     debitSatang: { type: 'string', description: 'Debit amount in satang (bigint as string)' },
     creditSatang: { type: 'string', description: 'Credit amount in satang (bigint as string)' },
+    costCenterId: { type: 'string', description: 'Optional cost center ID for segment reporting', nullable: true },
+    profitCenterId: { type: 'string', description: 'Optional profit center ID for segment reporting', nullable: true },
   },
 } as const;
 
@@ -67,7 +69,7 @@ const journalEntryResponseSchema = {
     status: { type: 'string', enum: ['draft', 'posted', 'reversed'] },
     fiscalYear: { type: 'integer' },
     fiscalPeriod: { type: 'integer' },
-    lines: { type: 'array', items: { type: 'object' } },
+    lines: { type: 'array', items: { type: 'object', additionalProperties: true } },
     createdBy: { type: 'string' },
     postedAt: { type: 'string', format: 'date-time', nullable: true },
     createdAt: { type: 'string', format: 'date-time' },
@@ -100,6 +102,8 @@ interface CreateJournalEntryBody {
     description?: string;
     debitSatang: string;
     creditSatang: string;
+    costCenterId?: string | null;
+    profitCenterId?: string | null;
   }>;
 }
 
@@ -141,6 +145,8 @@ interface JournalLineRow {
   description: string | null;
   debit_satang: bigint;
   credit_satang: bigint;
+  cost_center_id: string | null;
+  profit_center_id: string | null;
 }
 
 interface CountRow {
@@ -271,8 +277,8 @@ export async function journalEntryRoutes(
         const line = lines[i]!;
         const lineId = crypto.randomUUID();
         const lineRows = await fastify.sql<[JournalLineRow?]>`
-          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang)
-          VALUES (${lineId}, ${entryId}, ${i + 1}, ${line.accountId}, ${line.description ?? null}, ${line.debitSatang}::bigint, ${line.creditSatang}::bigint)
+          INSERT INTO journal_entry_lines (id, entry_id, line_number, account_id, description, debit_satang, credit_satang, cost_center_id, profit_center_id)
+          VALUES (${lineId}, ${entryId}, ${i + 1}, ${line.accountId}, ${line.description ?? null}, ${line.debitSatang}::bigint, ${line.creditSatang}::bigint, ${line.costCenterId ?? null}, ${line.profitCenterId ?? null})
           RETURNING *
         `;
         const inserted = lineRows[0];
@@ -298,6 +304,8 @@ export async function journalEntryRoutes(
           description: l.description,
           debitSatang: l.debit_satang.toString(),
           creditSatang: l.credit_satang.toString(),
+          costCenterId: l.cost_center_id,
+          profitCenterId: l.profit_center_id,
         })),
         createdBy: entry.created_by,
         postedAt: null,

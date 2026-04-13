@@ -20,7 +20,7 @@ export const stock_movements = pgTable('stock_movements', {
     .$type<'receive' | 'issue' | 'transfer' | 'adjust' | 'return'>(),
   quantity: integer('quantity').notNull(),
   reference_type: text('reference_type')
-    .$type<'purchase_order' | 'sales_order' | 'delivery_note' | 'manual'>(),
+    .$type<'purchase_order' | 'sales_order' | 'delivery_note' | 'manual' | 'transfer'>(),
   reference_id: text('reference_id'),
   batch_number: text('batch_number'),
   notes: text('notes'),

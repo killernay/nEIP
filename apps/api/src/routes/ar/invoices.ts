@@ -460,11 +460,11 @@ export async function invoiceRoutes(
         SELECT * FROM invoice_line_items WHERE invoice_id = ${id} ORDER BY line_number
       `;
 
-      // Look up AR account (code 1100), Revenue account (code 4000),
-      // and VAT Payable account (code 2110) for this tenant
+      // Look up AR account (TFAC code 1200/1210), Revenue account,
+      // and VAT Payable account (TFAC code 2210) for this tenant
       const arAccounts = await fastify.sql<[{ id: string }?]>`
         SELECT id FROM chart_of_accounts
-        WHERE tenant_id = ${tenantId} AND code LIKE '1100%' AND account_type = 'asset'
+        WHERE tenant_id = ${tenantId} AND (code LIKE '1200%' OR code LIKE '1210%') AND account_type = 'asset'
         ORDER BY code ASC LIMIT 1
       `;
       const revAccounts = await fastify.sql<[{ id: string }?]>`
@@ -474,7 +474,7 @@ export async function invoiceRoutes(
       `;
       const vatPayableAccounts = await fastify.sql<[{ id: string }?]>`
         SELECT id FROM chart_of_accounts
-        WHERE tenant_id = ${tenantId} AND code LIKE '2110%' AND account_type = 'liability'
+        WHERE tenant_id = ${tenantId} AND code LIKE '2210%' AND account_type = 'liability'
         ORDER BY code ASC LIMIT 1
       `;
 
@@ -485,7 +485,7 @@ export async function invoiceRoutes(
       // C-1 FIX: Validate ALL required accounts exist before creating JE
       if (!arAccountId) {
         throw new ValidationError({
-          detail: 'Cannot post: Accounts Receivable account (code 1100*) not found in Chart of Accounts.',
+          detail: 'Cannot post: Accounts Receivable account (code 1200*/1210*) not found in Chart of Accounts.',
         });
       }
       if (!revAccountId) {
@@ -499,7 +499,7 @@ export async function invoiceRoutes(
       }
       if (!vatPayableAccountId) {
         throw new ValidationError({
-          detail: 'Cannot post: VAT Payable account (code 2110*) not found in Chart of Accounts.',
+          detail: 'Cannot post: VAT Payable account (code 2210*) not found in Chart of Accounts.',
         });
       }
 

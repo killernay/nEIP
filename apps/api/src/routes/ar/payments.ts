@@ -266,21 +266,21 @@ export async function paymentRoutes(
       // C-5 FIX: Do NOT swallow JE creation errors — if JE fails, the entire payment must fail
       let journalEntryId: string | null = null;
       {
-        // Look up Cash/Bank account (code starting with "1010")
+        // Look up Cash/Bank account (TFAC code 1110 = Cash on Hand, 1120 = Cash at Bank)
         const cashRows = await fastify.sql<[{ id: string }?]>`
           SELECT id FROM chart_of_accounts
           WHERE tenant_id = ${tenantId} AND is_active = true
-            AND code LIKE '1010%'
+            AND (code LIKE '1110%' OR code LIKE '1120%')
             AND account_type = 'asset'
           ORDER BY code ASC LIMIT 1
         `;
-        // Look up Accounts Receivable account (code starting with "1120" or "1100")
+        // Look up Accounts Receivable account (TFAC code 1200/1210)
         const arRows = await fastify.sql<[{ id: string }?]>`
           SELECT id FROM chart_of_accounts
           WHERE tenant_id = ${tenantId} AND is_active = true
-            AND (code LIKE '1120%' OR code LIKE '1100%')
+            AND (code LIKE '1200%' OR code LIKE '1210%')
             AND account_type = 'asset'
-          ORDER BY code DESC LIMIT 1
+          ORDER BY code ASC LIMIT 1
         `;
 
         const cashAccountId = cashRows[0]?.id;

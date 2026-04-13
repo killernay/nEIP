@@ -1,5 +1,7 @@
 import { pgTable, text, real, timestamp } from 'drizzle-orm/pg-core';
 import { delivery_notes } from './delivery-notes.js';
+import { products } from './products.js';
+import { warehouses } from './warehouses.js';
 
 /**
  * delivery_note_lines — Line items for a delivery note.
@@ -15,6 +17,8 @@ export const delivery_note_lines = pgTable('delivery_note_lines', {
   sales_order_line_id: text('sales_order_line_id').notNull(), // FK to sales_order_lines
   description: text('description').notNull(),
   quantity_delivered: real('quantity_delivered').notNull(),
+  product_id: text('product_id').references(() => products.id),
+  warehouse_id: text('warehouse_id').references(() => warehouses.id),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

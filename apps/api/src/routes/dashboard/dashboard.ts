@@ -75,34 +75,35 @@ function getDateRange(period: TimePeriod, startDate?: string, endDate?: string):
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth(); // 0-indexed
+  const today = `${String(year)}-${String(month + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   switch (period) {
     case 'mtd':
       return {
         start: `${String(year)}-${String(month + 1).padStart(2, '0')}-01`,
-        end: now.toISOString().slice(0, 10),
+        end: today,
       };
     case 'qtd': {
       const quarterStart = Math.floor(month / 3) * 3;
       return {
         start: `${String(year)}-${String(quarterStart + 1).padStart(2, '0')}-01`,
-        end: now.toISOString().slice(0, 10),
+        end: today,
       };
     }
     case 'ytd':
       return {
         start: `${String(year)}-01-01`,
-        end: now.toISOString().slice(0, 10),
+        end: today,
       };
     case 'custom':
       return {
         start: startDate ?? `${String(year)}-01-01`,
-        end: endDate ?? now.toISOString().slice(0, 10),
+        end: endDate ?? today,
       };
     default:
       return {
         start: `${String(year)}-${String(month + 1).padStart(2, '0')}-01`,
-        end: now.toISOString().slice(0, 10),
+        end: today,
       };
   }
 }
@@ -250,7 +251,7 @@ export async function dashboardRoutes(
           AND je.status = 'posted'
           AND coa.account_type = 'expense'
           AND je.posted_at >= ${start}::date
-          AND je.posted_at <= ${end}::date
+          AND je.posted_at < (${end}::date + INTERVAL '1 day')
         GROUP BY coa.account_type, coa.code, coa.name_en
         ORDER BY total_amount DESC
       `;
@@ -268,7 +269,7 @@ export async function dashboardRoutes(
           AND je.status = 'posted'
           AND coa.account_type IN ('revenue', 'expense')
           AND je.posted_at >= ${start}::date
-          AND je.posted_at <= ${end}::date
+          AND je.posted_at < (${end}::date + INTERVAL '1 day')
         GROUP BY coa.account_type
       `;
 
@@ -441,7 +442,7 @@ export async function dashboardRoutes(
           WHERE je.status = 'posted'
             AND coa.account_type = 'revenue'
             AND je.posted_at >= ${mtdStart}::date
-            AND je.posted_at <= ${mtdEnd}::date
+            AND je.posted_at < (${mtdEnd}::date + INTERVAL '1 day')
           GROUP BY je.tenant_id
         ),
         expense_data AS (
@@ -455,7 +456,7 @@ export async function dashboardRoutes(
           WHERE je.status = 'posted'
             AND coa.account_type = 'expense'
             AND je.posted_at >= ${mtdStart}::date
-            AND je.posted_at <= ${mtdEnd}::date
+            AND je.posted_at < (${mtdEnd}::date + INTERVAL '1 day')
           GROUP BY je.tenant_id
         )
         SELECT

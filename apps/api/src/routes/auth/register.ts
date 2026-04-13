@@ -157,6 +157,23 @@ export async function registerRoute(
         throw new Error('Failed to create user — no row returned from insert.');
       }
 
+      // BUG-6 FIX: Assign default role to new user so they aren't locked out.
+      // Look up the "Owner" role for the tenant; fall back to any available role.
+      const roleRows = await fastify.sql<[{ id: string }?]>`
+        SELECT id FROM roles
+        WHERE tenant_id = ${resolvedTenantId}
+        ORDER BY CASE WHEN name = 'Owner' THEN 0 ELSE 1 END ASC
+        LIMIT 1
+      `;
+      const roleId = roleRows[0]?.id;
+      if (roleId) {
+        await fastify.sql`
+          INSERT INTO user_roles (user_id, role_id, tenant_id)
+          VALUES (${created.id}, ${roleId}, ${resolvedTenantId})
+          ON CONFLICT DO NOTHING
+        `;
+      }
+
       request.log.info(
         { userId: created.id, email: created.email },
         'User registered successfully',
