@@ -363,6 +363,71 @@ export const REPORT_CUSTOM_READ   = 'report:custom:read'   as const;
 export const REPORT_CUSTOM_RUN    = 'report:custom:run'    as const;
 
 // ---------------------------------------------------------------------------
+// Manufacturing / PP
+// ---------------------------------------------------------------------------
+
+export const PP_BOM_CREATE       = 'pp:bom:create'       as const;
+export const PP_BOM_READ         = 'pp:bom:read'         as const;
+export const PP_BOM_UPDATE       = 'pp:bom:update'       as const;
+export const PP_BOM_DELETE       = 'pp:bom:delete'       as const;
+export const PP_WORK_CENTER_CREATE = 'pp:work-center:create' as const;
+export const PP_WORK_CENTER_READ   = 'pp:work-center:read'   as const;
+export const PP_WORK_CENTER_UPDATE = 'pp:work-center:update' as const;
+export const PP_WORK_CENTER_DELETE = 'pp:work-center:delete' as const;
+export const PP_PRODUCTION_CREATE  = 'pp:production:create'  as const;
+export const PP_PRODUCTION_READ    = 'pp:production:read'    as const;
+export const PP_PRODUCTION_UPDATE  = 'pp:production:update'  as const;
+export const PP_MRP_RUN            = 'pp:mrp:run'            as const;
+
+// ---------------------------------------------------------------------------
+// Project System (PS)
+// ---------------------------------------------------------------------------
+
+export const PS_PROJECT_CREATE   = 'ps:project:create'   as const;
+export const PS_PROJECT_READ     = 'ps:project:read'     as const;
+export const PS_PROJECT_UPDATE   = 'ps:project:update'   as const;
+export const PS_TIME_CREATE      = 'ps:time:create'      as const;
+export const PS_TIME_READ        = 'ps:time:read'        as const;
+export const PS_TIME_APPROVE     = 'ps:time:approve'     as const;
+export const PS_EXPENSE_CREATE   = 'ps:expense:create'   as const;
+export const PS_EXPENSE_READ     = 'ps:expense:read'     as const;
+export const PS_EXPENSE_APPROVE  = 'ps:expense:approve'  as const;
+
+// ---------------------------------------------------------------------------
+// Quality Management (QM)
+// ---------------------------------------------------------------------------
+
+export const QM_INSPECTION_CREATE = 'qm:inspection:create' as const;
+export const QM_INSPECTION_READ   = 'qm:inspection:read'   as const;
+export const QM_INSPECTION_UPDATE = 'qm:inspection:update' as const;
+export const QM_CERT_CREATE       = 'qm:cert:create'       as const;
+export const QM_CERT_READ         = 'qm:cert:read'         as const;
+export const QM_CERT_UPDATE       = 'qm:cert:update'       as const;
+export const QM_BOI_CREATE        = 'qm:boi:create'        as const;
+export const QM_BOI_READ          = 'qm:boi:read'          as const;
+
+// ---------------------------------------------------------------------------
+// Foreign Trade (FT)
+// ---------------------------------------------------------------------------
+
+export const FT_DECLARATION_CREATE = 'ft:declaration:create' as const;
+export const FT_DECLARATION_READ   = 'ft:declaration:read'   as const;
+export const FT_DECLARATION_UPDATE = 'ft:declaration:update' as const;
+export const FT_DECLARATION_DELETE = 'ft:declaration:delete' as const;
+export const FT_DECLARATION_SUBMIT = 'ft:declaration:submit' as const;
+export const FT_DECLARATION_CLEAR  = 'ft:declaration:clear'  as const;
+export const FT_LC_CREATE          = 'ft:lc:create'          as const;
+export const FT_LC_READ            = 'ft:lc:read'            as const;
+export const FT_LC_UPDATE          = 'ft:lc:update'          as const;
+export const FT_LC_DELETE          = 'ft:lc:delete'          as const;
+export const FT_LC_ISSUE           = 'ft:lc:issue'           as const;
+export const FT_LC_NEGOTIATE       = 'ft:lc:negotiate'       as const;
+export const FT_LC_SETTLE          = 'ft:lc:settle'          as const;
+export const FT_LC_CANCEL          = 'ft:lc:cancel'          as const;
+export const FT_LANDED_CREATE      = 'ft:landed:create'      as const;
+export const FT_LANDED_READ        = 'ft:landed:read'        as const;
+
+// ---------------------------------------------------------------------------
 // Union type — exhaustive set of all permission strings
 // ---------------------------------------------------------------------------
 
@@ -559,7 +624,56 @@ export type Permission =
   | typeof AI_PARSE_EXECUTE
   | typeof REPORT_CUSTOM_CREATE
   | typeof REPORT_CUSTOM_READ
-  | typeof REPORT_CUSTOM_RUN;
+  | typeof REPORT_CUSTOM_RUN
+  // Manufacturing / PP
+  | typeof PP_BOM_CREATE
+  | typeof PP_BOM_READ
+  | typeof PP_BOM_UPDATE
+  | typeof PP_BOM_DELETE
+  | typeof PP_WORK_CENTER_CREATE
+  | typeof PP_WORK_CENTER_READ
+  | typeof PP_WORK_CENTER_UPDATE
+  | typeof PP_WORK_CENTER_DELETE
+  | typeof PP_PRODUCTION_CREATE
+  | typeof PP_PRODUCTION_READ
+  | typeof PP_PRODUCTION_UPDATE
+  | typeof PP_MRP_RUN
+  // Foreign Trade
+  | typeof FT_DECLARATION_CREATE
+  | typeof FT_DECLARATION_READ
+  | typeof FT_DECLARATION_UPDATE
+  | typeof FT_DECLARATION_DELETE
+  | typeof FT_DECLARATION_SUBMIT
+  | typeof FT_DECLARATION_CLEAR
+  | typeof FT_LC_CREATE
+  | typeof FT_LC_READ
+  | typeof FT_LC_UPDATE
+  | typeof FT_LC_DELETE
+  | typeof FT_LC_ISSUE
+  | typeof FT_LC_NEGOTIATE
+  | typeof FT_LC_SETTLE
+  | typeof FT_LC_CANCEL
+  | typeof FT_LANDED_CREATE
+  | typeof FT_LANDED_READ
+  // Project System
+  | typeof PS_PROJECT_CREATE
+  | typeof PS_PROJECT_READ
+  | typeof PS_PROJECT_UPDATE
+  | typeof PS_TIME_CREATE
+  | typeof PS_TIME_READ
+  | typeof PS_TIME_APPROVE
+  | typeof PS_EXPENSE_CREATE
+  | typeof PS_EXPENSE_READ
+  | typeof PS_EXPENSE_APPROVE
+  // Quality Management
+  | typeof QM_INSPECTION_CREATE
+  | typeof QM_INSPECTION_READ
+  | typeof QM_INSPECTION_UPDATE
+  | typeof QM_CERT_CREATE
+  | typeof QM_CERT_READ
+  | typeof QM_CERT_UPDATE
+  | typeof QM_BOI_CREATE
+  | typeof QM_BOI_READ;
 
 // ---------------------------------------------------------------------------
 // Permission sets — grouped by default role
@@ -758,6 +872,55 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   REPORT_CUSTOM_CREATE,
   REPORT_CUSTOM_READ,
   REPORT_CUSTOM_RUN,
+  // Manufacturing / PP
+  PP_BOM_CREATE,
+  PP_BOM_READ,
+  PP_BOM_UPDATE,
+  PP_BOM_DELETE,
+  PP_WORK_CENTER_CREATE,
+  PP_WORK_CENTER_READ,
+  PP_WORK_CENTER_UPDATE,
+  PP_WORK_CENTER_DELETE,
+  PP_PRODUCTION_CREATE,
+  PP_PRODUCTION_READ,
+  PP_PRODUCTION_UPDATE,
+  PP_MRP_RUN,
+  // Foreign Trade
+  FT_DECLARATION_CREATE,
+  FT_DECLARATION_READ,
+  FT_DECLARATION_UPDATE,
+  FT_DECLARATION_DELETE,
+  FT_DECLARATION_SUBMIT,
+  FT_DECLARATION_CLEAR,
+  FT_LC_CREATE,
+  FT_LC_READ,
+  FT_LC_UPDATE,
+  FT_LC_DELETE,
+  FT_LC_ISSUE,
+  FT_LC_NEGOTIATE,
+  FT_LC_SETTLE,
+  FT_LC_CANCEL,
+  FT_LANDED_CREATE,
+  FT_LANDED_READ,
+  // Project System
+  PS_PROJECT_CREATE,
+  PS_PROJECT_READ,
+  PS_PROJECT_UPDATE,
+  PS_TIME_CREATE,
+  PS_TIME_READ,
+  PS_TIME_APPROVE,
+  PS_EXPENSE_CREATE,
+  PS_EXPENSE_READ,
+  PS_EXPENSE_APPROVE,
+  // Quality Management
+  QM_INSPECTION_CREATE,
+  QM_INSPECTION_READ,
+  QM_INSPECTION_UPDATE,
+  QM_CERT_CREATE,
+  QM_CERT_READ,
+  QM_CERT_UPDATE,
+  QM_BOI_CREATE,
+  QM_BOI_READ,
 ] as const;
 
 /**
@@ -924,6 +1087,47 @@ export const ACCOUNTANT_PERMISSIONS: readonly Permission[] = [
   COMPANY_READ,
   APPROVAL_WORKFLOW_READ,
   APPROVAL_ACTION,
+  // Manufacturing / PP
+  PP_BOM_CREATE,
+  PP_BOM_READ,
+  PP_BOM_UPDATE,
+  PP_WORK_CENTER_READ,
+  PP_PRODUCTION_CREATE,
+  PP_PRODUCTION_READ,
+  PP_PRODUCTION_UPDATE,
+  PP_MRP_RUN,
+  // Foreign Trade
+  FT_DECLARATION_CREATE,
+  FT_DECLARATION_READ,
+  FT_DECLARATION_UPDATE,
+  FT_DECLARATION_SUBMIT,
+  FT_DECLARATION_CLEAR,
+  FT_LC_CREATE,
+  FT_LC_READ,
+  FT_LC_UPDATE,
+  FT_LC_ISSUE,
+  FT_LC_NEGOTIATE,
+  FT_LC_SETTLE,
+  FT_LANDED_CREATE,
+  FT_LANDED_READ,
+  // Project System
+  PS_PROJECT_CREATE,
+  PS_PROJECT_READ,
+  PS_PROJECT_UPDATE,
+  PS_TIME_CREATE,
+  PS_TIME_READ,
+  PS_TIME_APPROVE,
+  PS_EXPENSE_CREATE,
+  PS_EXPENSE_READ,
+  PS_EXPENSE_APPROVE,
+  // Quality Management
+  QM_INSPECTION_CREATE,
+  QM_INSPECTION_READ,
+  QM_INSPECTION_UPDATE,
+  QM_CERT_CREATE,
+  QM_CERT_READ,
+  QM_CERT_UPDATE,
+  QM_BOI_READ,
 ] as const;
 
 /**

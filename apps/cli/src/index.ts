@@ -105,6 +105,7 @@ import { buildApprovalCommand } from './commands/approvals.js';
 import { buildBatchCommand } from './commands/batches.js';
 import { buildPdpaCommand } from './commands/pdpa.js';
 import { buildAiCommand } from './commands/ai.js';
+import { buildTradeCommand } from './commands/trade.js';
 import { ApiError } from './lib/api-client.js';
 import { type OutputFormat, printError, setFormat } from './output/formatter.js';
 
@@ -283,6 +284,7 @@ program.addCommand(buildApprovalCommand());
 program.addCommand(buildBatchCommand());
 program.addCommand(buildPdpaCommand());
 program.addCommand(buildAiCommand());
+program.addCommand(buildTradeCommand());
 
 // ---------------------------------------------------------------------------
 // Parse and run

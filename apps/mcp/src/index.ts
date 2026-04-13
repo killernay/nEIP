@@ -16,6 +16,7 @@ import { registerListTools } from './tools/list.js';
 import { registerCreateTools } from './tools/create.js';
 import { registerActionTools } from './tools/action.js';
 import { registerReportTools } from './tools/report.js';
+import { registerTradeTools } from './tools/trade.js';
 
 const server = new McpServer({
   name: 'neip-erp',
@@ -27,6 +28,7 @@ registerListTools(server);
 registerCreateTools(server);
 registerActionTools(server);
 registerReportTools(server);
+registerTradeTools(server);
 
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();

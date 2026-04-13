@@ -296,3 +296,44 @@ export type { SavedReport, NewSavedReport } from './saved-reports.js';
 
 export { dashboard_configs } from './dashboard-configs.js';
 export type { DashboardConfig, NewDashboardConfig } from './dashboard-configs.js';
+
+// ---------------------------------------------------------------------------
+// Manufacturing / PP
+// ---------------------------------------------------------------------------
+
+export { bom_headers } from './bom-headers.js';
+export type { BomHeader, NewBomHeader } from './bom-headers.js';
+
+export { bom_lines } from './bom-lines.js';
+export type { BomLine, NewBomLine } from './bom-lines.js';
+
+export { work_centers } from './work-centers.js';
+export type { WorkCenter, NewWorkCenter } from './work-centers.js';
+
+export { production_orders } from './production-orders.js';
+export type { ProductionOrder, NewProductionOrder } from './production-orders.js';
+
+export { production_order_components } from './production-order-components.js';
+export type { ProductionOrderComponent, NewProductionOrderComponent } from './production-order-components.js';
+
+export { production_confirmations } from './production-confirmations.js';
+export type { ProductionConfirmation, NewProductionConfirmation } from './production-confirmations.js';
+
+// ---------------------------------------------------------------------------
+// Foreign Trade (FT)
+// ---------------------------------------------------------------------------
+
+export { incoterms } from './incoterms.js';
+export type { Incoterm, NewIncoterm } from './incoterms.js';
+
+export { trade_declarations } from './trade-declarations.js';
+export type { TradeDeclaration, NewTradeDeclaration } from './trade-declarations.js';
+
+export { trade_declaration_lines } from './trade-declaration-lines.js';
+export type { TradeDeclarationLine, NewTradeDeclarationLine } from './trade-declaration-lines.js';
+
+export { letters_of_credit } from './letters-of-credit.js';
+export type { LetterOfCredit, NewLetterOfCredit } from './letters-of-credit.js';
+
+export { landed_costs } from './landed-costs.js';
+export type { LandedCost, NewLandedCost } from './landed-costs.js';

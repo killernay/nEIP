@@ -46,6 +46,7 @@ const invoiceLineSchema = {
     quantity: { type: 'integer', minimum: 1, description: 'Quantity as integer (whole units)' },
     unitPriceSatang: { type: 'string', description: 'Unit price in satang' },
     accountId: { type: 'string', description: 'Revenue account ID' },
+    productId: { type: 'string', description: 'Product ID — used to determine VAT category' },
   },
 } as const;
 
@@ -113,6 +114,7 @@ interface CreateInvoiceBody {
     quantity: number;
     unitPriceSatang: string;
     accountId?: string;
+    productId?: string;
   }>;
 }
 
@@ -223,12 +225,42 @@ export async function invoiceRoutes(
         }
       }
 
-      // Calculate total.
+      // Look up VAT categories for products referenced in lines
+      const productIds = lines.map(l => l.productId).filter(Boolean) as string[];
+      const productVatMap: Record<string, string> = {};
+      if (productIds.length > 0) {
+        const products = await fastify.sql<{ id: string; vat_category: string }[]>`
+          SELECT id, COALESCE(vat_category, 'standard') as vat_category
+          FROM products WHERE id = ANY(${productIds}) AND tenant_id = ${tenantId}
+        `;
+        for (const p of products) {
+          productVatMap[p.id] = p.vat_category;
+        }
+      }
+
+      // Map vat_category → vat_code
+      function vatCategoryToCode(cat: string): string {
+        switch (cat) {
+          case 'exempt': return 'VX';
+          case 'zero_rated': return 'V0';
+          case 'out_of_scope': return 'VO';
+          default: return 'V7';
+        }
+      }
+
+      // Calculate total with per-line VAT
       let totalSatang = 0n;
+      let totalVatSatang = 0n;
       const processedLines = lines.map((line, index) => {
         // M-1 FIX: quantity is integer — no float precision loss
         const lineTotal = BigInt(line.unitPriceSatang) * BigInt(line.quantity);
         totalSatang += lineTotal;
+
+        const vatCategory = line.productId ? (productVatMap[line.productId] ?? 'standard') : 'standard';
+        const vatCode = vatCategoryToCode(vatCategory);
+        const lineVat = vatCode === 'V7' ? calcVat(lineTotal) : 0n;
+        totalVatSatang += lineVat;
+
         return {
           id: crypto.randomUUID(),
           lineNumber: index + 1,
@@ -237,6 +269,9 @@ export async function invoiceRoutes(
           unitPriceSatang: line.unitPriceSatang,
           totalSatang: lineTotal.toString(),
           accountId: line.accountId ?? null,
+          productId: line.productId ?? null,
+          vatCode,
+          vatAmountSatang: lineVat.toString(),
         };
       });
 
@@ -254,11 +289,11 @@ export async function invoiceRoutes(
         VALUES (${invoiceId}, ${invoiceNumber}, ${customerId}, 'draft', ${totalSatang.toString()}::bigint, 0, ${dueDate}, ${notes ?? null}, ${tenantId}, ${userId})
       `;
 
-      // Insert line items.
+      // Insert line items with per-line VAT.
       for (const line of processedLines) {
         await fastify.sql`
-          INSERT INTO invoice_line_items (id, invoice_id, line_number, description, quantity, unit_price_satang, total_satang, account_id)
-          VALUES (${line.id}, ${invoiceId}, ${line.lineNumber}, ${line.description}, ${line.quantity}, ${line.unitPriceSatang}::bigint, ${line.totalSatang}::bigint, ${line.accountId})
+          INSERT INTO invoice_line_items (id, invoice_id, line_number, description, quantity, unit_price_satang, total_satang, account_id, vat_code, vat_amount_satang)
+          VALUES (${line.id}, ${invoiceId}, ${line.lineNumber}, ${line.description}, ${line.quantity}, ${line.unitPriceSatang}::bigint, ${line.totalSatang}::bigint, ${line.accountId}, ${line.vatCode}, ${line.vatAmountSatang}::bigint)
         `;
       }
 
@@ -267,8 +302,7 @@ export async function invoiceRoutes(
         'Invoice created',
       );
 
-      const vatAmount = calcVat(totalSatang);
-      const grandTotal = totalSatang + vatAmount;
+      const grandTotal = totalSatang + totalVatSatang;
 
       return reply.status(201).send({
         id: invoiceId,
@@ -279,7 +313,7 @@ export async function invoiceRoutes(
         paidSatang: '0',
         subTotalSatang: totalSatang.toString(),
         vatRateBasisPoints: Number(VAT_RATE_BASIS_POINTS),
-        vatAmountSatang: vatAmount.toString(),
+        vatAmountSatang: totalVatSatang.toString(),
         grandTotalSatang: grandTotal.toString(),
         dueDate,
         notes: notes ?? null,

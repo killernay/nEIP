@@ -82,6 +82,7 @@ function mapProduct(p: ProductRow) {
     costPriceSatang: p.cost_price_satang, sellingPriceSatang: p.selling_price_satang,
     minStockLevel: p.min_stock_level, isActive: p.is_active,
     glAccountId: p.gl_account_id,
+    vatCategory: (p as unknown as Record<string, unknown>)['vat_category'] ?? 'standard',
     createdAt: toISO(p.created_at), updatedAt: toISO(p.updated_at),
   };
 }
@@ -140,7 +141,7 @@ export async function inventoryRoutes(
 
       await fastify.sql`
         INSERT INTO products (id, sku, name_th, name_en, description, category, unit,
-          cost_price_satang, selling_price_satang, min_stock_level, is_active, gl_account_id, tenant_id)
+          cost_price_satang, selling_price_satang, min_stock_level, is_active, gl_account_id, vat_category, tenant_id)
         VALUES (
           ${id}, ${b['sku'] as string}, ${b['nameTh'] as string}, ${b['nameEn'] as string},
           ${(b['description'] as string | undefined) ?? null},
@@ -151,6 +152,7 @@ export async function inventoryRoutes(
           ${Number(b['minStockLevel'] ?? 0)},
           ${b['isActive'] !== false},
           ${(b['glAccountId'] as string | undefined) ?? null},
+          ${(b['vatCategory'] as string | undefined) ?? 'standard'},
           ${tenantId}
         )
       `;
@@ -250,6 +252,7 @@ export async function inventoryRoutes(
           min_stock_level       = COALESCE(${b['minStockLevel'] != null ? Number(b['minStockLevel']) : null}, min_stock_level),
           is_active             = COALESCE(${b['isActive'] != null ? Boolean(b['isActive']) : null}, is_active),
           gl_account_id         = COALESCE(${(b['glAccountId'] as string | undefined) ?? null}, gl_account_id),
+          vat_category          = COALESCE(${(b['vatCategory'] as string | undefined) ?? null}, vat_category),
           updated_at            = NOW()
         WHERE id = ${id} AND tenant_id = ${tenantId}
         RETURNING *

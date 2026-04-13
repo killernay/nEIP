@@ -1740,6 +1740,40 @@ export async function reportRoutes(
       const vatPayableSatang = netVatAmount > 0n ? netVatAmount.toString() : '0';
       const vatRefundableSatang = netVatAmount < 0n ? (-netVatAmount).toString() : '0';
 
+      // Enhanced: Split sales by VAT category from invoice line items
+      const salesBreakdown = await fastify.sql<{ vat_code: string; total: string }[]>`
+        SELECT COALESCE(ili.vat_code, 'V7') as vat_code, COALESCE(SUM(ili.total_satang), 0)::text as total
+        FROM invoice_line_items ili
+        JOIN invoices inv ON inv.id = ili.invoice_id
+        WHERE inv.tenant_id = ${tenantId}
+          AND inv.status NOT IN ('draft','void')
+          AND inv.posted_at IS NOT NULL
+          AND EXTRACT(YEAR FROM inv.posted_at) = ${year}
+          AND EXTRACT(MONTH FROM inv.posted_at) = ${month}
+        GROUP BY COALESCE(ili.vat_code, 'V7')
+      `;
+
+      const taxableSales = BigInt(salesBreakdown.find(r => r.vat_code === 'V7')?.total ?? '0');
+      const zeroRatedSales = BigInt(salesBreakdown.find(r => r.vat_code === 'V0')?.total ?? '0');
+      const exemptSales = BigInt(salesBreakdown.find(r => r.vat_code === 'VX')?.total ?? '0');
+
+      // Input VAT: recoverable vs non-recoverable from bill line items
+      const inputBreakdown = await fastify.sql<{ recoverable: boolean; total: string }[]>`
+        SELECT COALESCE(bli.vat_recoverable, true) as recoverable,
+               COALESCE(SUM(bli.total_satang), 0)::text as total
+        FROM bill_line_items bli
+        JOIN bills b ON b.id = bli.bill_id
+        WHERE b.tenant_id = ${tenantId}
+          AND b.status NOT IN ('draft','void')
+          AND b.posted_at IS NOT NULL
+          AND EXTRACT(YEAR FROM b.posted_at) = ${year}
+          AND EXTRACT(MONTH FROM b.posted_at) = ${month}
+        GROUP BY COALESCE(bli.vat_recoverable, true)
+      `;
+
+      const recoverableInput = BigInt(inputBreakdown.find(r => r.recoverable === true)?.total ?? '0');
+      const nonRecoverableInput = BigInt(inputBreakdown.find(r => r.recoverable === false)?.total ?? '0');
+
       return reply.status(200).send({
         reportName: 'ภ.พ.30 VAT Return',
         generatedAt: new Date().toISOString(),
@@ -1754,6 +1788,16 @@ export async function reportRoutes(
         vatRefundableSatang,
         status,
         currency: 'THB',
+        // Enhanced breakdown
+        salesBreakdown: {
+          taxableSalesSatang: taxableSales.toString(),
+          zeroRatedSalesSatang: zeroRatedSales.toString(),
+          exemptSalesSatang: exemptSales.toString(),
+        },
+        inputVatBreakdown: {
+          recoverableSatang: recoverableInput.toString(),
+          nonRecoverableSatang: nonRecoverableInput.toString(),
+        },
       });
     },
   );

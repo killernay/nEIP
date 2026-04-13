@@ -94,8 +94,14 @@ import { approvalRoutes } from './routes/approvals/index.js';
 import { vendorReturnRoutes } from './routes/vendor-returns/index.js';
 import { batchRoutes } from './routes/batches/index.js';
 import { bankMatchingRoutes } from './routes/bank-matching/index.js';
+// Phase 7 — Industry Modules
+import { manufacturingRoutes } from './routes/manufacturing/index.js';
+import { tradeRoutes } from './routes/trade/index.js';
 // Phase 6 — AI & Analytics
 import { aiRoutes } from './routes/ai/index.js';
+// Industry modules — Projects & Quality
+import { projectRoutes } from './routes/projects/index.js';
+import { qualityRoutes } from './routes/quality/index.js';
 
 // ---------------------------------------------------------------------------
 // Fastify type augmentation — extend FastifyInstance with db + sql clients
@@ -398,6 +404,9 @@ export async function createApp(config: AppConfig): Promise<App> {
         { name: 'purchase-requisitions', description: 'Purchase requisitions (PR)' },
         { name: 'rfqs', description: 'Request for Quotation (RFQ)' },
         { name: 'ai', description: 'AI agents — anomaly detection, forecasting, categorization, reconciliation, parsing, predictions' },
+        { name: 'manufacturing', description: 'Manufacturing (PP) — BOM, Work Centers, Production Orders, MRP' },
+        { name: 'projects', description: 'Project System (PS) — Projects, Phases, Time Entries, Expenses' },
+        { name: 'quality', description: 'Quality Management (QM) — Inspections, Compliance Certificates, BOI Promotions' },
       ],
     },
   });
@@ -527,6 +536,12 @@ export async function createApp(config: AppConfig): Promise<App> {
 
   // Phase 6 — AI & Analytics
   await app.register(aiRoutes);
+
+  // Phase 7 — Industry Modules
+  await app.register(manufacturingRoutes);
+  await app.register(tradeRoutes);
+  await app.register(projectRoutes);
+  await app.register(qualityRoutes);
 
   // ---------------------------------------------------------------------------
   // 13. 404 fallback — serve Next.js index.html for unrecognised non-API paths
