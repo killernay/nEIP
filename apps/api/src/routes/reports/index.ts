@@ -20,6 +20,7 @@ import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { reportRoutes as reportHandlers } from './reports.js';
 import { customReportRoutes } from './custom-reports.js';
 import { cashFlowRoutes } from './cash-flow.js';
+import { profitabilityRoutes } from './profitability.js';
 
 export async function reportRoutes(
   fastify: FastifyInstance,
@@ -28,4 +29,5 @@ export async function reportRoutes(
   await fastify.register(reportHandlers);
   await fastify.register(customReportRoutes);
   await fastify.register(cashFlowRoutes);
+  await fastify.register(profitabilityRoutes);
 }

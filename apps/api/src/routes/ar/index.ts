@@ -28,6 +28,14 @@
  *   GET  /api/v1/credit-notes/:id              — detail
  *   POST /api/v1/credit-notes/:id/issue        — issue
  *   POST /api/v1/credit-notes/:id/void         — void
+ *   GET  /api/v1/ar/collections/worklist       — overdue invoice worklist
+ *   POST /api/v1/ar/collections/promise-to-pay — record promise to pay
+ *   GET  /api/v1/ar/collections/dashboard      — collections dashboard
+ *   POST /api/v1/ar/collections/escalate       — escalate dunning level
+ *   POST /api/v1/ar/down-payments              — create AR down payment
+ *   POST /api/v1/ar/down-payments/:id/receive  — record receipt
+ *   POST /api/v1/ar/down-payments/:id/clear    — clear against invoice
+ *   POST /api/v1/invoices/:id/convert-to-standard — convert proforma
  */
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
@@ -37,6 +45,9 @@ import { salesOrderRoutes } from '../sales-orders/index.js';
 import { deliveryNoteRoutes } from '../delivery-notes/index.js';
 import { receiptRoutes } from '../receipts/index.js';
 import { creditNoteRoutes } from '../credit-notes/index.js';
+import { collectionRoutes } from './collections.js';
+import { arDownPaymentRoutes } from './down-payments.js';
+import { proformaRoutes } from './proforma.js';
 
 export async function arRoutes(
   fastify: FastifyInstance,
@@ -48,4 +59,7 @@ export async function arRoutes(
   await fastify.register(deliveryNoteRoutes);
   await fastify.register(receiptRoutes);
   await fastify.register(creditNoteRoutes);
+  await fastify.register(collectionRoutes);
+  await fastify.register(arDownPaymentRoutes);
+  await fastify.register(proformaRoutes);
 }

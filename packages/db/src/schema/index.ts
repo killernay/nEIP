@@ -337,3 +337,23 @@ export type { LetterOfCredit, NewLetterOfCredit } from './letters-of-credit.js';
 
 export { landed_costs } from './landed-costs.js';
 export type { LandedCost, NewLandedCost } from './landed-costs.js';
+
+// ---------------------------------------------------------------------------
+// Enterprise Structure
+// ---------------------------------------------------------------------------
+
+export { branches } from './branches.js';
+export type { Branch, NewBranch } from './branches.js';
+
+export { sales_channels } from './sales-channels.js';
+export type { SalesChannel, NewSalesChannel } from './sales-channels.js';
+
+// ---------------------------------------------------------------------------
+// Module System
+// ---------------------------------------------------------------------------
+
+export { module_registry } from './module-registry.js';
+export type { ModuleRegistry, NewModuleRegistry } from './module-registry.js';
+
+export { tenant_modules } from './tenant-modules.js';
+export type { TenantModule, NewTenantModule } from './tenant-modules.js';

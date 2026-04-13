@@ -428,6 +428,69 @@ export const FT_LANDED_CREATE      = 'ft:landed:create'      as const;
 export const FT_LANDED_READ        = 'ft:landed:read'        as const;
 
 // ---------------------------------------------------------------------------
+// Plant Maintenance (PM)
+// ---------------------------------------------------------------------------
+
+export const PM_EQUIPMENT_CREATE = 'pm:equipment:create' as const;
+export const PM_EQUIPMENT_READ   = 'pm:equipment:read'   as const;
+export const PM_EQUIPMENT_UPDATE = 'pm:equipment:update' as const;
+export const PM_PLAN_CREATE      = 'pm:plan:create'      as const;
+export const PM_PLAN_READ        = 'pm:plan:read'        as const;
+export const PM_PLAN_UPDATE      = 'pm:plan:update'      as const;
+export const PM_ORDER_CREATE     = 'pm:order:create'     as const;
+export const PM_ORDER_READ       = 'pm:order:read'       as const;
+export const PM_ORDER_UPDATE     = 'pm:order:update'     as const;
+export const PM_ORDER_CLOSE      = 'pm:order:close'      as const;
+
+// ---------------------------------------------------------------------------
+// Service Procurement (AP — Service Entry Sheets)
+// ---------------------------------------------------------------------------
+
+export const AP_SERVICE_CREATE  = 'ap:service:create'  as const;
+export const AP_SERVICE_READ    = 'ap:service:read'    as const;
+export const AP_SERVICE_UPDATE  = 'ap:service:update'  as const;
+export const AP_SERVICE_APPROVE = 'ap:service:approve' as const;
+
+// ---------------------------------------------------------------------------
+// CO-PA Profitability Analysis
+// ---------------------------------------------------------------------------
+
+export const REPORT_PROFITABILITY_READ = 'report:profitability:read' as const;
+
+// ---------------------------------------------------------------------------
+// Available-to-Promise (ATP)
+// ---------------------------------------------------------------------------
+
+export const INV_ATP_READ = 'inventory:atp:read' as const;
+
+// ---------------------------------------------------------------------------
+// Module Management
+// ---------------------------------------------------------------------------
+
+export const MODULE_MANAGE = 'module:manage' as const;
+
+// ---------------------------------------------------------------------------
+// SAP-gap Phase 1 — Batch Payment, Collections, Down Payments
+// ---------------------------------------------------------------------------
+
+// Batch Payment Run (AP)
+export const AP_BATCH_PAYMENT_CREATE  = 'ap:batch-payment:create'  as const;
+export const AP_BATCH_PAYMENT_READ    = 'ap:batch-payment:read'    as const;
+export const AP_BATCH_PAYMENT_EXECUTE = 'ap:batch-payment:execute' as const;
+
+// Collections Management (AR)
+export const AR_COLLECTION_READ   = 'ar:collection:read'   as const;
+export const AR_COLLECTION_MANAGE = 'ar:collection:manage' as const;
+
+// Down Payments (AR)
+export const AR_DOWN_PAYMENT_CREATE = 'ar:down-payment:create' as const;
+export const AR_DOWN_PAYMENT_MANAGE = 'ar:down-payment:manage' as const;
+
+// Down Payments (AP)
+export const AP_DOWN_PAYMENT_CREATE = 'ap:down-payment:create' as const;
+export const AP_DOWN_PAYMENT_MANAGE = 'ap:down-payment:manage' as const;
+
+// ---------------------------------------------------------------------------
 // Union type — exhaustive set of all permission strings
 // ---------------------------------------------------------------------------
 
@@ -673,7 +736,39 @@ export type Permission =
   | typeof QM_CERT_READ
   | typeof QM_CERT_UPDATE
   | typeof QM_BOI_CREATE
-  | typeof QM_BOI_READ;
+  | typeof QM_BOI_READ
+  // Plant Maintenance
+  | typeof PM_EQUIPMENT_CREATE
+  | typeof PM_EQUIPMENT_READ
+  | typeof PM_EQUIPMENT_UPDATE
+  | typeof PM_PLAN_CREATE
+  | typeof PM_PLAN_READ
+  | typeof PM_PLAN_UPDATE
+  | typeof PM_ORDER_CREATE
+  | typeof PM_ORDER_READ
+  | typeof PM_ORDER_UPDATE
+  | typeof PM_ORDER_CLOSE
+  // Service Procurement
+  | typeof AP_SERVICE_CREATE
+  | typeof AP_SERVICE_READ
+  | typeof AP_SERVICE_UPDATE
+  | typeof AP_SERVICE_APPROVE
+  // CO-PA
+  | typeof REPORT_PROFITABILITY_READ
+  // ATP
+  | typeof INV_ATP_READ
+  // Module Management
+  | typeof MODULE_MANAGE
+  // SAP-gap Phase 1
+  | typeof AP_BATCH_PAYMENT_CREATE
+  | typeof AP_BATCH_PAYMENT_READ
+  | typeof AP_BATCH_PAYMENT_EXECUTE
+  | typeof AR_COLLECTION_READ
+  | typeof AR_COLLECTION_MANAGE
+  | typeof AR_DOWN_PAYMENT_CREATE
+  | typeof AR_DOWN_PAYMENT_MANAGE
+  | typeof AP_DOWN_PAYMENT_CREATE
+  | typeof AP_DOWN_PAYMENT_MANAGE;
 
 // ---------------------------------------------------------------------------
 // Permission sets — grouped by default role
@@ -921,6 +1016,38 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   QM_CERT_UPDATE,
   QM_BOI_CREATE,
   QM_BOI_READ,
+  // Plant Maintenance
+  PM_EQUIPMENT_CREATE,
+  PM_EQUIPMENT_READ,
+  PM_EQUIPMENT_UPDATE,
+  PM_PLAN_CREATE,
+  PM_PLAN_READ,
+  PM_PLAN_UPDATE,
+  PM_ORDER_CREATE,
+  PM_ORDER_READ,
+  PM_ORDER_UPDATE,
+  PM_ORDER_CLOSE,
+  // Service Procurement
+  AP_SERVICE_CREATE,
+  AP_SERVICE_READ,
+  AP_SERVICE_UPDATE,
+  AP_SERVICE_APPROVE,
+  // CO-PA
+  REPORT_PROFITABILITY_READ,
+  // ATP
+  INV_ATP_READ,
+  // Module Management
+  MODULE_MANAGE,
+  // SAP-gap Phase 1
+  AP_BATCH_PAYMENT_CREATE,
+  AP_BATCH_PAYMENT_READ,
+  AP_BATCH_PAYMENT_EXECUTE,
+  AR_COLLECTION_READ,
+  AR_COLLECTION_MANAGE,
+  AR_DOWN_PAYMENT_CREATE,
+  AR_DOWN_PAYMENT_MANAGE,
+  AP_DOWN_PAYMENT_CREATE,
+  AP_DOWN_PAYMENT_MANAGE,
 ] as const;
 
 /**
@@ -1128,6 +1255,30 @@ export const ACCOUNTANT_PERMISSIONS: readonly Permission[] = [
   QM_CERT_READ,
   QM_CERT_UPDATE,
   QM_BOI_READ,
+  // Plant Maintenance
+  PM_EQUIPMENT_READ,
+  PM_PLAN_READ,
+  PM_ORDER_CREATE,
+  PM_ORDER_READ,
+  PM_ORDER_UPDATE,
+  // Service Procurement
+  AP_SERVICE_CREATE,
+  AP_SERVICE_READ,
+  AP_SERVICE_UPDATE,
+  // CO-PA
+  REPORT_PROFITABILITY_READ,
+  // ATP
+  INV_ATP_READ,
+  // SAP-gap Phase 1
+  AP_BATCH_PAYMENT_CREATE,
+  AP_BATCH_PAYMENT_READ,
+  AP_BATCH_PAYMENT_EXECUTE,
+  AR_COLLECTION_READ,
+  AR_COLLECTION_MANAGE,
+  AR_DOWN_PAYMENT_CREATE,
+  AR_DOWN_PAYMENT_MANAGE,
+  AP_DOWN_PAYMENT_CREATE,
+  AP_DOWN_PAYMENT_MANAGE,
 ] as const;
 
 /**

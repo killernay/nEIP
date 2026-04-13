@@ -102,6 +102,18 @@ import { aiRoutes } from './routes/ai/index.js';
 // Industry modules — Projects & Quality
 import { projectRoutes } from './routes/projects/index.js';
 import { qualityRoutes } from './routes/quality/index.js';
+// Enterprise Structure
+import { enterpriseRoutes } from './routes/enterprise/index.js';
+// Module Toggle System
+import { moduleRoutesPlugin } from './routes/modules/index.js';
+// Onboarding Wizard
+import { onboardingRoutes } from './routes/onboarding/index.js';
+// Role-based UI visibility
+import { roleConfigRoutes } from './routes/role-config/index.js';
+// SAP-gap Phase 2 — PM, Service Procurement, ATP
+import { maintenanceRoutes } from './routes/maintenance/index.js';
+import { serviceRoutes } from './routes/services/index.js';
+import { atpRoutes } from './routes/inventory/atp.js';
 
 // ---------------------------------------------------------------------------
 // Fastify type augmentation — extend FastifyInstance with db + sql clients
@@ -407,6 +419,8 @@ export async function createApp(config: AppConfig): Promise<App> {
         { name: 'manufacturing', description: 'Manufacturing (PP) — BOM, Work Centers, Production Orders, MRP' },
         { name: 'projects', description: 'Project System (PS) — Projects, Phases, Time Entries, Expenses' },
         { name: 'quality', description: 'Quality Management (QM) — Inspections, Compliance Certificates, BOI Promotions' },
+        { name: 'modules', description: 'Module Toggle System — activate/deactivate ERP modules per tenant' },
+        { name: 'enterprise', description: 'Enterprise Structure — Branches, Sales Channels, Org Tree' },
       ],
     },
   });
@@ -542,6 +556,23 @@ export async function createApp(config: AppConfig): Promise<App> {
   await app.register(tradeRoutes);
   await app.register(projectRoutes);
   await app.register(qualityRoutes);
+
+  // Enterprise Structure
+  await app.register(enterpriseRoutes);
+
+  // Module Toggle System
+  await app.register(moduleRoutesPlugin);
+
+  // Onboarding Wizard (templates endpoint is public, steps require auth)
+  await app.register(onboardingRoutes);
+
+  // Role-based UI visibility
+  await app.register(roleConfigRoutes);
+
+  // SAP-gap Phase 2 — PM, Service Procurement, ATP
+  await app.register(maintenanceRoutes);
+  await app.register(serviceRoutes);
+  await app.register(atpRoutes);
 
   // ---------------------------------------------------------------------------
   // 13. 404 fallback — serve Next.js index.html for unrecognised non-API paths

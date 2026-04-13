@@ -22,6 +22,12 @@
  *   POST /api/v1/purchase-orders/:id/receive       — record received goods
  *   POST /api/v1/purchase-orders/:id/convert-to-bill — create bill from PO
  *   POST /api/v1/purchase-orders/:id/cancel        — cancel
+ *   POST /api/v1/ap/batch-payment/propose          — create payment proposal
+ *   POST /api/v1/ap/batch-payment/execute          — execute proposal
+ *   GET  /api/v1/ap/batch-payment/history          — list past runs
+ *   POST /api/v1/ap/down-payments                  — create vendor down payment
+ *   POST /api/v1/ap/down-payments/:id/pay          — pay vendor advance
+ *   POST /api/v1/ap/down-payments/:id/clear        — clear against bill
  *
  * Story 10.1, 10.2 — Accounts Payable
  * Story 10.3       — AP Vendor Management
@@ -33,6 +39,8 @@ import { billPaymentRoutes } from './bill-payments.js';
 import { vendorRoutes } from './vendors.js';
 import { purchaseOrderRoutes } from '../purchase-orders/index.js';
 import { threeWayMatchRoutes } from './three-way-match.js';
+import { batchPaymentRoutes } from './batch-payment.js';
+import { apDownPaymentRoutes } from './down-payments.js';
 
 export async function apRoutes(
   fastify: FastifyInstance,
@@ -43,4 +51,6 @@ export async function apRoutes(
   await fastify.register(vendorRoutes);
   await fastify.register(purchaseOrderRoutes);
   await fastify.register(threeWayMatchRoutes);
+  await fastify.register(batchPaymentRoutes);
+  await fastify.register(apDownPaymentRoutes);
 }

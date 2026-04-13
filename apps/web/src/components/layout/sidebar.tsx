@@ -38,6 +38,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { useSidebarStore } from '@/stores/sidebar-store';
 import { useAuthStore } from '@/stores/auth-store';
+import { useModuleAccess } from '@/hooks/use-module-access';
 import { TenantSwitcher } from '@/components/tenant-switcher';
 import type { Organization } from '@/components/tenant-switcher';
 
@@ -647,6 +648,7 @@ export function Sidebar(): React.JSX.Element {
   const { collapsed, toggle } = useSidebarStore();
   const user = useAuthStore((s) => s.user);
   const tenantId = useAuthStore((s) => s.tenantId);
+  const { isPageAllowed } = useModuleAccess();
 
   const userOrgs: Organization[] = tenantId
     ? [
@@ -657,6 +659,18 @@ export function Sidebar(): React.JSX.Element {
         },
       ]
     : [];
+
+  // Filter nav groups: remove items the user's role cannot access
+  const filteredNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => isPageAllowed(item.href)),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  // Filter standalone items
+  const filteredTopItems = standaloneTopItems.filter((item) => isPageAllowed(item.href));
+  const filteredBottomItems = standaloneBottomItems.filter((item) => isPageAllowed(item.href));
 
   return (
     <aside
@@ -701,7 +715,7 @@ export function Sidebar(): React.JSX.Element {
       >
         {/* Standalone top items (Dashboard) */}
         <ul role="list" className="flex flex-col gap-0.5">
-          {standaloneTopItems.map((item) => (
+          {filteredTopItems.map((item) => (
             <li key={item.id}>
               <StandaloneNavLink item={item} collapsed={collapsed} />
             </li>
@@ -717,13 +731,13 @@ export function Sidebar(): React.JSX.Element {
         {collapsed ? (
           /* Collapsed: icon row with flyouts */
           <div className="mt-2 flex flex-col items-center gap-0.5">
-            {navGroups.map((group) => (
+            {filteredNavGroups.map((group) => (
               <NavGroupSection key={group.id} group={group} collapsed={true} />
             ))}
           </div>
         ) : (
           <ul role="list" className="flex flex-col gap-0.5">
-            {navGroups.map((group) => (
+            {filteredNavGroups.map((group) => (
               <NavGroupSection key={group.id} group={group} collapsed={false} />
             ))}
           </ul>
@@ -736,7 +750,7 @@ export function Sidebar(): React.JSX.Element {
 
         {/* Standalone bottom items (Import/Export, Approvals) */}
         <ul role="list" className="flex flex-col gap-0.5">
-          {standaloneBottomItems.map((item) => (
+          {filteredBottomItems.map((item) => (
             <li key={item.id}>
               <StandaloneNavLink item={item} collapsed={collapsed} />
             </li>

@@ -19,6 +19,7 @@ export const document_sequences = pgTable(
         'journal_entry', 'invoice', 'payment', 'bill', 'receipt',
         'quotation', 'credit_note', 'delivery_note', 'sales_order',
         'purchase_order', 'wht', 'bill_payment',
+        'maintenance_order', 'service_entry_sheet',
       ],
     }).notNull(),
     fiscal_year: integer('fiscal_year').notNull(),
